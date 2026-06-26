@@ -60,6 +60,7 @@
 | `mcp-js-reverse-playbook` | Web JS | js-reverse-mcp 浏览器取证 |
 | `radare2` | 通用二进制 | CLI 快速侦察/反汇编/patch |
 | `reverse-engineering` | 知识库 | CTF 模式参考（自动加载，不直接调用） |
+| `ldplayer-control` | 雷电模拟器 | 启停/状态/ADB/快照管控 |
 
 **路由**: `.so`/native → `ida-reverse`/`radare2`；APK Java → `apk-reverse`；Web JS → `mcp-js-reverse-playbook`。
 
@@ -123,6 +124,7 @@
 | adb 1.0.41 | `tools\adb\adb.exe` |
 | zipalign (build-tools 33) | `tools\adb\zipalign.exe` |
 | apksigner 0.9 | `tools\adb\apksigner.bat` |
+| LDPlayer 9 管控 | `tools\ldplayer\ldplayer.ps1` |
 | JDK 21 | `tools\jdk\` |
 | Node.js 20.20.2 | `tools\node\node.exe` |
 
