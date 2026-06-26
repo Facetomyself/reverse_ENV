@@ -8,7 +8,8 @@
 
 - venv: `.venv\` ｜ JDK: `tools\jdk\` ｜ Node: `tools\node\`
 - IDA Pro 9.3: `resource\portable_win\` ｜ MCP 配置: `.mcp.json`
-- **所有逆向项目在 `workspace\<项目名>\` 下起新文件夹**。产出物（report/findings/triage/脚本）均落地到对应项目目录。
+- **所有逆向项目在 `workspace\<项目名>\` 下起新文件夹**。产出物均落地到对应项目目录。
+- **`storage\` 存放可复用的大文件**（安装包、SDK、ISO 等），内容不纳入 Git。
 
 ### AI 协作子约束
 

@@ -22,6 +22,10 @@ Thumbs.db
 # Workspace outputs (user projects)
 workspace/
 
+# Storage (reusable binaries/installers)
+storage/*
+!storage/README.md
+
 # IDA database files
 *.i64
 *.id0
@@ -57,3 +61,4 @@ tools/adb/sqlite3.exe
 tools/adb/NOTICE.txt
 tools/adb/source.properties
 tools/apktool/apktool.jar
+tools/gh/
