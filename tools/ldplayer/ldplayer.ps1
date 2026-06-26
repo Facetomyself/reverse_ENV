@@ -2,22 +2,23 @@
 
 <#
 .SYNOPSIS
-LDPlayer 9 模拟器管控：启停、状态、ADB、快照
+LDPlayer 9 模拟器管控：状态、ADB连接、关机、重启
+
+LDPlayer 9 由 Windows 服务 ldplayerservice 管理 VM 生命周期。
+服务持有 VBox 会话锁时 VBoxManage 无法启停 VM。
+- 启动：通过 LDPlayer GUI（本脚本无法绕过服务锁）
+- 关机：优先 ADB reboot -p（Android 内优雅关机），兜底 VBoxManage poweroff
+- 重启：ADB reboot
 
 .PARAMETER Action
-动作：start | start-gui | stop | stop-force | restart | status | adb | snapshot | restore
-
-.PARAMETER Name
-快照名称（snapshot/restore 时必填）
+status | adb | stop | restart
 #>
 
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('start', 'start-gui', 'stop', 'stop-force', 'restart', 'status', 'adb', 'snapshot', 'restore')]
-    [string]$Action,
-
-    [string]$Name
+    [ValidateSet('status', 'adb', 'stop', 'restart')]
+    [string]$Action
 )
 
 $ErrorActionPreference = 'Stop'
@@ -33,116 +34,39 @@ $AdbAddr     = '127.0.0.1:5555'
 # ── helpers ──────────────────────────────────────────────────────────
 
 function Test-VmRunning {
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
     $output = & $VBoxManage list runningvms 2>$null
+    $ErrorActionPreference = $prev
     return ($output -match [regex]::Escape($VmName))
 }
 
-function Wait-ForAdb {
-    param([int]$Timeout = 30)
-    $deadline = (Get-Date).AddSeconds($Timeout)
-    while ((Get-Date) -lt $deadline) {
-        $devices = & $AdbExe devices 2>$null
-        if ($devices -match $AdbAddr) { return $true }
-        Start-Sleep -Seconds 2
-    }
-    return $false
+function Test-AdbOnline {
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $devices = & $AdbExe devices 2>$null
+    $ErrorActionPreference = $prev
+    return ($devices -match "$AdbAddr\s+device")
+}
+
+function Invoke-VBoxSilent {
+    param([string[]]$Args)
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $result = & $VBoxManage @Args 2>&1
+    $ErrorActionPreference = $prev
+    return $result
 }
 
 # ── actions ──────────────────────────────────────────────────────────
 
 switch ($Action) {
 
-    'start' {
-        if (Test-VmRunning) {
-            Write-Output 'OK:already_running'
-            exit 0
-        }
-        & $VBoxManage startvm $VmName --type headless 2>&1 | Out-Null
-        Start-Sleep -Seconds 5
-        if (Test-VmRunning) {
-            Write-Output 'OK:started'
-            & $AdbExe connect $AdbAddr 2>&1 | Out-Null
-            if (Wait-ForAdb) { Write-Output 'OK:adb_connected' }
-        } else {
-            Write-Output 'ERR:start_failed'
-            exit 1
-        }
-    }
-
-    'start-gui' {
-        if (Test-VmRunning) {
-            Write-Output 'OK:already_running'
-            exit 0
-        }
-        & $VBoxManage startvm $VmName 2>&1 | Out-Null
-        Start-Sleep -Seconds 5
-        if (Test-VmRunning) {
-            Write-Output 'OK:started_gui'
-            & $AdbExe connect $AdbAddr 2>&1 | Out-Null
-        } else {
-            Write-Output 'ERR:start_failed'
-            exit 1
-        }
-    }
-
-    'stop' {
-        if (-not (Test-VmRunning)) {
-            Write-Output 'OK:already_stopped'
-            exit 0
-        }
-        & $VBoxManage controlvm $VmName acpipowerbutton 2>&1 | Out-Null
-        Start-Sleep -Seconds 8
-        if (Test-VmRunning) {
-            Write-Output 'WARN:still_running_use_stop_force'
-            exit 1
-        }
-        Write-Output 'OK:stopped'
-    }
-
-    'stop-force' {
-        if (-not (Test-VmRunning)) {
-            Write-Output 'OK:already_stopped'
-            exit 0
-        }
-        & $VBoxManage controlvm $VmName poweroff 2>&1 | Out-Null
-        Start-Sleep -Seconds 3
-        if (-not (Test-VmRunning)) {
-            Write-Output 'OK:force_stopped'
-        } else {
-            Write-Output 'ERR:force_stop_failed'
-            exit 1
-        }
-    }
-
-    'restart' {
-        if (Test-VmRunning) {
-            & $VBoxManage controlvm $VmName acpipowerbutton 2>&1 | Out-Null
-            Start-Sleep -Seconds 8
-            if (Test-VmRunning) {
-                & $VBoxManage controlvm $VmName poweroff 2>&1 | Out-Null
-                Start-Sleep -Seconds 3
-            }
-        }
-        & $VBoxManage startvm $VmName --type headless 2>&1 | Out-Null
-        Start-Sleep -Seconds 5
-        if (Test-VmRunning) {
-            Write-Output 'OK:restarted'
-            & $AdbExe connect $AdbAddr 2>&1 | Out-Null
-        } else {
-            Write-Output 'ERR:restart_failed'
-            exit 1
-        }
-    }
-
     'status' {
         if (Test-VmRunning) {
             Write-Output 'RUNNING'
-            $devices = & $AdbExe devices 2>$null
-            if ($devices -match $AdbAddr) {
-                Write-Output "ADB:$AdbAddr"
-            } else {
-                Write-Output 'ADB:disconnected'
-            }
+            if (Test-AdbOnline) { Write-Output "ADB:$AdbAddr" }
+            else { Write-Output 'ADB:offline' }
         } else {
             Write-Output 'STOPPED'
         }
@@ -150,26 +74,58 @@ switch ($Action) {
 
     'adb' {
         & $AdbExe connect $AdbAddr 2>&1
+        Write-Output '---'
         & $AdbExe devices 2>&1
     }
 
-    'snapshot' {
-        if (-not $Name) { Write-Output 'ERR:snapshot_requires_-Name'; exit 1 }
-        if (Test-VmRunning) { Write-Output 'WARN:vm_running_snapshot_may_be_inconsistent' }
-        & $VBoxManage snapshot $VmName take $Name 2>&1
-        if ($LASTEXITCODE -eq 0) { Write-Output "OK:snapshot:$Name" }
-        else { Write-Output 'ERR:snapshot_failed'; exit 1 }
+    'stop' {
+        if (-not (Test-VmRunning)) {
+            Write-Output 'OK:already_stopped'
+            exit 0
+        }
+        # Try ADB graceful shutdown first
+        if (Test-AdbOnline) {
+            Write-Output 'INFO:adb_reboot_shutdown'
+            & $AdbExe -s $AdbAddr shell reboot -p 2>$null | Out-Null
+            Start-Sleep -Seconds 8
+            if (-not (Test-VmRunning)) {
+                Write-Output 'OK:stopped_via_adb'
+                exit 0
+            }
+            Write-Output 'WARN:adb_shutdown_no_effect'
+        }
+        # Fallback: VBoxManage poweroff
+        Write-Output 'INFO:trying_poweroff'
+        Invoke-VBoxSilent controlvm, $VmName, 'poweroff' | Out-Null
+        Start-Sleep -Seconds 3
+        if (-not (Test-VmRunning)) {
+            Write-Output 'OK:poweroff'
+        } else {
+            Write-Output 'ERR:stop_failed'
+            Write-Output 'HINT: LDPlayer service may be holding a lock'
+            exit 1
+        }
     }
 
-    'restore' {
-        if (-not $Name) { Write-Output 'ERR:restore_requires_-Name'; exit 1 }
-        if (Test-VmRunning) {
-            & $VBoxManage controlvm $VmName poweroff 2>&1 | Out-Null
-            Start-Sleep -Seconds 3
+    'restart' {
+        if (-not (Test-VmRunning)) {
+            Write-Output 'ERR:vm_not_running'
+            Write-Output 'HINT: Start LDPlayer via GUI first'
+            exit 1
         }
-        & $VBoxManage snapshot $VmName restore $Name 2>&1
-        if ($LASTEXITCODE -eq 0) { Write-Output "OK:restored:$Name" }
-        else { Write-Output 'ERR:restore_failed'; exit 1 }
+        if (-not (Test-AdbOnline)) {
+            Write-Output 'ERR:adb_offline'
+            exit 1
+        }
+        Write-Output 'INFO:adb_reboot'
+        & $AdbExe -s $AdbAddr shell reboot 2>$null | Out-Null
+        Start-Sleep -Seconds 12
+        & $AdbExe connect $AdbAddr 2>$null | Out-Null
+        if (Test-AdbOnline) {
+            Write-Output 'OK:restarted_adb_reconnected'
+        } else {
+            Write-Output 'WARN:restarted_adb_not_yet'
+        }
     }
 
 }

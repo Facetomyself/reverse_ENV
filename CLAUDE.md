@@ -60,7 +60,7 @@
 | `mcp-js-reverse-playbook` | Web JS | js-reverse-mcp 浏览器取证 |
 | `radare2` | 通用二进制 | CLI 快速侦察/反汇编/patch |
 | `reverse-engineering` | 知识库 | CTF 模式参考（自动加载，不直接调用） |
-| `ldplayer-control` | 雷电模拟器 | 启停/状态/ADB/快照管控 |
+| `ldplayer-control` | 雷电模拟器 | 状态/ADB/关机/重启（启动需GUI） |
 
 **路由**: `.so`/native → `ida-reverse`/`radare2`；APK Java → `apk-reverse`；Web JS → `mcp-js-reverse-playbook`。
 

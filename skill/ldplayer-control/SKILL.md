@@ -1,20 +1,23 @@
 ---
 name: ldplayer-control
 description: |
-  LDPlayer 9 雷电模拟器管控——启停、状态、ADB 连接、快照。
-  当用户需要"启动模拟器"、"关掉雷电"、"模拟器连 adb"、"给模拟器做快照"时使用。
+  LDPlayer 9 雷电模拟器管控——状态、ADB 连接、关机、重启。
+  当用户需要"模拟器连adb"、"关掉雷电"、"重启模拟器"时使用。
+  注意：启动需通过 LDPlayer GUI，脚本无法绕过服务锁。
 ---
 
 # 雷电模拟器管控
 
 ## 适用范围
 
-- 启动/停止/重启雷电模拟器
 - 查看模拟器运行状态
 - ADB 连接管理
-- 快照保存与恢复
+- 关机（ADB 优雅关机 / 强制断电）
+- 重启（ADB reboot）
 
-如果任务是 APK 分析本身（反编译、Hook），请用 `apk-reverse`。
+启动模拟器需要通过 LDPlayer GUI（桌面快捷方式），因为 LDPlayer 9 的 Windows 服务持有 VM 会话锁，VBoxManage 无法绕过。
+
+如果任务是 APK 分析本身，请用 `apk-reverse`。
 
 ## 本机环境
 
@@ -25,6 +28,16 @@ description: |
 | VM 名称 | `leidian0` |
 | ADB 地址 | `127.0.0.1:5555` |
 | 后端 | VirtualBox 6.1.50 |
+| 服务 | `ldplayerservice`（Windows 服务，自动管理 VM 生命周期） |
+
+## 架构约束
+
+LDPlayer 9 由 Windows 服务 `ldplayerservice` 管理 VM。服务运行时持有 VirtualBox 会话锁，VBoxManage 无法直接启停 VM。因此：
+
+- **启动**：通过 LDPlayer GUI（脚本无法绕过服务锁）
+- **关机**：优先 `adb reboot -p`（Android 内优雅关机），兜底 `VBoxManage poweroff`
+- **重启**：`adb reboot`
+- **状态/ADB**：始终可用
 
 ## CLI 管控脚本
 
@@ -38,48 +51,38 @@ powershell -File "D:\reverse_ENV\tools\ldplayer\ldplayer.ps1" -Action <动作>
 
 | -Action | 说明 |
 |---------|------|
-| `start` | 无 GUI 后台启动 |
-| `start-gui` | 带窗口启动 |
-| `stop` | 优雅关机（acpi） |
-| `stop-force` | 强制断电 |
-| `restart` | 优雅重启 |
-| `status` | 查看是否运行中 |
+| `status` | 查看 VM 是否运行 + ADB 是否在线 |
 | `adb` | 执行 `adb connect 127.0.0.1:5555` |
-| `snapshot` | 创建快照（需 `-Name`） |
-| `restore` | 恢复到快照（需 `-Name`） |
+| `stop` | 关机（优先 ADB reboot -p，兜底 poweroff） |
+| `restart` | ADB reboot 软重启 Android |
 
 ### 示例
 
 ```powershell
-# 后台启动
-powershell -File "D:\reverse_ENV\tools\ldplayer\ldplayer.ps1" -Action start
-
 # 查看状态
 powershell -File "D:\reverse_ENV\tools\ldplayer\ldplayer.ps1" -Action status
 
 # 连接 ADB
 powershell -File "D:\reverse_ENV\tools\ldplayer\ldplayer.ps1" -Action adb
 
-# 创建分析前快照
-powershell -File "D:\reverse_ENV\tools\ldplayer\ldplayer.ps1" -Action snapshot -Name "before-hook"
-
-# 优雅关机
+# 关机
 powershell -File "D:\reverse_ENV\tools\ldplayer\ldplayer.ps1" -Action stop
+
+# 重启 Android
+powershell -File "D:\reverse_ENV\tools\ldplayer\ldplayer.ps1" -Action restart
 ```
 
 ## 典型工作流
 
 ```
-1. 启动模拟器           → start
-2. ADB 连接             → adb
-3. 安装/运行目标 APK     → adb install（或走 apk-reverse 的 rebuild-sign-install.ps1）
-4. Frida Hook / 分析    → 走 apk-reverse
-5. 分析完毕、关机        → stop
+1. 双击桌面 LDPlayer 图标启动模拟器
+2. 等 Android 启动完毕
+3. powershell -File "ldplayer.ps1" -Action adb      → 连接
+4. 安装/运行 APK，Frida Hook                        → 走 apk-reverse
+5. powershell -File "ldplayer.ps1" -Action stop     → 关机
 ```
-
-> 如果要做破坏性测试，先 `snapshot` 保存当前状态，事后 `restore` 恢复。
 
 ## 禁止事项
 
-- 不要在 `stop-force` 前不尝试 `stop`（优先优雅关机）
-- 不要在生产/敏感环境中使用快照恢复（会丢弃所有增量数据）
+- 不要杀 `ldplayerservice` 或 `VBoxSVC` 进程（会导致 VM 注册丢失）
+- 不要在 ADB 离线时用 `restart`（需先确认 ADB 在线）
