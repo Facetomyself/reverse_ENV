@@ -1,0 +1,59 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Node
+js-reverse-mcp/node_modules/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Temp / cache
+*.tmp
+*.log
+
+# Workspace outputs (user projects)
+workspace/
+
+# IDA database files
+*.i64
+*.id0
+*.id1
+*.id2
+*.nam
+*.til
+
+# Large binaries (track separately)
+resource/portable_win/
+resource/kg_patch/win/
+resource/kg_patch/linux/
+resource/misc/
+resource/ida93.torrent
+tools/jdk/
+tools/node/
+tools/jadx/
+tools/radare2/
+tools/adb/apksigner.jar
+tools/adb/zipalign.exe
+tools/adb/libwinpthread-1.dll
+tools/adb/AdbWinApi.dll
+tools/adb/AdbWinUsbApi.dll
+tools/adb/adb.exe
+tools/adb/fastboot.exe
+tools/adb/etc1tool.exe
+tools/adb/hprof-conv.exe
+tools/adb/make_f2fs.exe
+tools/adb/make_f2fs_casefold.exe
+tools/adb/mke2fs.conf
+tools/adb/mke2fs.exe
+tools/adb/sqlite3.exe
+tools/adb/NOTICE.txt
+tools/adb/source.properties
+tools/apktool/apktool.jar

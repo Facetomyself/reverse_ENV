@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "ida-multi-mcp": {
+      "command": "D:\\reverse_ENV\\.venv\\Scripts\\python.exe",
+      "args": ["-m", "ida_multi_mcp"],
+      "env": {
+        "IDADIR": "D:\\reverse_ENV\\resource\\portable_win"
+      }
+    },
+    "jadx-ai-mcp": {
+      "command": "D:\\reverse_ENV\\.venv\\Scripts\\python.exe",
+      "args": ["D:\\reverse_ENV\\tools\\jadx-mcp-server\\jadx_mcp_server.py"],
+      "env": {
+        "JAVA_HOME": "D:\\reverse_ENV\\tools\\jdk"
+      }
+    },
+    "js-reverse-mcp": {
+      "command": "D:\\reverse_ENV\\tools\\node\\node.exe",
+      "args": ["D:\\reverse_ENV\\js-reverse-mcp\\node_modules\\js-reverse-mcp\\build\\src\\index.js"]
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "_schema": "reverse-coordinator-findings-v1",
+  "target": {
+    "path": "",
+    "type": "",
+    "arch": ""
+  },
+  "analysis_depth": "L1",
+  "findings": [
+    {
+      "id": "F-001",
+      "category": "signature|crypto|network|anti-tamper|jni|logic|config|other",
+      "claim": "",
+      "location": {
+        "file": "",
+        "class": "",
+        "method": "",
+        "address": "",
+        "line": 0
+      },
+      "description": "",
+      "evidence": {
+        "type": "string_xref|disasm|decompile|runtime_hook|network_trace|manifest",
+        "source": "",
+        "value": ""
+      },
+      "confidence": "high|medium|low",
+      "rebuild_status": "extracted|partial|not_applicable",
+      "rebuild_path": ""
+    }
+  ],
+  "triage_items": [
+    {
+      "id": "T-001",
+      "description": "",
+      "severity": "blocker|high|medium|low",
+      "reason": "",
+      "suggested_next": ""
+    }
+  ],
+  "session": {
+    "started": "",
+    "skills_used": [],
+    "mcp_tools_called": []
+  }
+}

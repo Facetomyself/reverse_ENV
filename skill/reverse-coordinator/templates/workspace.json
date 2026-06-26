@@ -1,0 +1,45 @@
+{
+  "_schema": "reverse-coordinator-workspace-v1",
+  "target": {
+    "path": "",
+    "type": "",
+    "arch": "",
+    "size_bytes": 0
+  },
+  "pipeline": {
+    "phase": "classification",
+    "analysis_depth": "L1",
+    "primary_skill": "",
+    "fallback_skill": ""
+  },
+  "phases": {
+    "classification": { "status": "pending", "started": null, "completed": null, "notes": "" },
+    "recon":          { "status": "pending", "started": null, "completed": null, "notes": "" },
+    "decision":       { "status": "pending", "started": null, "completed": null, "notes": "" },
+    "deep_dive":      { "status": "pending", "started": null, "completed": null, "notes": "" },
+    "rebuild":        { "status": "pending", "started": null, "completed": null, "notes": "" },
+    "review":         { "status": "pending", "started": null, "completed": null, "notes": "" }
+  },
+  "markers": {
+    "file_format": "",
+    "has_native": false,
+    "has_wasm": false,
+    "has_obfuscation": false,
+    "has_anti_debug": false,
+    "has_jni": false,
+    "has_crypto": false,
+    "strings_of_interest": []
+  },
+  "artifacts": {
+    "report": "",
+    "findings": "",
+    "triage": ""
+  },
+  "review_gate": {
+    "all_claims_have_evidence": false,
+    "triage_items_documented": false,
+    "rebuild_scripts_tested": false,
+    "sensitive_data_redacted": false,
+    "ready_for_delivery": false
+  }
+}
