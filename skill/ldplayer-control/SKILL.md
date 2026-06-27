@@ -26,18 +26,12 @@ description: |
 | 版本 | LDPlayer 9 |
 | 安装路径 | `C:\Program Files\ldplayer9box\` |
 | VM 名称 | `leidian0` |
-| ADB 地址 | `127.0.0.1:5555` |
-| 后端 | VirtualBox 6.1.50 |
-| 服务 | `ldplayerservice`（Windows 服务，自动管理 VM 生命周期） |
+| ADB 地址 | `emulator-5554`（LDPlayer index 0 固定地址） |
+| ADB 路径 | `D:\leidian\LDPlayer9\adb.exe`（雷电自带，与 MAA 共用） |
 
-## 架构约束
+## 架构说明
 
-LDPlayer 9 由 Windows 服务 `ldplayerservice` 管理 VM。服务运行时持有 VirtualBox 会话锁，VBoxManage 无法直接启停 VM。因此：
-
-- **启动**：通过 LDPlayer GUI（脚本无法绕过服务锁）
-- **关机**：优先 `adb reboot -p`（Android 内优雅关机），兜底 `VBoxManage poweroff`
-- **重启**：`adb reboot`
-- **状态/ADB**：始终可用
+LDPlayer 9 使用 `emulator-5554` 作为 ADB 地址（非 `127.0.0.1:5555`）。与 MAA 兼容共存——MAA 使用同一 ADB 路径和地址。本脚本只做只读状态查询和通过 ADB 操作 Android，不碰 VBoxManage，不影响 MAA 运行。
 
 ## CLI 管控脚本
 
