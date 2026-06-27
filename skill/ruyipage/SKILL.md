@@ -215,11 +215,11 @@ page.delete_cookies()                               # 清空
 
 ## 约束与禁止
 
-1. **不得在追踪浏览器中登录个人账号** — 所有 DOM API 调用被 C++ 层 Hook 记录
-2. **不得在生产环境使用 action_visual** — 鼠标轨迹可视化会留下可检测的 DOM 痕迹
-3. **代理认证走 fpfile** — HTTP 代理用户名密码不要明文写在代码里，用 `set_fpfile` 引用外部文件
-4. **不要与 ruyitrace 共享同一 profile** — 追踪浏览器和自动化浏览器使用独立 Firefox profile
-5. **优先用 `launch()` 而非 `FirefoxPage()`** — 当需要自定义选项时，`launch()` 更简洁
+1. **代理认证走 fpfile** — HTTP/SOCKS5 代理用户名密码不要明文写在代码里，用 `set_fpfile` 引用外部文件
+2. **不得在生产环境使用 `action_visual` / `xpath_picker`** — 这些调试功能会注入可见 DOM 元素，被检测
+3. **`smart_fingerprint` 依赖代理出口 IP** — 无代理时无法检测地理位置，指纹伪装不完整
+4. **不要与 ruyitrace 共享同一 Firefox profile** — ruyipage 自动化可能修改浏览器状态，影响 ruyitrace 追踪纯度。两者用独立 profile
+5. **Firefox 151.0a1 是定制版本** — 不要用 `set_browser_path` 指向系统安装的普通 Firefox，反检测补丁只在定制版中生效
 
 ## 快速命令
 
