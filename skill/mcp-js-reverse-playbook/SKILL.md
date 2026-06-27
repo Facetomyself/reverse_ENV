@@ -136,6 +136,10 @@ description: 在使用 js-reverse-mcp 做前端 JavaScript 逆向时使用，适
 - 失败时按 `references/fallbacks.md` 回退
 - 输出遵循 `references/output-contract.md`
 
+## 交付衔接
+
+当本 skill 的 Rebuild 阶段完成（签名函数已定位、环境已补全、能本地跑出目标参数），若用户需要"写采集器"或"纯协议交付"，切到 `protocol-recovery` skill 继续。那个 skill 负责把已验证的签名逻辑打包为脱离浏览器的 Python 采集器。
+
 ## 必读引用
 
 - 自动化入口：`references/automation-entry.md`

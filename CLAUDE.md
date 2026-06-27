@@ -63,6 +63,7 @@
 | `ldplayer-control` | 雷电模拟器 | 状态/ADB/关机/重启（启动需GUI） |
 | `ruyipage` | 指纹浏览器自动化 | WebDriver BiDi 操控 Firefox，过验证码/代理池/抓包 |
 | `ruyitrace` | DOM 指纹追踪 | C++ 层 API Hook → NDJSON（与 ruyipage 互补） |
+| `protocol-recovery` | Web 协议恢复 | 签名→Python 采集器（接在 mcp-js-reverse-playbook 之后） |
 
 **路由**: `.so`/native → `ida-reverse`/`radare2`；APK Java → `apk-reverse`；Web JS → `mcp-js-reverse-playbook`。
 
