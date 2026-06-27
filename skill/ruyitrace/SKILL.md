@@ -79,4 +79,3 @@ python tools\ruyitrace\trace_analyzer.py trace.ndjson -c webgl
 ## 禁止
 
 - 不要删除 `tools\ruyitrace\firefox\RUYI_DOMTRACE.txt` 标记文件
-- **禁止登录个人账号** — `MOZ_DOM_TRACE=1` 时 C++ 层记录所有 DOM API 调用到 NDJSON，包括 cookie、表单输入、token。登录 Google/GitHub/邮箱等会导致凭据泄露到追踪日志文件
