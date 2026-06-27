@@ -125,6 +125,7 @@
 | zipalign (build-tools 33) | `tools\adb\zipalign.exe` |
 | apksigner 0.9 | `tools\adb\apksigner.bat` |
 | LDPlayer 9 管控 | `tools\ldplayer\ldplayer.ps1` |
+| ruyipage 指纹浏览器 | `.venv\Scripts\python.exe -m ruyipage` |
 | JDK 21 | `tools\jdk\` |
 | Node.js 20.20.2 | `tools\node\node.exe` |
 
