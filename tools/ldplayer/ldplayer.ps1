@@ -15,7 +15,8 @@ param(
     [Parameter(Mandatory = $true)]
     [ValidateSet('list', 'status', 'launch', 'quit', 'reboot',
                  'add', 'copy', 'remove', 'modify',
-                 'install', 'uninstall', 'runapp', 'adb')]
+                 'install', 'uninstall', 'runapp', 'adb',
+                 'proxy-on', 'proxy-off')]
     [string]$Action,
 
     [int]$Index = -1,
@@ -33,7 +34,8 @@ param(
     [switch]$Root,
     [string]$FileName,
     [string]$Key,
-    [string]$Value
+    [string]$Value,
+    [int]$ProxyPort = 8080
 )
 
 $ErrorActionPreference = 'Stop'
@@ -44,6 +46,11 @@ $OutputEncoding           = [System.Text.UTF8Encoding]::new($false)
 $LdConsole   = 'D:\leidian\LDPlayer9\ldconsole.exe'
 $AdbExe      = 'D:\leidian\LDPlayer9\adb.exe'
 $MaaIndex    = 0
+$MitmProxy   = 'D:\reverse_ENV\.venv\Scripts\mitmdump.exe'
+$CaCert      = 'D:\reverse_ENV\tools\c8750f0d.0'
+$CaHash      = 'c8750f0d'
+$CertDir     = '/data/local/tmp/cacerts'
+$CertSystem  = '/system/etc/security/cacerts'
 
 # ── helpers ──────────────────────────────────────────────────────────
 
@@ -228,6 +235,92 @@ switch ($Action) {
         $target = Resolve-Target
         $result = Invoke-Ld -LdArgs @('adb') + $target + @('--command', $Command)
         Write-Output $result
+    }
+
+    'proxy-on' {
+        $AdbAddr = Get-AdbAddr -I $Index
+
+        if (-not (Test-Path $CaCert)) {
+            Write-Output "ERR: CA cert not found: $CaCert"
+            Write-Output 'HINT: Generate with mitmdump first, then compute hash:'
+            Write-Output '  openssl x509 -subject_hash_old -in ~/.mitmproxy/mitmproxy-ca-cert.cer'
+            exit 1
+        }
+
+        # 1. Push CA cert
+        Write-Output 'Installing CA cert...'
+        & $AdbExe -s $AdbAddr push $CaCert "/sdcard/$CaHash.0" 2>$null | Out-Null
+
+        # 2. Bind mount cacerts
+        & $AdbExe -s $AdbAddr root 2>$null | Out-Null
+        Start-Sleep -Seconds 1
+
+        $bindResult = & $AdbExe -s $AdbAddr shell "su -c '
+            if [ ! -d $CertDir ]; then
+                cp -r $CertSystem $CertDir
+            fi
+            cp /sdcard/$CaHash.0 $CertDir/
+            chmod 644 $CertDir/$CaHash.0
+            mount --bind $CertDir $CertSystem 2>/dev/null
+            ls $CertSystem/$CaHash.0
+        '" 2>$null
+
+        if ($bindResult -match $CaHash) {
+            Write-Output 'OK:ca_cert_installed'
+        } else {
+            Write-Output "WARN: ca cert may not be active: $bindResult"
+        }
+
+        # 3. adb reverse for proxy port
+        & $AdbExe -s $AdbAddr reverse "tcp:$ProxyPort" "tcp:$ProxyPort" 2>$null | Out-Null
+        Write-Output "OK:adb_reverse tcp:$ProxyPort"
+
+        # 4. Set Android proxy
+        & $AdbExe -s $AdbAddr shell "settings put global http_proxy 127.0.0.1:$ProxyPort" 2>$null | Out-Null
+        Write-Output "OK:proxy_set 127.0.0.1:$ProxyPort"
+
+        # 5. Start mitmdump (if not running)
+        $mitmRunning = Get-Process -Name 'mitmdump' -ErrorAction SilentlyContinue
+        if (-not $mitmRunning) {
+            $flowFile = "$PWD\mitmproxy_traffic.flow"
+            Start-Process -WindowStyle Hidden -FilePath $MitmProxy `
+                -ArgumentList "-p", "$ProxyPort", "-w", $flowFile, "--set", "stream_large_bodies=10m"
+            Start-Sleep -Seconds 2
+            Write-Output "OK:mitmdump_started (flow: $flowFile)"
+        } else {
+            Write-Output 'OK:mitmdump_already_running'
+        }
+
+        Write-Output ''
+        Write-Output '=== HTTPS interception ACTIVE ==='
+        Write-Output "Proxy:  127.0.0.1:$ProxyPort"
+        Write-Output 'Traffic: mitmdump_traffic.flow'
+        Write-Output ''
+        Write-Output 'To stop: powershell -File ldplayer.ps1 -Action proxy-off'
+    }
+
+    'proxy-off' {
+        $AdbAddr = Get-AdbAddr -I $Index
+
+        # 1. Clear Android proxy
+        & $AdbExe -s $AdbAddr shell "settings delete global http_proxy" 2>$null | Out-Null
+        Write-Output 'OK:proxy_cleared'
+
+        # 2. Remove adb reverse
+        & $AdbExe -s $AdbAddr reverse --remove "tcp:$ProxyPort" 2>$null | Out-Null
+        Write-Output 'OK:adb_reverse_removed'
+
+        # 3. Kill mitmdump
+        $mitm = Get-Process -Name 'mitmdump' -ErrorAction SilentlyContinue
+        if ($mitm) {
+            $mitm | Stop-Process -Force
+            Write-Output 'OK:mitmdump_stopped'
+        } else {
+            Write-Output 'OK:mitmdump_not_running'
+        }
+
+        Write-Output ''
+        Write-Output '=== HTTPS interception OFF ==='
     }
 
 }

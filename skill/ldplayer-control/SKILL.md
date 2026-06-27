@@ -60,6 +60,8 @@ powershell -File "D:\reverse_ENV\tools\ldplayer\ldplayer.ps1" -Action <动作> [
 | `uninstall` | `-Index N -PackageName <pkg>` | 卸载应用 |
 | `runapp` | `-Index N -PackageName <pkg>` | 启动应用 |
 | `adb` | `-Index N -Command "..."` | 执行 ADB shell 命令 |
+| `proxy-on` | `-Index N` | 开启 HTTPS 拦截代理（mitmproxy） |
+| `proxy-off` | `-Index N` | 关闭代理，恢复直连 |
 
 ### 示例
 

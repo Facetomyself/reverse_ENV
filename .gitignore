@@ -63,3 +63,6 @@ tools/adb/NOTICE.txt
 tools/adb/source.properties
 tools/apktool/apktool.jar
 tools/gh/
+tools/frida-server
+tools/*.0
+mitmproxy_traffic.flow
