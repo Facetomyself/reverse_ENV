@@ -65,4 +65,6 @@ tools/apktool/apktool.jar
 tools/gh/
 tools/frida-server
 tools/*.0
-mitmproxy_traffic.flow
+*.flow
+*.pcap
+*.har

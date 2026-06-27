@@ -282,7 +282,7 @@ switch ($Action) {
         # 5. Start mitmdump (if not running)
         $mitmRunning = Get-Process -Name 'mitmdump' -ErrorAction SilentlyContinue
         if (-not $mitmRunning) {
-            $flowFile = "$PWD\mitmproxy_traffic.flow"
+            $flowFile = "D:\reverse_ENV\workspace\mitmproxy_traffic.flow"
             Start-Process -WindowStyle Hidden -FilePath $MitmProxy `
                 -ArgumentList "-p", "$ProxyPort", "-w", $flowFile, "--set", "stream_large_bodies=10m"
             Start-Sleep -Seconds 2
