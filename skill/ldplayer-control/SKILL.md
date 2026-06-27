@@ -1,82 +1,94 @@
 ---
 name: ldplayer-control
 description: |
-  LDPlayer 9 雷电模拟器管控——状态、ADB 连接、关机、重启。
-  当用户需要"模拟器连adb"、"关掉雷电"、"重启模拟器"时使用。
-  注意：启动需通过 LDPlayer GUI，脚本无法绕过服务锁。
+  LDPlayer 9 雷电模拟器多实例管控——列表、状态、ADB、关机、重启、安装APK。
+  支持多实例（-Index 参数），与 MAA 兼容共存。
 ---
 
-# 雷电模拟器管控
+# 雷电模拟器多实例管控
 
 ## 适用范围
 
-- 查看模拟器运行状态
-- ADB 连接管理
-- 关机（ADB 优雅关机 / 强制断电）
-- 重启（ADB reboot）
+- 查看所有模拟器实例及运行状态
+- ADB 连接指定实例
+- 关机 / 重启
+- 安装 APK
 
-启动模拟器需要通过 LDPlayer GUI（桌面快捷方式），因为 LDPlayer 9 的 Windows 服务持有 VM 会话锁，VBoxManage 无法绕过。
-
-如果任务是 APK 分析本身，请用 `apk-reverse`。
+如果任务是 APK 分析本身（反编译、Hook），请用 `apk-reverse`。
+创建/删除/克隆实例通过 LDPlayer 多开器 GUI（`dnmultiplayer.exe`），本脚本不管。
 
 ## 本机环境
 
 | 项目 | 值 |
 |------|-----|
 | 版本 | LDPlayer 9 |
-| 安装路径 | `C:\Program Files\ldplayer9box\` |
-| VM 名称 | `leidian0` |
-| ADB 地址 | `emulator-5554`（LDPlayer index 0 固定地址） |
-| ADB 路径 | `D:\leidian\LDPlayer9\adb.exe`（雷电自带，与 MAA 共用） |
+| 安装路径 | `D:\leidian\LDPlayer9\` |
+| 后端 | VirtualBox 6.1.50 |
+| ADB | `D:\leidian\LDPlayer9\adb.exe`（雷电自带） |
 
-## 架构说明
+## 实例与 ADB 映射
 
-LDPlayer 9 使用 `emulator-5554` 作为 ADB 地址（非 `127.0.0.1:5555`）。与 MAA 兼容共存——MAA 使用同一 ADB 路径和地址。本脚本只做只读状态查询和通过 ADB 操作 Android，不碰 VBoxManage，不影响 MAA 运行。
-
-## CLI 管控脚本
-
-统一入口：`tools\ldplayer\ldplayer.ps1`
-
-```powershell
-powershell -File "D:\reverse_ENV\tools\ldplayer\ldplayer.ps1" -Action <动作>
+```
+leidian0  →  emulator-5554   ← MAA 正在使用，写操作需确认
+leidian1  →  emulator-5556
+leidian2  →  emulator-5558
+leidianN  →  emulator-{5554 + N*2}
 ```
 
-### 支持的动作
+## CLI
 
-| -Action | 说明 |
-|---------|------|
-| `status` | 查看 VM 是否运行 + ADB 是否在线 |
-| `adb` | 执行 `adb connect 127.0.0.1:5555` |
-| `stop` | 关机（优先 ADB reboot -p，兜底 poweroff） |
-| `restart` | ADB reboot 软重启 Android |
+```powershell
+powershell -File "D:\reverse_ENV\tools\ldplayer\ldplayer.ps1" -Action <动作> [-Index N] [-ApkPath ...]
+```
+
+### 动作
+
+| -Action | 说明 | 影响 MAA? |
+|---------|------|-----------|
+| `list` | 列出所有实例（名称、ADB地址、运行状态、机型） | 只读 |
+| `status` | 指定实例详情（Index/ADB/Model/DPI/SDK） | 只读 |
+| `adb` | ADB devices 列表 | 只读 |
+| `stop` | 通过 ADB 关机 | 若 Index=0 会警告 |
+| `reboot` | 通过 ADB 重启 | 若 Index=0 会警告 |
+| `install` | 安装 APK 到指定实例 | 若 Index=0 会警告 |
 
 ### 示例
 
 ```powershell
-# 查看状态
+# 列出所有实例
+powershell -File "D:\reverse_ENV\tools\ldplayer\ldplayer.ps1" -Action list
+
+# 查看 index 0 详情
 powershell -File "D:\reverse_ENV\tools\ldplayer\ldplayer.ps1" -Action status
 
-# 连接 ADB
-powershell -File "D:\reverse_ENV\tools\ldplayer\ldplayer.ps1" -Action adb
+# 查看 index 1（如果有）
+powershell -File "D:\reverse_ENV\tools\ldplayer\ldplayer.ps1" -Action status -Index 1
 
-# 关机
-powershell -File "D:\reverse_ENV\tools\ldplayer\ldplayer.ps1" -Action stop
+# 安装 APK 到 index 1
+powershell -File "D:\reverse_ENV\tools\ldplayer\ldplayer.ps1" -Action install -Index 1 -ApkPath "D:\app.apk"
 
-# 重启 Android
-powershell -File "D:\reverse_ENV\tools\ldplayer\ldplayer.ps1" -Action restart
+# 重启 index 1
+powershell -File "D:\reverse_ENV\tools\ldplayer\ldplayer.ps1" -Action reboot -Index 1
 ```
 
 ## 典型工作流
 
 ```
-1. 双击桌面 LDPlayer 图标启动模拟器
-2. 等 Android 启动完毕
-3. powershell -File "ldplayer.ps1" -Action adb      → 连接
-4. 安装/运行 APK，Frida Hook                        → 走 apk-reverse
-5. powershell -File "ldplayer.ps1" -Action stop     → 关机
+1. list → 确认目标实例 index
+2. status -Index N → 确认在线
+3. install -Index N -ApkPath xxx → 安装目标 APK
+4. 用 apk-reverse skill 做分析
+5. stop -Index N → 分析完关机
 ```
 
-## 禁止事项
+## 与 MAA 共存
 
-- 不要杀 `ldplayerservice` 或 `VBoxSVC` 进程（会导致 VM 注册丢失）
-- 不要在 ADB 离线时用 `restart`（需先确认 ADB 在线）
+- 本脚本和 MAA 共用 `D:\leidian\LDPlayer9\adb.exe`，互不干扰
+- `list` 和 `status` 只读，不影响 MAA 运行
+- 对 index=0 的写操作（stop/reboot/install）会输出警告
+- MAA 独占 `emulator-5554`，不建议在 MAA 运行时对其 stop/reboot
+
+## 禁止
+
+- 不要杀 `ldplayerservice` 或 `VBoxSVC` 进程
+- 不要在 MAA 执行任务时对 index=0 做 stop/reboot
