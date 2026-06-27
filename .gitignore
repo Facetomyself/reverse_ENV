@@ -36,6 +36,7 @@ storage/*
 
 # Large binaries (track separately)
 resource/portable_win/
+tools/ruyitrace/firefox/
 resource/kg_patch/win/
 resource/kg_patch/linux/
 resource/misc/

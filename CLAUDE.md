@@ -61,6 +61,7 @@
 | `radare2` | 通用二进制 | CLI 快速侦察/反汇编/patch |
 | `reverse-engineering` | 知识库 | CTF 模式参考（自动加载，不直接调用） |
 | `ldplayer-control` | 雷电模拟器 | 状态/ADB/关机/重启（启动需GUI） |
+| `ruyitrace` | DOM 指纹追踪 | Firefox 内核级 API Hook → NDJSON |
 
 **路由**: `.so`/native → `ida-reverse`/`radare2`；APK Java → `apk-reverse`；Web JS → `mcp-js-reverse-playbook`。
 
@@ -126,6 +127,7 @@
 | apksigner 0.9 | `tools\adb\apksigner.bat` |
 | LDPlayer 9 管控 | `tools\ldplayer\ldplayer.ps1` |
 | ruyipage 指纹浏览器 | `.venv\Scripts\python.exe -m ruyipage` |
+| ruyiTrace DOM 追踪 | `tools\ruyitrace\ruyitrace.ps1` |
 | JDK 21 | `tools\jdk\` |
 | Node.js 20.20.2 | `tools\node\node.exe` |
 
