@@ -61,7 +61,8 @@
 | `radare2` | 通用二进制 | CLI 快速侦察/反汇编/patch |
 | `reverse-engineering` | 知识库 | CTF 模式参考（自动加载，不直接调用） |
 | `ldplayer-control` | 雷电模拟器 | 状态/ADB/关机/重启（启动需GUI） |
-| `ruyitrace` | DOM 指纹追踪 | Firefox 内核级 API Hook → NDJSON |
+| `ruyipage` | 指纹浏览器自动化 | WebDriver BiDi 操控 Firefox，过验证码/代理池/抓包 |
+| `ruyitrace` | DOM 指纹追踪 | C++ 层 API Hook → NDJSON（与 ruyipage 互补） |
 
 **路由**: `.so`/native → `ida-reverse`/`radare2`；APK Java → `apk-reverse`；Web JS → `mcp-js-reverse-playbook`。
 
