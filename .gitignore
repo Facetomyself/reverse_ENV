@@ -92,3 +92,10 @@ toolsFirst/
 
 # Claude session data (project-level)
 .claude/
+
+# 代理凭证 (敏感信息)
+**/proxy-usage/.env
+**/proxy_creds.json
+.env
+!.env.example
+.secret
