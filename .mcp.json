@@ -15,8 +15,8 @@
       }
     },
     "js-reverse-mcp": {
-      "command": "D:\\reverse_ENV\\tools\\node\\node.exe",
-      "args": ["D:\\reverse_ENV\\js-reverse-mcp\\node_modules\\js-reverse-mcp\\build\\src\\index.js", "--cloak"]
+      "command": "powershell",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "D:\\reverse_ENV\\tools\\chromium\\start-js-reverse.ps1"]
     },
     "ruyi-mcp": {
       "command": "D:\\reverse_ENV\\tools\\node\\node.exe",

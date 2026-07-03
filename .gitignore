@@ -77,7 +77,8 @@ ruyi-mcp/node_modules/
 
 # Additional large tools / binaries
 tools/First/
-tools/chromium/
+tools/chromium/*
+!tools/chromium/start-js-reverse.ps1
 tools/debug.keystore
 tools/frida-gadget-*.so
 tools/hide-soinfo/

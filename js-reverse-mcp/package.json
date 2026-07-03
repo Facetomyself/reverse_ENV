@@ -10,6 +10,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "cloakbrowser": "^0.4.7",
     "js-reverse-mcp": "^3.0.0"
   }
 }
