@@ -11,6 +11,9 @@ js-reverse-mcp/node_modules/
 .vscode/
 .idea/
 
+# article
+article/
+
 # OS
 Thumbs.db
 .DS_Store
@@ -64,7 +67,10 @@ tools/adb/source.properties
 tools/apktool/apktool.jar
 tools/gh/
 tools/frida-server
+tools/android-ndk/
+tools/android-ndk.zip
 tools/*.0
 *.flow
 *.pcap
 *.har
+ruyi-mcp/node_modules/

@@ -16,7 +16,18 @@
     },
     "js-reverse-mcp": {
       "command": "D:\\reverse_ENV\\tools\\node\\node.exe",
-      "args": ["D:\\reverse_ENV\\js-reverse-mcp\\node_modules\\js-reverse-mcp\\build\\src\\index.js"]
+      "args": ["D:\\reverse_ENV\\js-reverse-mcp\\node_modules\\js-reverse-mcp\\build\\src\\index.js", "--cloak"]
+    },
+    "ruyi-mcp": {
+      "command": "D:\\reverse_ENV\\tools\\node\\node.exe",
+      "args": ["D:\\reverse_ENV\\ruyi-mcp\\build\\src\\index.js"]
+    },
+    "first-mcp": {
+      "url": "http://127.0.0.1:4554/sse"
+    },
+    "reqable": {
+      "command": "D:\\reverse_ENV\\.venv\\Scripts\\reqable-mcp.exe",
+      "args": ["mcp"]
     }
   }
 }

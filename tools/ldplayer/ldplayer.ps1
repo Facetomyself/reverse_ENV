@@ -35,7 +35,8 @@ param(
     [string]$FileName,
     [string]$Key,
     [string]$Value,
-    [int]$ProxyPort = 8080
+    [int]$ProxyPort = 8080,
+    [string]$Project
 )
 
 $ErrorActionPreference = 'Stop'
@@ -47,6 +48,7 @@ $LdConsole   = 'D:\leidian\LDPlayer9\ldconsole.exe'
 $AdbExe      = 'D:\leidian\LDPlayer9\adb.exe'
 $MaaIndex    = 0
 $MitmProxy   = 'D:\reverse_ENV\.venv\Scripts\mitmdump.exe'
+$Workspace   = 'D:\reverse_ENV\workspace'
 $CaCert      = 'D:\reverse_ENV\tools\c8750f0d.0'
 $CaHash      = 'c8750f0d'
 $CertDir     = '/data/local/tmp/cacerts'
@@ -238,6 +240,11 @@ switch ($Action) {
     }
 
     'proxy-on' {
+        if (-not $Project) {
+            Write-Output 'ERR: -Project required (e.g. -Project myapp). Flow file will be saved to workspace\<Project>\'
+            exit 1
+        }
+
         $AdbAddr = Get-AdbAddr -I $Index
 
         if (-not (Test-Path $CaCert)) {
@@ -282,7 +289,11 @@ switch ($Action) {
         # 5. Start mitmdump (if not running)
         $mitmRunning = Get-Process -Name 'mitmdump' -ErrorAction SilentlyContinue
         if (-not $mitmRunning) {
-            $flowFile = "D:\reverse_ENV\workspace\mitmproxy_traffic.flow"
+            $ProjectDir = Join-Path $Workspace $Project
+            if (-not (Test-Path $ProjectDir)) {
+                New-Item -ItemType Directory -Path $ProjectDir -Force | Out-Null
+            }
+            $flowFile = Join-Path $ProjectDir 'mitmproxy_traffic.flow'
             Start-Process -WindowStyle Hidden -FilePath $MitmProxy `
                 -ArgumentList "-p", "$ProxyPort", "-w", $flowFile, "--set", "stream_large_bodies=10m"
             Start-Sleep -Seconds 2
@@ -294,7 +305,8 @@ switch ($Action) {
         Write-Output ''
         Write-Output '=== HTTPS interception ACTIVE ==='
         Write-Output "Proxy:  127.0.0.1:$ProxyPort"
-        Write-Output 'Traffic: mitmdump_traffic.flow'
+        Write-Output "Project: $Project"
+        Write-Output "Traffic: $flowFile"
         Write-Output ''
         Write-Output 'To stop: powershell -File ldplayer.ps1 -Action proxy-off'
     }

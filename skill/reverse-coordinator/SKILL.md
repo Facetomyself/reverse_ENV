@@ -56,6 +56,7 @@ description: |
 - 每个阶段只调用一个 skill，完成后再决定是否进入下一阶段
 - 子 skill 返回"结构化摘要 + 文件路径"（大材料写文件）
 - 全局 todo 由本 skill 管理，子 skill 不修改全局计划
+- **Web RE 路由**：默认走 `ruyi-reverse`（统一编排器 T0→T4）；需 CDP 完整调试时通过 T4 桥接到 `mcp-js-reverse-playbook`
 
 ### 交付产物
 
@@ -91,9 +92,23 @@ description: |
 |------|------|---------|
 | `.apk` / `.aab` / Android 包名 | Android APK | `apk-reverse` |
 | `.exe` / `.dll` / `.sys` | Windows PE | `ida-reverse` |
-| `.so` / `.elf` / `.macho` | Linux/macOS 二进制 | `ida-reverse` 或 `radare2` |
-| `.js` / 网页 URL / 小程序 | Web JS | `mcp-js-reverse-playbook` |
+| `.so` / `.elf`（反调试/反Frida/壳化/闪退） | Android/Linux Native 检测 | `native-reverse` |
+| `.so` / `.elf` / `.macho`（纯算法/无保护） | Linux/macOS 二进制 | `ida-reverse` 或 `radare2` |
+| `.js` / 网页 URL / 小程序 | Web JS | `ruyi-reverse`（默认）/ `mcp-js-reverse-playbook`（需 CDP 调试时） |
 | 任意二进制（仅需快速侦察） | 通用二进制 | `radare2` |
+| Android Native 反检测/完整性/Root | Native 安全分析 | `native-reverse` |
+
+**Web JS 子路由**（统一入口 + 能力模块组合）：
+- **所有 Web JS 逆向** → `ruyi-reverse` (7 模块 × 两级深度，按任务主动组合)
+  - Anti-Detect / Observe / Capture / Trace / Human-Sim / Debug / Export
+  - 每个模块有 L1 (轻量) 和 L2 (深度)，根据任务特征主动推荐——不等失败再升级
+  - 需 Python API → ruyi-reverse 内部回退 (`references/ruyipage-api.md`)
+  - 需 C++ trace → ruyi-reverse 内部回退 (`references/ruyitrace-cli.md`)
+  - 需 CDP 断点调试 -> ruyi-reverse Export 桥接：`ruyi_export_session` -> js-reverse-mcp
+- **已知需要 CDP 完整断点调试**（且无反检测需求）→ `mcp-js-reverse-playbook` (js-reverse-mcp)
+- **需要 HTTP/WebSocket 抓包数据分析** → `reqable_*` (reqable-mcp)：先确认 Reqable ≥2.20 已配置上报到 `127.0.0.1:18765/report`，再 `ingest_status` → `list_requests`/`search_requests`/`analyze_api`/`generate_code` 等 17 tools
+
+> ruyipage 和 ruyitrace 不再是独立 skill — 它们是 `ruyi-reverse` 内部能力模块的 L2 回退参考。
 
 混合目标（如 APK 含多个 .so）：先走主 skill 的侦察阶段，发现 native 层信号后切 `ida-reverse`。
 
@@ -103,7 +118,8 @@ description: |
 
 - **APK**: `decode.ps1`（不跳过 jadx+apktool） → 产出 package/java_files/smali_dirs/so_files
 - **二进制**: 字符串 + 导入表 + 段信息（`rabin2 -I/-z/-i` 或 `idapro_survey_binary`）
-- **Web JS**: `js-reverse_list_scripts` + `js-reverse_list_network_requests` + `js-reverse_search_in_sources`
+- **Web JS**: `ruyi_new_page`（默认）+ `ruyi_list_scripts` + `ruyi_list_network_requests` + `ruyi_search_in_sources`；需 CDP 调试时 `js-reverse_new_page`（T4 桥接）
+- **网络抓包分析**: `reqable_ingest_status` → `reqable_list_requests` / `reqable_search_requests` / `reqable_get_domains`（前提：Reqable 桌面端已抓包并推送到 18765）
 
 **产出**: `workspace.json` 中记录目标类型、架构、关键字符串/类/函数名列表、复杂度 marker。
 
@@ -118,6 +134,17 @@ description: |
 | 核心签名/加密在 .so 中 | L2（Java 层）+ L3（native 层） |
 | `.wasm` / `WebAssembly.instantiate` / VM 解释器 / 控制流平坦化 | L4 |
 | 反调试、反 Hook、反模拟器 | L3（需先中和保护） |
+
+**Web JS 工具选择：** 路由到 ruyi-reverse（统一编排器），按任务组合能力模块：
+
+| 任务需求 | 模块组合 | 说明 |
+|---------|---------|------|
+| 过检/侦察（默认路径） | Anti-Detect + Observe | ruyi-mcp |
+| 协议逆向（加密定位->复现） | Anti-Detect(L2) + Capture(L2) + Debug(L2) + Export(L2) | ruyi -> js-reverse 桥接 |
+| 指纹取证 | Anti-Detect(L2) + Observe(L1) + Trace(L2) | 主动推荐 C++ trace |
+| 验证码突破 | Anti-Detect(L2) + Human-Sim(L2) | ruyi 人类模拟 |
+| CDP 完整断点调试（无反检测） | `mcp-js-reverse-playbook` | 直接 CDP |
+| 抓包流量分析 | `reqable_*` | Reqable + reqable-mcp |
 
 ### 阶段 3：定向深挖
 
