@@ -74,3 +74,20 @@ tools/*.0
 *.pcap
 *.har
 ruyi-mcp/node_modules/
+
+# Additional large tools / binaries
+tools/First/
+tools/chromium/
+tools/debug.keystore
+tools/frida-gadget-*.so
+tools/hide-soinfo/
+tools/mingw64/
+tools/quickjs/
+tools/reqable-mcp/
+tools/rustup-init.exe
+tools/serena/
+tools/stealth-hook-engine/
+toolsFirst/
+
+# Claude session data (project-level)
+.claude/
