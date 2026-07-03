@@ -2,21 +2,15 @@
 
 逆向工程环境配置与技能仓库。为 Claude Code 提供 skills、MCP 服务、工具脚本。
 
-## 开发前必检
+## 任务前强制检查（每次任务启动必须过）
 
-每次开始任务前执行，否则不得动手：
+| # | 检查项 | 动作 |
+|---|--------|------|
+| 1 | **WebFetch 封禁** | 需要取 URL 内容？→ 禁止 WebFetch，走 `search-layer` / `content-extract` / `github-solution-research` / 浏览器方案 |
+| 2 | **Git 状态** | `git status --short --branch` |
+| 3 | **远端同步** | `git remote -v`；涉及 PR/远端时 `git fetch origin && git log --oneline origin/main..HEAD` |
 
-```powershell
-git status --short --branch
-git remote -v
-```
-
-涉及 PR / 远端操作时追加：
-
-```powershell
-git fetch origin
-git log --oneline origin/main..HEAD
-```
+> WebFetch 硬封禁：即使 URL 看起来可访问，也不得直接调用 WebFetch。优先用 `search-layer` (搜索)、`content-extract` (国内文章/Markdown)、`github-solution-research` (GitHub)、浏览器 MCP (需登录/JS 渲染)。**此规则优先于所有其他工具选择逻辑。**
 
 ## 核心约束
 
