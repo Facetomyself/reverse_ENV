@@ -178,6 +178,41 @@ git log --oneline origin/main..HEAD
 
 > 51job 等强反检测站点：先用 `ruyi-mcp` (Firefox/BiDi) 过检，必要时切 js-reverse-mcp `--cloak`。两者可通过 `ruyi_export_session` 桥接。
 
+### 反检测能力边界（指纹伪装）
+
+**注意区分：`ruyitrace` 是监控取证工具（被动记录页面查了什么指纹），不做伪装。** 反检测伪装由 `ruyipage smart_fingerprint` 和 `CloakBrowser` 承担。
+
+| 伪装维度 | ruyipage (Firefox/fpfile) | CloakBrowser (Chromium/C++) | 说明 |
+|---------|--------------------------|---------------------------|------|
+| navigator.webdriver | ✅ fpfile webdriver:0 | ✅ C++ 层清除 | |
+| Canvas 指纹 | ✅ 随机种子 | ✅ C++ patched | |
+| WebGL (12字段) | ✅ 22 个真实 GPU profile | ✅ C++ patched | RTX 4090→3050 / RX / Arc / UHD |
+| AudioContext | ❌ 不覆盖 | ✅ C++ patched | |
+| 字体枚举 | ✅ font_system | ✅ C++ 层控制 | |
+| 硬件并发 | ✅ 22 个真实值 | ✅ C++ 层控制 | |
+| 屏幕/窗口 | ✅ width/height + emulation | ✅ C++ 层控制 | |
+| WebRTC IP | ✅ public/private IP | ✅ C++ 层阻止泄露 | ruyi 防真实 IP 泄露 |
+| 时区/语言 | ✅ fpfile + BiDi 双层 | ✅ geoip 自动匹配 | |
+| 地理位置 | ✅ BiDi emulation | ✅ 代理 IP 匹配 | |
+| TLS 指纹 | ❌ Firefox 原生 TLS | ✅ 对齐真实 Chrome | **ruyi 碰不到** |
+| CDP 协议痕迹 | ❌ 不适用(BiDi无CDP) | ✅ C++ 层清除 | |
+| 网络时序 | ❌ 不覆盖 | ✅ C++ 层标准化 | |
+| 自动化标记 | ❌ 不覆盖 | ✅ 消除 Playwright 信号 | |
+| 语音合成 | ✅ speech.voices | ❌ 不覆盖 | |
+
+**路由决策（按检测深度）：**
+
+```
+页面 → 查 navigator/canvas/webgl? (JS 层检测)
+  ├─ 是 → ruyipage 22 profile 够了，无需 cloak
+  ├─ 查 TLS / CDP / 网络时序? (协议层检测)
+  │   └─ 是 → 必须 CloakBrowser --cloak
+  └─ 查 AudioContext / 自动化标记?
+      └─ 是 → 必须 CloakBrowser --cloak
+```
+
+> **经验规则**：90% 的国内站点（含 51job）检测在 JS 层，ruyipage 够用。遇到 ruyi 反复被拦时，分析 trace 判断是否协议层检测，再决定切 cloak。
+
 ## WebFetch 使用约束
 
 **禁止直接使用 WebFetch。** WebFetch 有结构性限制——不跟随跨域重定向、HTTP 强制升级 HTTPS、不支持认证/Cookie、国内站点常被封锁——项目内已有成熟替代：
