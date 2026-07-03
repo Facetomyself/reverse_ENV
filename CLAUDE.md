@@ -165,6 +165,19 @@ git log --oneline origin/main..HEAD
 
 **工具前缀隔离：** 同一浏览器 session 内不混用两个前缀的工具。跨工具协作通过 `ruyi_export_session` 显式桥接。
 
+## WebFetch 使用约束
+
+**禁止直接使用 WebFetch。** WebFetch 有结构性限制——不跟随跨域重定向、HTTP 强制升级 HTTPS、不支持认证/Cookie、国内站点常被封锁——项目内已有成熟替代：
+
+| 场景 | 走哪个 |
+|------|--------|
+| 搜索/查事实/找资料 | `search-layer`（四源并行 + 去重打分） |
+| 微信公众号/国内文章/需解析的 URL | `content-extract`（MinerU API） |
+| GitHub 代码/Issue/PR 深挖 | `github-solution-research` |
+| 需登录/Cookie/JS 渲染的页面 | `ruyi_*` / `js-reverse_*` 浏览器方案 |
+
+WebFetch 仅限以上工具均不可用时的最后 fallback，且结论须标注「来源: WebFetch，置信度低」。
+
 ## 已知坑点
 
 1. **idalib 孤儿进程** → `start.ps1` 用 `taskkill /F /T` 杀进程树。
