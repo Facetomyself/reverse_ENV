@@ -2,6 +2,22 @@
 
 逆向工程环境配置与技能仓库。为 Claude Code 提供 skills、MCP 服务、工具脚本。
 
+## 开发前必检
+
+每次开始任务前执行，否则不得动手：
+
+```powershell
+git status --short --branch
+git remote -v
+```
+
+涉及 PR / 远端操作时追加：
+
+```powershell
+git fetch origin
+git log --oneline origin/main..HEAD
+```
+
 ## 核心约束
 
 **所有 skill、MCP、Python venv、工具依赖均安装在 `D:\reverse_ENV\` 内，不得污染系统全局。**
@@ -222,3 +238,32 @@
 | Deepcon (user MCP) | `tools\node\npx.cmd -y deepcon-mcp` |
 
 > 完整清单见 `docs/工具与环境.md`
+
+## 提交前自检（硬门禁）
+
+```powershell
+git status --short
+git diff --stat
+git diff --check
+```
+
+- 提交信息须描述真实改动，不写 "update" / "fix"
+- 确认无临时文件、敏感数据、调试日志混入 diff
+- 涉及脚本/工具路径变更 → 同步 CLAUDE.md + skill 文档
+- 涉及 MCP 配置变更 → 同步 `.mcp.json`
+- 涉及用户 MCP 变更 → 同步 `~/.claude.json`
+
+## 大任务自动刷新
+
+满足以下任一条件时，**先更新本文件和相关规范，再写代码**：
+
+- 新增/移除 skill、MCP、工具
+- 任务跨 3 个及以上 `skill/` / `tools/` / `docs/` 顶层目录
+- 涉及工作流变更（如新增逆向阶段、新增平台支持）
+
+## 本文件维护规则
+
+- 路径变更必须同步更新；工具版本号变更必须同步更新
+- 目录不存在或命令不可用时，标注 `（待建）` 或 `（待验证）`，不得保留过期路径
+- 规范与真实仓库冲突时，以真实仓库为准，并立即更新本文件
+- 全局约束（搜索、治理、编码）在 `~/.claude/CLAUDE.md`，本文件引用而不重复
