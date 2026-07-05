@@ -1,7 +1,7 @@
 ---
 name: proxy-usage
 description: |
-  第三方代理统一入口 — 快代理 (HTTP/HTTPS) + Cliproxy (SOCKS5)。
+  第三方代理统一入口 — 快代理 (HTTP) + Cliproxy (HTTP, 端口 3010)。
   按使用链路组织: 场景→诊断→提取→验证→注入。供应商细节放在参考区，按需查阅。
   凭证统一走 .env，禁止硬编码。
 ---
@@ -27,7 +27,7 @@ description: |
 
 ```
 目标网站在国内?  → 快代理 (HTTP 代理，国内 IP)
-目标网站在海外?  → Cliproxy (SOCKS5，海外住宅 IP)
+目标网站在海外?  → Cliproxy (HTTP 代理，海外住宅 IP)
 需要固定 IP 长期持有? → 快代理 独享 / Cliproxy 静态 ISP
 需要每次换 IP (轮换)? → 快代理 隧道 / Cliproxy Rotating
 需要同 IP 保持 N 分钟? → Cliproxy Sticky (t-N) / 快代理私密(粘滞)
@@ -61,24 +61,21 @@ python "D:\reverse_ENV\skill\proxy-usage\scripts\cliproxy_test.py"
 ```
 
 **Cliproxy 网络前置 (大陆环境):**
-Cliprocy SOCKS5 端口 (`us.cliproxy.io:1080`, `sg.cliproxy.io:1080`) 从大陆直连被阻断。当前用 Clash Verge 将 `*.cliproxy.io` 流量路由到 HK 节点，由 HK 出口连 Cliproxy。拓扑:
+端口 3010 (HTTP 代理) 大陆直连可达。瓶颈不在网络层，在 IP 白名单: Cliproxy 要求连接来源 IP 在白名单中，大陆 IP 无法加入。当前用 Clash Verge 将 `*.cliproxy.io` 流量路由到 HK 节点，由 HK 出口 (可白名单) 连 Cliproxy。拓扑:
 
 ```
-PC(大陆) → Clash(TUN/系统代理) → HK 节点 → us.cliproxy.io:1080 → 目标
+PC(大陆) → Clash → HK 节点 → us.cliproxy.io:3010 (HTTP) → 目标
+              ↑ HK IP 可加入白名单
 ```
 
-> Clash 规则: `DOMAIN-SUFFIX,cliproxy.io,<HK节点名>`。Clash 开启后 Python 脚本直连即可，代码无需改动。
+> Clash 规则: `DOMAIN-SUFFIX,cliproxy.io,<HK节点名>`。Clash 开启后 Python/curl 代码无需改动，直连即通。
 
 ### 第三步: 验证
 
 ```powershell
-# HTTP 代理
+# HTTP 代理 (快代理 / Cliproxy 通用)
 python "D:\reverse_ENV\skill\proxy-usage\scripts\proxy_check.py" `
     --proxy "http://user:pass@ip:port"
-
-# SOCKS5 代理
-python "D:\reverse_ENV\skill\proxy-usage\scripts\proxy_check.py" `
-    --proxy "socks5h://user:pass@host:port"
 ```
 
 ### 第四步: 注入工具链
@@ -87,9 +84,9 @@ python "D:\reverse_ENV\skill\proxy-usage\scripts\proxy_check.py" `
 
 | 工具 | 怎么注入 |
 |------|---------|
-| `ruyi-mcp` 浏览器 | `ruyi_new_page(proxy="http://...")` 或 `proxy="socks5h://..."` |
+| `ruyi-mcp` 浏览器 | `ruyi_new_page(proxy="http://...")` |
 | Python `requests` | `requests.get(url, proxies={"http": proxy_url, "https": proxy_url})` |
-| `curl` | `curl -x "http://..."` 或 `curl -x "socks5h://..."` |
+| `curl` | `curl -x "http://user:pass@host:port"` |
 | `mitmproxy` (ldplayer 抓包) | `mitmdump --mode upstream:http://proxy_ip:port` |
 | `aiohttp` / `httpx` | `session.get(url, proxy=proxy_url)` / `Client(proxy=proxy_url)` |
 
@@ -169,7 +166,7 @@ proxy_url = f"http://{username}:{password}@{tunnel_host}:{tunnel_port}"
 
 ### Cliproxy
 
-SOCKS5 海外代理，按流量计费。
+HTTP 代理，海外住宅 IP，按流量计费。端口 **3010**，大陆直连可达 (仅 IP 白名单限制)。
 
 **核心机制: 用户名分段参数**
 
@@ -199,22 +196,22 @@ youruser-region-US-st-Texas-sid-sess1-t-30
 **连接:**
 
 ```python
-proxy_url = f"socks5h://{username}:{password}@{host}:{port}"
+proxy_url = f"http://{username}:{password}@{host}:{port}"
 # host: us.cliproxy.io (美) 或 sg.cliproxy.io (新)
-# port: 1080
-# socks5h: DNS 走代理 (逆向场景强制，避免 DNS 泄露)
+# port: 3010
+# 原生 HTTP 代理，requests/curl/ruyi 直接支持，无需额外依赖
 ```
 
 **网络前置 (大陆):**
-`*.cliproxy.io` TCP 端口从大陆直连被阻断，DNS 正常解析。当前通过 Clash Verge 将 Cliproxy 域名流量路由到 HK 节点:
+端口 3010 大陆直连可达。瓶颈是 IP 白名单 — 大陆 IP 无法加入。通过 Clash HK 节点中继:
 
 ```
-PC(大陆) → Clash → HK 节点 → us.cliproxy.io:1080 → 目标
+PC(大陆) → Clash → HK 节点 → us.cliproxy.io:3010 → 目标
 ```
 
-Clash 开启后 Python 脚本无需改动，直连即通。
+Clash 开启后代码无需改动，`http://user:pass@us.cliproxy.io:3010` 直连即通。
 
-**白名单模式:** 在后台将出口 IP (此处为 HK 节点的出口 IP) 加入白名单后，可省略账密。
+**白名单模式:** 在后台将 HK 出口 IP 加入白名单后，可省略账密，直接用 `http://host:3010`。
 
 **API 模式 (端口绑定):** 在 Web 面板生成 API URL → GET 请求触发绑定 → 该端口固定 IP。适合需要预先选好 IP 再操作的场景。
 
@@ -230,9 +227,9 @@ Clash 开启后 Python 脚本无需改动，直连即通。
 # 快代理 HTTP
 ruyi_new_page(url="https://目标", proxy="http://user:pass@ip:port")
 
-# Cliproxy SOCKS5
+# Cliproxy HTTP
 ruyi_new_page(url="https://目标",
-    proxy="socks5h://user-region-US-st-CA:pass@us.cliproxy.io:1080")
+    proxy="http://user-region-US-st-CA:pass@us.cliproxy.io:3010")
 ```
 
 ruyi-mcp 代理在 `ruyi_new_page` 时设置，启动后无法切换。多代理需求用多标签页。
@@ -246,10 +243,10 @@ import requests
 proxies = {"http": "http://user:pass@ip:port", "https": "http://user:pass@ip:port"}
 resp = requests.get("https://目标", proxies=proxies, timeout=15)
 
-# Cliproxy SOCKS5 — 需要: pip install 'requests[socks]'
+# Cliproxy HTTP
 proxies = {
-    "http": "socks5h://user-region-US-sid-sess1-t-30:pass@us.cliproxy.io:1080",
-    "https": "socks5h://user-region-US-sid-sess1-t-30:pass@us.cliproxy.io:1080",
+    "http": "http://user-region-US-sid-sess1-t-30:pass@us.cliproxy.io:3010",
+    "https": "http://user-region-US-sid-sess1-t-30:pass@us.cliproxy.io:3010",
 }
 resp = requests.get("https://目标", proxies=proxies, timeout=30)
 ```
@@ -262,8 +259,8 @@ resp = requests.get("https://目标", proxies=proxies, timeout=30)
 # HTTP 代理
 curl -x "http://user:pass@ip:port" "https://目标"
 
-# SOCKS5 — socks5h 让 DNS 也走代理
-curl -x "socks5h://user-region-US:pass@us.cliproxy.io:1080" "https://目标"
+# Cliproxy HTTP
+curl -x "http://user-region-US:pass@us.cliproxy.io:3010" "https://目标"
 ```
 
 ### aiohttp / httpx
@@ -339,7 +336,7 @@ python "...\cliproxy_test.py" --env $env_path
 | 代理连上但目标返回 403 | IP 被目标封禁 | 换 IP |
 | 代理返回 407 | 认证失败 | 检查账密/白名单配置 |
 | Sticky 模式 IP 变了 | 会话过期 | 加大 `t-N` 值 |
-| SOCKS5 报 `Missing dependencies` | 缺 PySocks | `pip install 'requests[socks]'` |
+| Cliproxy 返回 403 `forbidden ip=...` | 连接来源 IP 不在白名单 | 确认 Clash HK 节点开启；在 Cliproxy 后台将 HK 出口 IP 加入白名单 |
 | ruyi-mcp 代理不生效 | 浏览器已启动 | `ruyi_browser_quit` 后重新 `ruyi_new_page` |
 
 ### 禁止事项

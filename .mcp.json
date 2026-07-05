@@ -9,7 +9,7 @@
     },
     "jadx-ai-mcp": {
       "command": "D:\\reverse_ENV\\.venv\\Scripts\\python.exe",
-      "args": ["D:\\reverse_ENV\\tools\\jadx-mcp-server\\jadx_mcp_server.py"],
+      "args": ["D:\\reverse_ENV\\mcp\\jadx-mcp-server\\jadx_mcp_server.py"],
       "env": {
         "JAVA_HOME": "D:\\reverse_ENV\\tools\\jdk"
       }
@@ -20,7 +20,7 @@
     },
     "ruyi-mcp": {
       "command": "D:\\reverse_ENV\\tools\\node\\node.exe",
-      "args": ["D:\\reverse_ENV\\ruyi-mcp\\build\\src\\index.js"]
+      "args": ["D:\\reverse_ENV\\mcp\\ruyi-mcp\\build\\src\\index.js"]
     },
     "first-mcp": {
       "url": "http://127.0.0.1:4554/sse"

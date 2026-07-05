@@ -28,7 +28,7 @@ param(
 
     # Shared
     [string]$NodeExe = "D:\reverse_ENV\tools\node\node.exe",
-    [string]$JsReverseMcp = "D:\reverse_ENV\js-reverse-mcp\node_modules\js-reverse-mcp\build\src\index.js"
+    [string]$JsReverseMcp = "D:\reverse_ENV\mcp\js-reverse-mcp\node_modules\js-reverse-mcp\build\src\index.js"
 )
 
 $ErrorActionPreference = "Stop"

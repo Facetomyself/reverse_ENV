@@ -4,21 +4,20 @@ __pycache__/
 *.pyc
 *.egg-info/
 
-# Node
-js-reverse-mcp/node_modules/
+# Node (MCP)
+mcp/js-reverse-mcp/node_modules/
+mcp/ruyi-mcp/node_modules/
 
 # IDE
 .vscode/
 .idea/
-
-# article
-article/
 
 # OS
 Thumbs.db
 .DS_Store
 
 # Temp / cache
+temp/
 *.tmp
 *.log
 
@@ -48,6 +47,9 @@ tools/jdk/
 tools/node/
 tools/jadx/
 tools/radare2/
+tools/go/
+tools/vineflower/
+tools/dex2jar/
 tools/adb/apksigner.jar
 tools/adb/zipalign.exe
 tools/adb/libwinpthread-1.dll
@@ -73,8 +75,6 @@ tools/*.0
 *.flow
 *.pcap
 *.har
-ruyi-mcp/node_modules/
-
 # Additional large tools / binaries
 tools/First/
 tools/chromium/*
@@ -85,11 +85,10 @@ tools/hide-soinfo/
 tools/mingw64/
 tools/quickjs/
 tools/reqable-mcp/
+mcp/reqable-mcp/
 tools/rustup-init.exe
 tools/serena/
 tools/stealth-hook-engine/
-toolsFirst/
-
 # Claude session data (project-level)
 .claude/
 

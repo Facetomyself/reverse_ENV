@@ -90,7 +90,7 @@ description: |
 
 | 特征 | 判定 | 主 skill |
 |------|------|---------|
-| `.apk` / `.aab` / Android 包名 | Android APK | `apk-reverse` |
+| `.apk` / `.aab` / Android 包名 | Android APK | `apk-reverse`（先跑 `fingerprint.sh` 判断是否为 Flutter/RN/Cordova/Xamarin） |
 | `.exe` / `.dll` / `.sys` | Windows PE | `ida-reverse` |
 | `.so` / `.elf`（反调试/反Frida/壳化/闪退） | Android/Linux Native 检测 | `native-reverse` |
 | `.so` / `.elf` / `.macho`（纯算法/无保护） | Linux/macOS 二进制 | `ida-reverse` 或 `radare2` |
@@ -116,7 +116,7 @@ description: |
 
 委托给对应 skill 的侦察阶段：
 
-- **APK**: `decode.ps1`（不跳过 jadx+apktool） → 产出 package/java_files/smali_dirs/so_files
+- **APK**: 先 `fingerprint.sh` 做 Phase 0 指纹（框架/混淆度/HTTP栈/下一步建议）；确认 Native Android 后再 `decode.ps1`
 - **二进制**: 字符串 + 导入表 + 段信息（`rabin2 -I/-z/-i` 或 `idapro_survey_binary`）
 - **Web JS**: `ruyi_new_page`（默认）+ `ruyi_list_scripts` + `ruyi_list_network_requests` + `ruyi_search_in_sources`；需 CDP 调试时 `js-reverse_new_page`（T4 桥接）
 - **网络抓包分析**: `reqable_ingest_status` → `reqable_list_requests` / `reqable_search_requests` / `reqable_get_domains`（前提：Reqable 桌面端已抓包并推送到 18765）

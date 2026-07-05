@@ -3,7 +3,7 @@
 
 用法:
     python proxy_check.py --proxy "http://user:pass@1.2.3.4:5678"
-    python proxy_check.py --proxy "socks5://user:pass@us.cliproxy.io:1080"
+    python proxy_check.py --proxy "socks5://user:pass@us.cliproxy.io:3010"
     python proxy_check.py --proxy "http://1.2.3.4:5678" --target "https://api.example.com"
     python proxy_check.py --file proxies.txt --check
 

@@ -16,12 +16,12 @@ description: |
 
 ## 前置条件
 
-使用本 skill 前，必须先通过 `mcp-js-reverse-playbook` 完成：
+使用本 skill 前，必须先通过 `mcp-js-reverse-playbook` 或 `ruyi-reverse` [Export] 模块完成：
 - 目标请求和参数已定位
 - 签名函数/加密逻辑已确认
 - 运行时依赖已识别
 
-如果还没完成这些，先走 `mcp-js-reverse-playbook`。
+如果还没完成这些，先走 `mcp-js-reverse-playbook` 或 `ruyi-reverse`（两者都能导出 session + 签名定位结果）。
 
 ## 目标家族分类
 

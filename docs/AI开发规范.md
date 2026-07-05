@@ -59,8 +59,9 @@ git status --short --branch   # 若已初始化 git
 
 本仓库为**逆向工程环境配置与技能仓库**，核心目录：
 
-- `skill/`：Claude Code skill 定义（5 个 skill）
-- `tools/`：便携工具链（JDK, jadx, apktool, radare2, adb, node, jadx-mcp-server）
+- `skill/`：Claude Code skill 定义（12 个 skill）
+- `tools/`：便携工具链（JDK, jadx, apktool, radare2, adb, node, vineflower, dex2jar 等）
+- `mcp/`：MCP 服务源码（js-reverse-mcp, ruyi-mcp, jadx-mcp-server, reqable-mcp），清单见 `mcp/README.md`
 - `resource/`：资源文件（IDA Pro 便携版 + 汉化 + 许可补丁）
 - `.venv/`：Python 虚拟环境（所有 MCP 服务和 Python 包）
 - `.mcp.json`：项目级 MCP 服务配置
@@ -68,9 +69,10 @@ git status --short --branch   # 若已初始化 git
 
 ### 1.1 MCP 主线 / 脚本兜底
 
-- **MCP 工具（stdio）是主线**：ida-multi-mcp / jadx-ai-mcp / js-reverse-mcp
-- **PowerShell 脚本是兜底**：当 MCP 有 schema bug 或需要特殊绕过时才走脚本
-- 新增 MCP 服务时，同步更新 `.mcp.json` 和 CLAUDE.md
+- **MCP 工具（stdio）是主线**：ida-multi-mcp / jadx-ai-mcp / js-reverse-mcp / ruyi-mcp / reqable
+- **PowerShell/Bash 脚本是兜底**：当 MCP 有 schema bug 或需要特殊绕过时才走脚本
+- **MCP 源码统一在 `mcp/` 下**，不得散落根目录或 `tools/`
+- 新增 MCP 服务时，同步更新 `.mcp.json` + `mcp/README.md` + `docs/MCP服务详情.md` + CLAUDE.md
 - 新增 skill 时，同步更新 CLAUDE.md 的 skill 表
 
 ### 1.2 模块边界

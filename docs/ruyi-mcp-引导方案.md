@@ -284,8 +284,8 @@ export class PythonBridge {
 ## 3. 项目初始化
 
 ```bash
-mkdir D:\reverse_ENV\ruyi-mcp
-cd D:\reverse_ENV\ruyi-mcp
+mkdir D:\reverse_ENV\mcp\ruyi-mcp
+cd D:\reverse_ENV\mcp\ruyi-mcp
 
 # 初始化 Node.js 项目
 D:\reverse_ENV\tools\node\node.exe -e "

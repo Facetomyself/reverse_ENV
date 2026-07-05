@@ -1,6 +1,6 @@
 # MCP 服务详情
 
-所有 MCP 服务通过 `D:\reverse_ENV\.mcp.json` 注册，stdio 模式由 Claude Code 自动管理。
+所有 MCP 服务通过 `D:\reverse_ENV\.mcp.json` 注册，stdio 模式由 Claude Code 自动管理。MCP 源码统一在 `mcp/` 目录下，清单见 `mcp/README.md`。
 
 ## 服务总览
 
@@ -35,7 +35,7 @@ Claude Code 拉起 ida-multi-mcp (stdio)
 
 - **架构**: JADX GUI 插件 (Java, 端口 8650) + Python MCP 服务端 (stdio)
 - **插件 JAR**: `tools\jadx\plugins\jadx-ai-mcp-6.4.0.jar`
-- **服务端**: `tools\jadx-mcp-server\jadx_mcp_server.py`
+- **服务端**: `mcp\jadx-mcp-server\jadx_mcp_server.py`
 - **依赖**: fastmcp, httpx, requests（已安装在 venv）
 
 ### 工作流
@@ -52,7 +52,7 @@ Claude Code 拉起 ida-multi-mcp (stdio)
 
 ## js-reverse-mcp
 
-- **入口**: `tools\node\node.exe js-reverse-mcp\node_modules\js-reverse-mcp\build\src\index.js --cloak`
+- **入口**: `tools\node\node.exe mcp\js-reverse-mcp\node_modules\js-reverse-mcp\build\src\index.js --cloak`
 - **依赖**: CloakBrowser（反检测 Chromium，首次自动下载 ~200MB，已缓存）
 - **备选**: 手动 Chromium 152 (`tools\chromium\chrome-win\chrome.exe`) + `--browserUrl http://127.0.0.1:9222`
 - **关键选项**:
@@ -68,7 +68,7 @@ Claude Code 拉起 ida-multi-mcp (stdio)
 
 ## ruyi-mcp
 
-- **入口**: `tools\node\node.exe ruyi-mcp\build\src\index.js`
+- **入口**: `tools\node\node.exe mcp\ruyi-mcp\build\src\index.js`
 - **依赖**: ruyipage Firefox 151.0a1（`C:\Users\mengma\AppData\Local\ruyipage\browsers\`）
 - **架构**: Node.js MCP Server → Python 子进程 (JSON-RPC over stdio) → ruyipage (WebDriver BiDi)
 - **浏览器**: Firefox 151.0a1 定制版（22 维指纹伪装 + 人类行为模拟 + C++ DOM Trace）
@@ -154,16 +154,16 @@ Claude Code ← stdio ← FastMCP ← reqable_* 工具查询
     },
     "jadx-ai-mcp": {
       "command": "D:\\reverse_ENV\\.venv\\Scripts\\python.exe",
-      "args": ["D:\\reverse_ENV\\tools\\jadx-mcp-server\\jadx_mcp_server.py"],
+      "args": ["D:\\reverse_ENV\\mcp\\jadx-mcp-server\\jadx_mcp_server.py"],
       "env": { "JAVA_HOME": "D:\\reverse_ENV\\tools\\jdk" }
     },
     "js-reverse-mcp": {
       "command": "D:\\reverse_ENV\\tools\\node\\node.exe",
-      "args": ["D:\\reverse_ENV\\js-reverse-mcp\\node_modules\\js-reverse-mcp\\build\\src\\index.js", "--cloak"]
+      "args": ["D:\\reverse_ENV\\mcp\\js-reverse-mcp\\node_modules\\js-reverse-mcp\\build\\src\\index.js", "--cloak"]
     },
     "ruyi-mcp": {
       "command": "D:\\reverse_ENV\\tools\\node\\node.exe",
-      "args": ["D:\\reverse_ENV\\ruyi-mcp\\build\\src\\index.js"]
+      "args": ["D:\\reverse_ENV\\mcp\\ruyi-mcp\\build\\src\\index.js"]
     }
   }
 }
@@ -173,5 +173,6 @@ Claude Code ← stdio ← FastMCP ← reqable_* 工具查询
 
 必须同步：
 1. 更新 `.mcp.json`
-2. 更新本文档
-3. 更新 `CLAUDE.md` 的 MCP 前缀速查表
+2. 更新 `mcp/README.md` 服务清单
+3. 更新本文档
+4. 更新 `CLAUDE.md` 的 MCP 前缀速查表 + 工具速查表
