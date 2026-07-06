@@ -24,7 +24,8 @@
 
 - 项目 MCP: `.mcp.json` (项目根，项目级可用声明)
 - Claude 全局 MCP / skill: `~/.claude.json` + `~/.claude/skills/` (跨项目，含 `search-layer` / `content-extract` 等全局分层)
-- Codex 用户 MCP: `~/.codex/config.toml` (默认冷启动配置)
+- Codex 项目 MCP: `.codex/config.toml` (reverse_ENV 项目启动配置)
+- Codex 用户配置: `~/.codex/config.toml` (provider、features、plugins、trust 等个人默认；不放 `D:\reverse_ENV` 专属 MCP)
 
 `jadx-ai-mcp`、`js-reverse-mcp`、`reqable`、`first-mcp` 都依赖额外前置条件，默认不放进自动初始化清单；需要时再临时加入配置。
 
@@ -32,8 +33,8 @@
 
 ## Claude → Codex 迁移约束
 
-1. `.mcp.json` 维护项目级可用 MCP；`~/.codex/config.toml` 维护 Codex 用户级默认启动 MCP。迁移时禁止简单镜像复制。
-2. 默认启动清单只放“冷启动稳定项”；依赖 GUI、浏览器端口、本地 SSE、桌面客户端上报链的服务统一降级为按需配置。
+1. `.mcp.json` 维护项目级可用 MCP；`.codex/config.toml` 维护 Codex 项目级启动 MCP；`~/.codex/config.toml` 维护 Codex 用户级个人默认。迁移时禁止简单镜像复制到全局层。
+2. 项目启动清单只放“冷启动稳定项”；依赖 GUI、浏览器端口、本地 SSE、桌面客户端上报链的服务统一降级为按需配置。
 3. 规范名以项目实现为准：`js-reverse-mcp` 是仓库规范名，文档与配置示例统一使用这一名字。
 4. 迁移后至少做两类验证：默认 MCP 的真实工具调用验证、按需 MCP 的前置条件验证。
 
@@ -42,7 +43,7 @@
 1. 在 `mcp/` 下创建子目录，放入源码
 2. 判断该服务属于“默认冷启动”还是“按需启用”
 3. 在 `.mcp.json` 的 `mcpServers` 中添加项目级配置段
-4. 如需 Codex 默认启用，再同步 `~/.codex/config.toml`
+4. 如需 Codex 在本项目启用，同步 `.codex/config.toml`；只有全局 MCP 才同步 `~/.codex/config.toml`
 5. 在 `CLAUDE.md` / `AGENTS.md` 的 MCP 前缀表中添加工具前缀
 6. 更新 `docs/MCP服务详情.md` 添加服务说明、前置条件、验证方式
 7. 更新本文件的「MCP 服务清单」表

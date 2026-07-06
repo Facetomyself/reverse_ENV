@@ -17,9 +17,12 @@
 
 **所有 skill、MCP、Python venv、工具依赖均安装在 `D:\reverse_ENV\` 内，不得污染系统全局。**
 
+- 项目 skill 源目录: `skill\<name>\`；Codex repo-scope 发现入口: `.agents\skills\<name>\` 薄封装。
+- `.agents\skills\` 只保留 frontmatter 与源 skill 路由说明，不复制脚本/参考资料/流程正文；真实维护仍在 `skill\<name>\`。
+- `.agents\skills\<name>\SKILL.md` 必须与 `skill\<name>\SKILL.md` 一一对应，只允许指向源 skill；新增/删除/重命名 skill 时两侧同步。
 - venv: `.venv\` ｜ JDK: `tools\jdk\` ｜ Node: `tools\node\`
 - NDK r29: `tools\android-ndk\` ｜ Rust: `%USERPROFILE%\.cargo\`
-- IDA Pro 9.3: `resource\portable_win\` ｜ MCP 配置: `.mcp.json` + `~/.codex/config.toml`（Codex）+ `~/.claude.json`（Claude 全局）
+- IDA Pro 9.3: `resource\portable_win\` ｜ MCP 配置: `.mcp.json` + `.codex\config.toml`（Codex 项目层）+ `~/.codex/config.toml`（Codex 用户默认）+ `~/.claude.json`（Claude 全局）
 - **所有逆向项目在 `workspace\<项目名>\` 下起新文件夹**。产出物均落地到对应项目目录。
 - **待分析二进制文件**（`.dll`, `.so`, `.exe`, `.bin` 等）**必须先放入 `workspace\<项目名>\`**，再打开 IDA/radare2。禁止将二进制文件直接放在 `workspace\` 根目录。
 - **IDA 数据库文件**（`.id0`, `.id1`, `.id2`, `.nam`, `.til`, `.i64`）由 IDA 在二进制文件所在目录自动生成。确保二进制文件在项目子目录内，即可避免 IDA 产物污染根目录。
@@ -34,7 +37,7 @@
 **操作纪律：**
 1. **不得凭记忆** — 修改文件前 Read 实际内容，不基于摘要操作。
 2. **先确认、再动手** — 确认当前目录、文件存在、工具可用。
-3. **改动闭环** — 改脚本 → 同步 CLAUDE.md + AGENTS.md；改工具路径 → 同步 skill 文档；加项目 MCP → 同步 `.mcp.json`；加 Codex 默认 MCP → 同步 `~/.codex/config.toml`；加 Claude 全局 MCP → 同步 `~/.claude.json`。
+3. **改动闭环** — 改脚本 → 同步 CLAUDE.md + AGENTS.md；改工具路径 → 同步 skill 文档；加项目 MCP → 同步 `.mcp.json` + `.codex/config.toml`；加 Codex 全局 MCP → 同步 `~/.codex/config.toml`；加 Claude 全局 MCP → 同步 `~/.claude.json`。
 4. **禁止猜测** — 工具安装、命令执行必须有真实输出为证。
 
 **编码：**
@@ -53,7 +56,7 @@
 13. **不得假装** — 不对 L4 目标声称"已完整复现"。
 
 **修改闭环：**
-14. 自检：CLAUDE.md/AGENTS.md 路径一致？`.mcp.json` / `~/.codex/config.toml` / `~/.claude.json` 合法？临时文件已清理？敏感数据已脱敏？
+14. 自检：CLAUDE.md/AGENTS.md 路径一致？`.mcp.json` / `.codex/config.toml` / `~/.codex/config.toml` / `~/.claude.json` 合法？临时文件已清理？敏感数据已脱敏？
 
 ## 仓库入口
 
@@ -63,6 +66,7 @@
 | 工具版本与路径 | `tools/README.md` + `docs/工具与环境.md` |
 | MCP 服务配置详情 | `mcp/README.md` + `docs/MCP服务详情.md` |
 | Skill 清单 | `skill/README.md` |
+| Codex repo-scope skill 入口 | `.agents/skills/README.md` |
 | 工作流与深度等级 | `docs/逆向工作流详解.md` |
 | Web 逆向架构分析 | `docs/Web逆向架构分析.md` |
 | ruyi-mcp 引导方案 | `docs/ruyi-mcp-引导方案.md` |
@@ -135,8 +139,8 @@
 
 ### Claude → Codex MCP 迁移规则
 
-1. `.mcp.json` 是**项目级声明**，`~/.codex/config.toml` 是 **Codex 用户级启动配置**。迁移时不得把项目级可用清单直接提升为 Codex 默认冷启动清单。
-2. 默认冷启动只保留无额外前置条件、可在进入项目时立即握手成功的 MCP；依赖 GUI、浏览器调试端口、本地 SSE、桌面客户端上报链的 MCP 一律改为按需启用。
+1. `.mcp.json` 是**项目级可用声明**，`.codex/config.toml` 是 **Codex 项目级启动配置**，`~/.codex/config.toml` 是 **Codex 用户级个人默认**。迁移时不得把项目级可用清单直接提升为 Codex 全局冷启动清单。
+2. 项目冷启动只保留无额外前置条件、可在进入项目时立即握手成功的 MCP；依赖 GUI、浏览器调试端口、本地 SSE、桌面客户端上报链的 MCP 一律改为按需启用。
 3. 项目规范名优先。Web CDP 调试 MCP 的规范名统一为 `js-reverse-mcp`；如 Codex 侧实验过其他包名，也不得反向污染项目文档与项目配置。
 4. 迁移完成的判定标准不是“配置能被加载”，而是“默认冷启动无噪音 + 至少一个默认 MCP 能真实调用成功 + 按需 MCP 的前置条件和验证步骤已写清楚”。
 
@@ -147,7 +151,7 @@
 | 规则 | 说明 |
 |------|------|
 | 源码归属 | MCP 源码/项目必须在 `mcp/` 下，不得散落根目录或 `tools/` |
-| 配置同步 | 新增/变更 MCP 路径时，同步更新 `.mcp.json` + `~/.codex/config.toml`（如需 Codex 默认启用）+ `CLAUDE.md` + `AGENTS.md` + `mcp/README.md` + `docs/MCP服务详情.md` |
+| 配置同步 | 新增/变更项目 MCP 路径时，同步更新 `.mcp.json` + `.codex/config.toml` + `CLAUDE.md` + `AGENTS.md` + `mcp/README.md` + `docs/MCP服务详情.md`；只有全局 MCP 才同步 `~/.codex/config.toml` |
 | pip 管理标注 | pip 安装的 MCP 在 `mcp/README.md` 中标注包名和 venv 位置 |
 | 硬编码路径 | MCP 启动脚本（如 `start-js-reverse.ps1`）中的路径必须使用 `mcp/` 前缀 |
 
@@ -357,7 +361,7 @@ git diff --check
 - 提交信息须描述真实改动，不写 "update" / "fix"
 - 确认无临时文件、敏感数据、调试日志混入 diff
 - 涉及脚本/工具路径变更 → 同步 CLAUDE.md + AGENTS.md + skill 文档
-- 涉及 MCP 配置变更 → 同步 `.mcp.json`；如需 Codex 默认启用，同步 `~/.codex/config.toml`
+- 涉及项目 MCP 配置变更 → 同步 `.mcp.json` + `.codex/config.toml`；涉及 Codex 全局 MCP 再同步 `~/.codex/config.toml`
 - 涉及 Claude 全局 MCP 变更 → 同步 `~/.claude.json`
 
 ## 大任务自动刷新

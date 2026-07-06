@@ -1,12 +1,13 @@
 # MCP 服务详情
 
-项目级 MCP 服务通过 `D:\reverse_ENV\.mcp.json` 声明，stdio 模式由 AI client 按配置拉起。Codex 用户级默认启动配置位于 `~/.codex/config.toml`，Claude 全局 MCP 位于 `~/.claude.json`。MCP 源码统一在 `mcp/` 目录下，清单见 `mcp/README.md`。
+项目级 MCP 服务通过 `D:\reverse_ENV\.mcp.json` 声明，Codex 项目级启动配置位于 `D:\reverse_ENV\.codex\config.toml`，stdio 模式由 AI client 按配置拉起。Codex 用户级 `~/.codex/config.toml` 只保留 provider、features、plugins、trust 等个人默认；Claude 全局 MCP 位于 `~/.claude.json`。MCP 源码统一在 `mcp/` 目录下，清单见 `mcp/README.md`。
 
 ## Claude → Codex 正式迁移规则
 
 1. **区分配置层级**
    - `.mcp.json`：项目级可用 MCP 声明
-   - `~/.codex/config.toml`：Codex 用户级默认启动配置
+   - `.codex/config.toml`：Codex 项目级启动配置
+   - `~/.codex/config.toml`：Codex 用户级个人默认，不放 `D:\reverse_ENV` 专属 MCP
    - `~/.claude.json`：Claude 全局 MCP 配置
    - `search-layer` / `content-extract`：全局搜索/提取分级策略，不写入项目 `.mcp.json`
    - Codex `search-layer`：本地 skill 副本位于 `~/.codex/skills/search-layer`，已通过 `search.py --mode fast` smoke test
@@ -200,7 +201,7 @@ Claude Code ← stdio ← FastMCP ← reqable_* 工具查询
 }
 ```
 
-## Codex 默认启动配置建议
+## Codex 项目启动配置
 
 ```toml
 [mcp_servers.ida-multi-mcp]
@@ -226,8 +227,8 @@ args = ["D:\\reverse_ENV\\mcp\\ruyi-mcp\\build\\src\\index.js"]
 
 ## 迁移后验证
 
-1. 启动 Codex，确认默认 MCP 无握手报错。
-2. 验证默认冷启动 MCP：
+1. 在 `D:\reverse_ENV` 启动 Codex，确认项目 MCP 无握手报错。
+2. 验证项目冷启动 MCP：
    - `ida-multi-mcp`：至少完成一次 `idalib_open` + `survey_binary` 或同等级真实调用
    - `ruyi-mcp`：至少完成一次 `ruyi_new_page` 或同等级真实调用
 3. 验证按需 MCP：
@@ -238,7 +239,7 @@ args = ["D:\\reverse_ENV\\mcp\\ruyi-mcp\\build\\src\\index.js"]
 
 必须同步：
 1. 更新 `.mcp.json`
-2. 如需 Codex 默认冷启动，更新 `~/.codex/config.toml`
+2. 如需 Codex 在 reverse_ENV 项目冷启动，更新 `.codex/config.toml`
 3. 如属 Claude 全局 MCP，更新 `~/.claude.json` 并在项目文档标明“全局分层，不进项目 `.mcp.json`”
 4. 更新 `mcp/README.md` 服务清单
 5. 更新本文档，写清前置条件、启用方式、验证方式

@@ -1,6 +1,8 @@
 # Skills
 
-Claude Code skill 集合，每个 skill 一个子目录，包含 `SKILL.md` + `scripts/` + `references/`。
+逆向项目 skill 源目录。每个 skill 一个子目录，包含 `SKILL.md` + `scripts/` + `references/`。
+
+Codex 的官方 repo-scope skill 发现入口在 `.agents/skills/`。本仓库采用薄封装策略：`.agents/skills/<name>/SKILL.md` 只负责让 Codex 发现 skill，并要求读取这里对应的 `skill/<name>/SKILL.md` 作为唯一源。
 
 ## Skill 清单
 
@@ -31,6 +33,7 @@ skill/<name>/
 
 ## 维护规则
 
-- 新增 skill 后同步更新本 README + `CLAUDE.md` Skill 速查表
+- 新增 skill 后同步更新本 README + `CLAUDE.md` / `AGENTS.md` Skill 速查表 + `.agents/skills/` 薄入口
 - 脚本路径变更后同步更新 `CLAUDE.md` 脚本速查表 + `docs/脚本参考.md`
 - 每个 SKILL.md 必须有 YAML frontmatter（name + description）
+- `.agents/skills/` 不复制实现细节；若入口描述与源 skill 冲突，以 `skill/<name>/SKILL.md` 为准并修正入口

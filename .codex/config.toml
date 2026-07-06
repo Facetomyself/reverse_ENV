@@ -1,0 +1,45 @@
+# reverse_ENV project-scoped Codex configuration.
+# Keep reverse-engineering MCP servers here instead of user-level config so other
+# Codex projects do not inherit D:\reverse_ENV-specific tool startup.
+
+# IDA Pro reverse engineering through ida-multi-mcp.
+[mcp_servers.ida-multi-mcp]
+command = "D:\\reverse_ENV\\.venv\\Scripts\\python.exe"
+args = ["-m", "ida_multi_mcp"]
+
+[mcp_servers.ida-multi-mcp.env]
+IDADIR = "D:\\reverse_ENV\\resource\\portable_win"
+
+# ruyi-mcp: Firefox/BiDi anti-detection, fingerprinting, trace, and Web RE flow.
+[mcp_servers.ruyi-mcp]
+command = "D:\\reverse_ENV\\tools\\node\\node.exe"
+args = ["D:\\reverse_ENV\\mcp\\ruyi-mcp\\build\\src\\index.js"]
+
+# On-demand MCPs stay disabled by default. Enable only when the prerequisite GUI,
+# browser debugging port, SSE endpoint, or desktop client is already running.
+
+# jadx APK reverse engineering. Requires jadx GUI with the target APK loaded.
+# [mcp_servers.jadx-ai-mcp]
+# enabled = false
+# command = "D:\\reverse_ENV\\.venv\\Scripts\\python.exe"
+# args = ["D:\\reverse_ENV\\mcp\\jadx-mcp-server\\jadx_mcp_server.py"]
+#
+# [mcp_servers.jadx-ai-mcp.env]
+# JAVA_HOME = "D:\\reverse_ENV\\tools\\jdk"
+
+# JS reverse debugging through the project wrapper.
+# [mcp_servers.js-reverse-mcp]
+# enabled = false
+# command = "powershell"
+# args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "D:\\reverse_ENV\\tools\\chromium\\start-js-reverse.ps1"]
+
+# First WeChat Mini Program debugging. Requires First GUI / SSE service.
+# [mcp_servers.first-mcp]
+# enabled = false
+# url = "http://127.0.0.1:4554/sse"
+
+# Reqable capture query. Requires reqable-mcp runtime/client health.
+# [mcp_servers.reqable]
+# enabled = false
+# command = "D:\\reverse_ENV\\.venv\\Scripts\\reqable-mcp.exe"
+# args = ["mcp"]
