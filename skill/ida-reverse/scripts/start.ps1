@@ -4,8 +4,8 @@ Verify IDA Pro MCP environment (venv, idalib, ida-multi-mcp)
 
 .DESCRIPTION
 In ida-multi-mcp v0.1.0+, the MCP server is stdio-based and managed
-by Claude Code (launched via .mcp.json). This script verifies that
-the environment is correctly set up and idalib is functional.
+by the MCP client (launched via .mcp.json / Codex config). This script
+verifies that the environment is correctly set up and idalib is functional.
 
 Usage: run without parameters
 #>
@@ -47,7 +47,7 @@ if ($ok) {
 if ($ok) {
     $check = & $VenvPython -c "import idapro; print(idapro.get_library_version())" 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Output "WARN:idapro_import_failed:$check"
+        Write-Output "WARN:ida_pro_module_import_failed:$check"
         Write-Output "HINT:run: pip install %IDADIR%\idalib\python\idapro-*.whl"
         Write-Output "HINT:run: python %IDADIR%\idalib\python\py-activate-idalib.py -d %IDADIR%"
     } else {
@@ -64,7 +64,9 @@ if (-not (Test-Path $McpJson)) {
 }
 
 # 6. Clean up stale idalib worker processes from previous sessions
-$stale = Get-Process -Name "python" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -match "idalib_worker" }
+$stale = Get-Process -Name "python" -ErrorAction SilentlyContinue | Where-Object {
+    $_.Path -eq $VenvPython -and $_.CommandLine -match "idalib_worker"
+}
 if ($stale) {
     Write-Output "INFO:stale_workers:$($stale.Count)"
     $stale | ForEach-Object { taskkill /F /T /PID $_.Id 2>$null | Out-Null }
@@ -73,8 +75,8 @@ if ($stale) {
 # Summary
 if ($ok) {
     Write-Output "READY:ida-multi-mcp environment verified"
-    Write-Output "NOTE:MCP server is stdio-managed by Claude Code via .mcp.json"
-    Write-Output "NOTE:Use idalib_open MCP tool to open files (no need for HTTP scripts)"
+    Write-Output "NOTE:MCP server is stdio-managed by the client via .mcp.json / Codex config"
+    Write-Output "NOTE:Use idalib_open MCP tool to open files; worker HTTP is internal implementation detail"
 } else {
     Write-Output "ERR:environment_check_failed"
 }

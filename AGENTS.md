@@ -124,8 +124,8 @@
 
 | 前缀 | 服务 | 用途 |
 |------|------|------|
-| `idapro_*` | ida-multi-mcp | 反编译/反汇编/xref/patch/类型/栈帧 (~72 tools) |
-| `idalib_*` | ida-multi-mcp | headless 会话管理 (open/close/list) |
+| `survey_binary` 等 | ida-multi-mcp | IDA proxied tools：反编译/反汇编/xref/patch/类型/栈帧 (44 tools，均需 `instance_id`) |
+| `idalib_*` | ida-multi-mcp | headless 会话管理 (open/close/list/status) |
 | `jadx_*` | jadx-ai-mcp | APK 类/方法搜索/反编译/xref |
 | `js-reverse_*` | js-reverse-mcp | JS 逆向调试 — 断点/脚本/网络/运行时 (~22 tools) |
 | `ruyi_*` | ruyi-mcp | Firefox/BiDi 全链路增强 — 反检测/指纹/人类模拟/trace/JS逆向 (56 tools) |
@@ -198,8 +198,8 @@
 
 ## 已知坑点
 
-1. **idalib 孤儿进程** → `start.ps1` 用 `taskkill /F /T` 杀进程树。
-2. **System32 文件无权限** → `open.ps1` 自动复制到 `%TEMP%\opencode\`。
+1. **idalib 孤儿进程** → `start.ps1` 只清理当前 venv 下的旧 `idalib_worker` 进程树。
+2. **System32 文件无权限 / 同名旧 IDA 库** → `open.ps1` 自动复制到 `%TEMP%\opencode\`；默认不删除 `.i64` / `.id*`。
 3. **IDA 许可单实例** → GUI 和 headless 互斥，跑 headless 前关 GUI。
 4. **jadx-ai-mcp 需先开 GUI** → `tools\jadx-gui.cmd` 启动并加载 APK 后 MCP 才可用。
 5. **ruyi-mcp proxy 需在 launch 时设置** → 启动后无法切换代理。
@@ -225,7 +225,7 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | APK | `init-ldplayer-re.ps1` | LDPlayer RE 模拟器环境一键初始化 |
 | APK | `dex-dump.js` | Frida DEX 内存 Dump (三种策略抗加固壳) |
 | APK | `backup-ldplayer-re.ps1` | 雷电 RE 实例备份/还原 |
-| IDA | `start.ps1` / `open.ps1` | 环境验证 / idalib 打开文件 |
+| IDA | `start.ps1` / `open.ps1` | 环境验证 / idalib 路径预处理（不打开数据库） |
 | r2 | `recon.ps1` | 一站式侦察 |
 | LDPlayer | `re-init.ps1` / `re-proxy.ps1` / `re-list.ps1` / `re-destroy.ps1` | 实例管理 |
 | Proxy | `proxy_check.py` / `kuaidaili_extract.py` / `cliproxy_test.py` | 代理验证/提取 |

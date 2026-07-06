@@ -30,7 +30,7 @@
 
 | 服务 | 版本 | 工具前缀 | 运行时 | 使用前提 |
 |------|------|----------|--------|---------|
-| `ida-multi-mcp` | 0.1.0 | `idapro_*`, `idalib_*` | Python venv | 无需额外操作 |
+| `ida-multi-mcp` | 0.1.0 | `survey_binary`, `decompile`, `analyze_function`, `idalib_*` 等 | Python venv | 无需额外操作 |
 | `jadx-ai-mcp` | 6.4.0 | `jadx_*` | Python venv | **先启动 jadx-gui 并加载 APK**；按需手动启用，默认不自动初始化 |
 | `js-reverse-mcp` | 3.0.0 | `js-reverse_*` | Node.js 便携版 | Chrome 浏览器；按需手动启用，默认不自动初始化 |
 | `ruyi-mcp` | 0.1.0 | `ruyi_*` | Node.js 便携版 + Python venv | ruyipage Firefox 151.0a1 |
@@ -42,18 +42,19 @@
 - **入口**: `.venv\Scripts\python.exe -m ida_multi_mcp`
 - **IDADIR**: `D:\reverse_ENV\resource\portable_win`
 - **模式**: stdio
-- **核心工具**: `idapro_decompile`, `idapro_analyze_function`, `idapro_xrefs_to`, `idapro_survey_binary`, `idapro_rename` 等约 72 个
-- **管理工具**: `idalib_open`, `idalib_close`, `idalib_list`, `list_instances`, `refresh_tools`, `compare_binaries`
+- **核心工具**: `survey_binary`, `decompile`, `analyze_function`, `xrefs_to`, `rename` 等 44 个 proxied IDA tools
+- **管理工具**: `idalib_open`, `idalib_close`, `idalib_list`, `idalib_status`, `list_instances`, `refresh_tools`, `compare_binaries`, `decompile_to_file`
 
 ### 工作流
 
 ```
-Claude Code 拉起 ida-multi-mcp (stdio)
+MCP client 拉起 ida-multi-mcp (stdio)
   → idalib_open 打开二进制（headless 分析）
-  → idapro_* 工具分析
+  → 记录 instance_id
+  → survey_binary / analyze_function / decompile 等工具分析
 ```
 
-无需手动启动 HTTP 服务器。`start.ps1` 用作环境验证。
+无需手动启动独立 HTTP 服务器。`start.ps1` 用作环境验证；worker HTTP/registry 是 ida-multi-mcp 内部实现细节。
 
 ## jadx-ai-mcp
 

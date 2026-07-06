@@ -150,14 +150,14 @@ def nop_func(addr_func, arch='arm'):
 
 ```python
 import idapro  # 必须第一个 import
-import idautils, idc
+import idautils, idc, ida_hexrays
 
-ida.open_database("target.so", True)
+idapro.open_database("target.so", True)
 for func in idautils.Functions():
     name = idc.get_func_name(func)
     dec = ida_hexrays.decompile(func)
     print(name, str(dec) if dec else "FAILED")
-ida.close_database(save=False)
+idapro.close_database(save=False)
 ```
 
 批量反编译到 JSON:

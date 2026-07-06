@@ -1,31 +1,37 @@
 <#
 .SYNOPSIS
-Prepare a binary path for ida-multi-mcp idalib_open.
+Prepare a safe binary path for ida-multi-mcp idalib_open.
 
 .DESCRIPTION
 Compatibility helper only. It does not open the binary, does not write
 ~/.ida-mcp/instances.json, and does not bind an MCP session.
 
-Use MCP idalib_open / idapro_idalib_open as the primary open path. This helper
+Use MCP idalib_open as the primary open path. This helper
 only preserves path workarounds:
 - System32 file auto-copy to temp
-- Old database lock detection with GUID fallback
+- Existing IDA database detection with non-destructive temp-copy fallback
 
 The final READY_FOR_IDALIB_OPEN path should be passed to the MCP open tool.
 
 .PARAMETER Path
 Binary file path (required)
+.PARAMETER CleanOldDb
+Explicitly delete existing same-name IDA database files before returning the
+original path. Default is false. Without this switch, existing database files
+are never deleted; the binary is copied to temp with a GUID prefix instead.
 
 Usage:
   powershell -File "open.ps1" -Path "C:\target.exe"
+  powershell -File "open.ps1" -Path "C:\target.exe" -CleanOldDb
 #>
 
 param(
     [Parameter(Mandatory=$true)]
-    [string]$Path
+    [string]$Path,
+    [switch]$CleanOldDb
 )
 
-$TempDir = "C:\Users\mengma\AppData\Local\Temp\opencode"
+$TempDir = Join-Path $env:TEMP "opencode"
 
 if (-not (Test-Path -LiteralPath $TempDir)) {
     New-Item -ItemType Directory -Path $TempDir -Force | Out-Null
@@ -52,24 +58,40 @@ if (-not $isTempCopy) {
     $dir = [System.IO.Path]::GetDirectoryName($resolved)
     $base = [System.IO.Path]::GetFileNameWithoutExtension($resolved)
     $oldExts = @(".id0", ".id1", ".id2", ".nam", ".til", ".i64")
-    $hasLocked = $false
+    $oldDbFiles = @()
 
     foreach ($ext in $oldExts) {
         $candidate = Join-Path $dir "$base$ext"
         if (Test-Path -LiteralPath $candidate) {
-            Remove-Item -LiteralPath $candidate -Force -ErrorAction SilentlyContinue
-            if (Test-Path -LiteralPath $candidate) {
-                $hasLocked = $true
-            }
+            $oldDbFiles += $candidate
         }
     }
 
-    if ($hasLocked) {
+    if ($oldDbFiles.Count -gt 0) {
+        Write-Output "WARN:old_db_exists:$($oldDbFiles -join ';')"
+    }
+
+    if ($oldDbFiles.Count -gt 0 -and $CleanOldDb) {
+        $deleteFailed = $false
+        foreach ($candidate in $oldDbFiles) {
+            Remove-Item -LiteralPath $candidate -Force -ErrorAction SilentlyContinue
+            if (Test-Path -LiteralPath $candidate) {
+                $deleteFailed = $true
+            }
+        }
+        if ($deleteFailed) {
+            Write-Output "WARN:old_db_delete_failed:using_temp_copy"
+        } else {
+            Write-Output "INFO:old_db_cleaned"
+        }
+    }
+
+    if ($oldDbFiles.Count -gt 0 -and ((-not $CleanOldDb) -or $deleteFailed)) {
         $guid = [System.Guid]::NewGuid().ToString("N").Substring(0, 8)
         $newName = "$guid-$([System.IO.Path]::GetFileName($resolved))"
         $tempPath = Join-Path $TempDir $newName
         Copy-Item -LiteralPath $resolved -Destination $tempPath -Force -ErrorAction Stop
-        Write-Output "INFO:locked_db_fallback:$tempPath"
+        Write-Output "INFO:old_db_temp_copy:$tempPath"
         $resolved = $tempPath
     }
 }
