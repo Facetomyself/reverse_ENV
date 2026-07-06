@@ -120,6 +120,44 @@ bash D:/reverse_ENV/skill/apk-reverse/scripts/find-api-calls.sh output/sources/ 
 
 `--urls` 模式通过 `third_party_hosts.txt` (120+ 域名) 自动将 URL 分为 first-party 和 third-party，按频次排序输出。
 
+### `scripts/init-ldplayer-re.ps1` — LDPlayer RE 模拟器环境一键初始化
+
+```powershell
+powershell -File "D:\reverse_ENV\skill\apk-reverse\scripts\init-ldplayer-re.ps1"
+```
+
+自动化步骤: ADB 连接检测 → Root 验证 → 系统可写确认 → 推送/启动 Frida server → 状态报告。
+
+### `scripts/backup-ldplayer-re.ps1` — 雷电 RE 实例备份/还原
+
+```powershell
+# 备份
+powershell -File "D:\reverse_ENV\skill\apk-reverse\scripts\backup-ldplayer-re.ps1" -Action backup
+# 还原
+powershell -File "D:\reverse_ENV\skill\apk-reverse\scripts\backup-ldplayer-re.ps1" -Action restore
+# 查看备份
+powershell -File "D:\reverse_ENV\skill\apk-reverse\scripts\backup-ldplayer-re.ps1" -Action list
+```
+
+全量备份 `D:\leidian\LDPlayer9\vms\leidian1\` 到 `storage\ldplayer-backups\`。
+
+### `scripts/dex-dump.js` — Frida DEX 内存 Dump
+
+```bash
+# spawn 模式 (从启动开始 Hook ClassLoader)
+frida -U -f com.example.app -l D:/reverse_ENV/skill/apk-reverse/scripts/dex-dump.js
+
+# attach 模式 (附加到已运行的进程)
+frida -U <pid> -l D:/reverse_ENV/skill/apk-reverse/scripts/dex-dump.js
+```
+
+三种策略依次尝试:
+1. **Hook DexFile/ClassLoader** — 拦截 DEX 加载路径
+2. **/proc/self/maps 扫描** — 找 DEX 内存映射后 dump (需 root)
+3. **ClassLoader 遍历** — 反射读取已加载 DEX elements
+
+输出: `/sdcard/Download/dex_dump_*.dex`
+
 ### `scripts/decode.ps1`
 
 用途：
@@ -318,6 +356,26 @@ bash D:/reverse_ENV/skill/apk-reverse/scripts/fingerprint.sh app.apk
 
 如果 Java 代码可读，先在这里定位业务逻辑。
 
+### 2.5 Phase 2.5 — 加固壳 DEX 内存 Dump
+
+如果 Phase 0 报告高混淆 + 加固壳标志，或 jadx 反编译产出极少 Java 文件 (< 50 个):
+
+**方式 A: Frida DEX dump (x86 模拟器, 当下可用)**
+
+```bash
+frida -U -f <package> -l D:/reverse_ENV/skill/apk-reverse/scripts/dex-dump.js
+```
+
+**方式 B: panda-dex-dumper (ARM64 真机, ptrace 方案, 待补充源码编译)**
+
+```bash
+adb push tools/panda-dex-dumper/panda-dex-dumper /data/local/tmp/
+adb shell su -c "/data/local/tmp/panda-dex-dumper --pid $(pidof <package>)"
+adb pull /data/local/tmp/panda/ ./
+```
+
+Dump 出的 DEX 用 jadx 重新反编译后继续 Phase 3。
+
 ### 2.5 Phase 3.5 — Kotlin 类名恢复 (混淆 Kotlin 应用必做)
 
 如果 Phase 0 报告混淆度为 MODERATE/HIGH 且应用为 Kotlin/Compose：
@@ -430,7 +488,9 @@ bash D:/reverse_ENV/skill/apk-reverse/scripts/find-api-calls.sh output/sources/
 | `references/api-extraction-patterns.md` | Retrofit/OkHttp/Ktor/Apollo/Volley grep 模式库 + 端点文档模板 (Tier1/Tier2) |
 | `references/call-flow-analysis.md` | Activity→ViewModel→Repository→HTTP 调用链追踪技术 + 混淆对抗策略 |
 | `references/kotlin-name-recovery.md` | R8/Kotlin metadata 类名恢复原理 + 局限性 + 阅读流 |
-| `references/third_party_hosts.txt` | URL 分桶用第三方域名 denylist (120+ 域名: Firebase/AppsFlyer/Stripe/...)
+| `references/third_party_hosts.txt` | URL 分桶用第三方域名 denylist (120+ 域名: Firebase/AppsFlyer/Stripe/...) |
+| `references/frida-best-practices.md` | Frida 脚本最佳实践 (loader hook 时机/anti-init陷阱/现代API) |
+| `references/unity-il2cpp-dump.md` | Unity IL2CPP 符号提取 (→ IDA 导入 C# 类名/方法名) |
 
 ## 渐进式披露阶段
 

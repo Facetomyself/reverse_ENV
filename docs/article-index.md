@@ -17,6 +17,7 @@
 | 文章 | 来源项目 | 关键词 | 摘要 |
 |------|----------|--------|------|
 | [51job-anti-detection-analysis.md](../article/anti-detection/51job-anti-detection-analysis.md) | 51job-web-reverse | `阿里ACW WAF`, `飞林FeiLin`, `神策SensorsData`, `Function.toString`, `debugger绕过`, `WebDriver检测`, `CDP检测`, `hook检测`, `反检测对抗矩阵` | 51job 三层风控体系全面分析：ACW WAF 检测向量、飞林设备指纹、神策行为埋点，20+ 检测向量的逐一对抗设计 |
+| [chromium-fingerprint-compilation.md](../article/anti-detection/chromium-fingerprint-compilation.md) | — (CSDN 归档) | `Chromium编译`, `指纹浏览器`, `Canvas指纹`, `WebGL指纹`, `WebRTC`, `TLS/JA3/JA4`, `CDP绕过`, `无头检测`, `源码修改`, `BoringSSL`, `V8`, `Blink` | Chromium 源码级指纹浏览器编译全系列 (38篇)：15+ 指纹维度随机化/固定、反检测绕过 (WebDriver/CDP/无头/Selenium)、爬虫增强 (Shadow DOM/跨域iframe/CSS动画禁用)、工程化 (JWT校验/Cookie明文/任务栏徽章) |
 
 ### 签名算法 (`article/signature-algorithms/`)
 
@@ -67,7 +68,10 @@
 - **加固绕过**: [jiagu-bypass](../article/packing-bypass/jiagu-bypass-analysis.md)
 - **反调试 (ptrace/TracerPid)**: [jiagu-bypass](../article/packing-bypass/jiagu-bypass-analysis.md)
 - **Frida 检测绕过**: [jiagu-bypass](../article/packing-bypass/jiagu-bypass-analysis.md)
-- **WebDriver/CDP 检测**: [51job-anti-detection](../article/anti-detection/51job-anti-detection-analysis.md)
+- **WebDriver/CDP 检测**: [51job-anti-detection](../article/anti-detection/51job-anti-detection-analysis.md), [chromium-fingerprint-compilation](../article/anti-detection/chromium-fingerprint-compilation.md)
+- **Chromium 源码修改/指纹浏览器**: [chromium-fingerprint-compilation](../article/anti-detection/chromium-fingerprint-compilation.md)
+- **TLS/JA3/JA4 指纹**: [chromium-fingerprint-compilation](../article/anti-detection/chromium-fingerprint-compilation.md)
+- **Canvas/WebGL 指纹**: [chromium-fingerprint-compilation](../article/anti-detection/chromium-fingerprint-compilation.md)
 
 ### 厂商/平台
 - **腾讯 (微信/应用宝)**: [mmtls](../article/protocols/mmtls-protocol-analysis.md)
@@ -75,6 +79,7 @@
 - **阿里 (ACW/飞林)**: [51job-anti-detection](../article/anti-detection/51job-anti-detection-analysis.md)
 - **360 (Jiagu)**: [jiagu-bypass](../article/packing-bypass/jiagu-bypass-analysis.md)
 - **51job**: [51job-anti-detection](../article/anti-detection/51job-anti-detection-analysis.md), [51job-webpack](../article/web-reverse/51job-webpack-analysis.md)
+- **CSDN/w1101662433 (fivcan)**: [chromium-fingerprint-compilation](../article/anti-detection/chromium-fingerprint-compilation.md)
 
 ### 工具/方法
 - **Webpack 模块自吐**: [51job-webpack](../article/web-reverse/51job-webpack-analysis.md)
@@ -82,7 +87,7 @@
 - **IDA Pro 静态分析**: [qidian-so](../article/native-analysis/qidian-so-analysis.md), [jiagu-bypass](../article/packing-bypass/jiagu-bypass-analysis.md)
 - **radare2 快速侦察**: [qidian-so](../article/native-analysis/qidian-so-analysis.md)
 - **Frida spawn 注入**: [jiagu-bypass](../article/packing-bypass/jiagu-bypass-analysis.md)
-- **JNI 调用链追踪**: [qidian-so](../article/native-analysis/qidian-so-analysis.md)
+- **Chromium 源码编译与修改**: [chromium-fingerprint-compilation](../article/anti-detection/chromium-fingerprint-compilation.md)
 
 ---
 

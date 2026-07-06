@@ -59,7 +59,7 @@ git status --short --branch   # 若已初始化 git
 
 本仓库为**逆向工程环境配置与技能仓库**，核心目录：
 
-- `skill/`：Claude Code skill 定义（12 个 skill）
+- `skill/`：Claude Code skill 定义（11 个 skill）
 - `tools/`：便携工具链（JDK, jadx, apktool, radare2, adb, node, vineflower, dex2jar 等）
 - `mcp/`：MCP 服务源码（js-reverse-mcp, ruyi-mcp, jadx-mcp-server, reqable-mcp），清单见 `mcp/README.md`
 - `resource/`：资源文件（IDA Pro 便携版 + 汉化 + 许可补丁）

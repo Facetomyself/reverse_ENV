@@ -98,3 +98,4 @@ tools/stealth-hook-engine/
 .env
 !.env.example
 .secret
+*.apk
