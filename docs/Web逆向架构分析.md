@@ -2,15 +2,17 @@
 
 ## 核心结论
 
-**当前架构合理性：中等（3/5）。** 三个工具各自能力很强，但 ruyipage + ruyitrace 没有统合成 MCP 全链路方案，无法与 js-reverse-mcp 形成对称的"双场景"覆盖。
+**当前架构状态：已进入“双 MCP 并行”阶段。** `ruyi-mcp` 已作为 Firefox/BiDi 全链路 MCP 接入并暴露 **56 tools**；`js-reverse-mcp` 保留 Chrome/CDP 的完整断点、单步、作用域优势。二者不是替代关系，而是按能力边界互补。
 
-**目标架构：两套独立全链路 MCP — 弱检测走 js-reverse-mcp，强检测走 ruyi-mcp（ruyipage + ruyitrace 统合）。** 二者工具接口对齐、流程对等，按目标反检测强度路由。
+**执行路由：Web JS 默认走 `ruyi-reverse` / `ruyi-mcp`。** 只有明确需要 CDP 级暂停、单步、作用域枚举，且目标无强反检测需求时，才切 `mcp-js-reverse-playbook` / `js-reverse-mcp`；强反检测、指纹取证、DOM trace、人类行为模拟一律优先 ruyi。
+
+> 本文早期章节保留了 ruyi-mcp 43-tool 设计草案，用作演进背景和能力对照；实际执行口径以本节、`AGENTS.md`、`CLAUDE.md`、`docs/MCP服务详情.md` 为准。
 
 ---
 
 ## 1. js-reverse-mcp 完整工具集（基线参考）
 
-js-reverse-mcp 共 **22 个工具**（CLAUDE.md 标注 ~17，实际列表如下），按工作流阶段分 7 类：
+js-reverse-mcp 共 **22 个工具**，按工作流阶段分 7 类：
 
 ### 1.1 页面管理 (Page Lifecycle) — 3 tools
 
@@ -150,24 +152,24 @@ Observe ──→ Capture ──→ Rebuild ──→ Patch ──→ DeepDive
 
 ---
 
-## 3. 目标架构：双场景全链路
+## 3. 当前架构：双 MCP 全链路
 
 ```
                     Web RE 目标
                          │
               ┌──────────┴──────────┐
               │  reverse-coordinator │
-              │  检测反检测强度       │
+              │  判定能力需求         │
               └──────────┬──────────┘
                          │
           ┌──────────────┼──────────────┐
           │              │              │
-    弱检测/无反检测   强检测(CF/hCaptcha)  APK内嵌H5
+    默认 Web JS      CDP 完整调试      APK 内嵌 H5
           │              │              │
           ▼              ▼              ▼
-   js-reverse-mcp    ruyi-mcp       apk-reverse
-   (Chrome/CDP)    (Firefox/BiDi    + ruyi-mcp
-    22 tools        + C++ Trace)    辅助
+   ruyi-mcp       js-reverse-mcp     apk-reverse
+   (Firefox/BiDi   (Chrome/CDP      + ruyi-mcp
+    56 tools)       22 tools)       辅助
           │              │
           │     ┌────────┴────────┐
           │     │                 │
@@ -188,11 +190,11 @@ Observe ──→ Capture ──→ Rebuild ──→ Patch ──→ DeepDive
 
 ---
 
-## 4. ruyi-mcp 统一工具集设计规范
+## 4. ruyi-mcp 统一工具集设计规范（历史基线）
 
 ### 4.1 工具总数与分类
 
-**共 35 个工具**，分 9 类。核心 22 个对齐 js-reverse-mcp，13 个为 ruyi 独有增强。
+早期设计基线为 **43 个工具**：核心 22 个对齐 js-reverse-mcp，21 个为 ruyi 独有增强。当前实现已扩展为 **56 tools**，新增 frame、cookie、请求/响应拦截、WebSocket、request initiator、preload scripts 等能力；实际清单以 `mcp/ruyi-mcp/src/tools/` 和 `docs/MCP服务详情.md` 为准。
 
 ```
 ruyi-mcp = js-reverse-mcp 等价工具 (22)
@@ -203,7 +205,7 @@ ruyi-mcp = js-reverse-mcp 等价工具 (22)
          + 网络增强 (4)
          + Session 导出 (1)
          ─────────────────
-         = 35 tools (+ 13 独有)
+         = 43 tools (+ 21 独有，历史基线)
 ```
 
 ### 4.2 完整工具列表
@@ -439,7 +441,7 @@ Observe ──────→ Capture ──────→ Rebuild ────
 │                                             │
 │  ┌─────────────────────────────────────┐   │
 │  │     MCP Server (stdio transport)     │   │
-│  │     → 43 tools exposed to Claude     │   │
+│  │     → 56 tools exposed to AI clients │   │
 │  └──────────────┬──────────────────────┘   │
 │                 │                            │
 │  ┌──────────────┴──────────────────────┐   │
@@ -563,17 +565,16 @@ skill/ruyi-reverse/
 │   └── session-bridge.md # Cookie 桥接操作
 ```
 
-### 7.2 更新 `reverse-coordinator` 路由
+### 7.2 `reverse-coordinator` 路由（当前口径）
 
 ```
 Web JS 路由决策树：
-  ├── 无反检测 / 弱反检测 → mcp-js-reverse-playbook (js-reverse-mcp)
-  ├── 强反检测 (CF/hCaptcha/akamai/datadome) → ruyi-reverse (ruyi-mcp)
-  │     ├── 需要指纹取证 → ruyi_trace_* 子流程
-  │     └── 需要过验证码 → ruyi_set_fingerprint + ruyi_human_*
-  └── 不确定 → 先用 js-reverse-mcp 侦察
-        ├── 遇到反检测阻断 → 切 ruyi-mcp
-        └── 无反检测 → 继续 js-reverse-mcp
+  ├── 默认 → ruyi-reverse (ruyi-mcp)
+  │     ├── 需要指纹取证 / DOM trace → ruyi_trace_* 子流程
+  │     ├── 需要过验证码 / 人类行为 → ruyi_fingerprint_* + ruyi_human_*
+  │     └── 需要导出会话 → ruyi_export_session
+  ├── 明确需要 CDP 暂停 / 单步 / 作用域枚举，且无强反检测 → mcp-js-reverse-playbook (js-reverse-mcp)
+  └── 两者协作 → ruyi_export_session → js-reverse-mcp 继续 CDP 调试
 ```
 
 ### 7.3 更新 `CLAUDE.md` — Skill 速查表
@@ -584,7 +585,7 @@ Web JS 路由决策树：
 
 MCP 前缀表新增：
 ```markdown
-| `ruyi_*` | ruyi-mcp | Firefox 反检测浏览器全链路逆向 (~43 tools) |
+| `ruyi_*` | ruyi-mcp | Firefox/BiDi 全链路增强 — 反检测/指纹/人类模拟/trace/JS逆向 (56 tools) |
 ```
 
 ---
@@ -594,9 +595,9 @@ MCP 前缀表新增：
 | 维度 | 现状 | 目标 |
 |------|------|------|
 | **强检测场景覆盖** | ruyipage 只用来过验证码，然后手动切 Chrome | ruyi-mcp 全链路覆盖，从反检测→JS调试→补环境→协议恢复 |
-| **MCP 集成** | js-reverse 一等公民，ruyipage/ruyitrace 二等 | 两个一等 MCP 服务，对称的工具接口 |
+| **MCP 集成** | 两个一等 MCP 服务已并存：ruyi-mcp 默认、js-reverse-mcp 专注 CDP | 继续补齐验证与文档同步 |
 | **反检测+调试共存** | 做不到（跨浏览器 Cookie 手动搬） | 同一 Firefox session 内完成 |
 | **指纹追踪** | 独立 CLI，手动分析 | MCP 工具实时追踪+分析，嵌入工作流 |
-| **工具对齐** | 三者各自独立设计 | ruyi-mcp 22 核心工具对齐 js-reverse-mcp |
+| **工具对齐** | ruyi-mcp 当前 56 tools，核心能力覆盖并扩展 js-reverse-mcp 工作流 | 继续维护能力边界和桥接规范 |
 | **工作流复用** | 每个 skill 独立工作流 | Observe→Capture→Rebuild→Patch→DeepDive 五阶段统一 |
 | **Session 桥接** | 手动 | `ruyi_export_session` 自动化 |

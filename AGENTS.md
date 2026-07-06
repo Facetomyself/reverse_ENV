@@ -2,7 +2,7 @@
 
 本文件与 `CLAUDE.md` 并存，功能对等。Codex 在 `D:\reverse_ENV` 及子目录下工作时自动加载。
 
-> MCP 已在 `~/.codex/config.toml` 中配置，与 `.mcp.json` 对等：ida-multi-mcp、jadx-ai-mcp、jsreverser-mcp、ruyi-mcp、first-mcp、reqable。
+> MCP 默认配置位于 `~/.codex/config.toml` 与 `.mcp.json`：ida-multi-mcp、ruyi-mcp。`jadx-ai-mcp`、`js-reverse-mcp`、`reqable`、`first-mcp` 统一改为按需手动启用，默认不自动初始化。搜索类能力（`search-layer` / `github-solution-research`）属于全局分级策略，不放入项目 `.mcp.json`；Claude 全局环境已有 `search-layer`，Codex 侧已迁移本地 skill 副本到 `~/.codex/skills/search-layer`，并完成 `search.py --mode fast` smoke test。
 
 ## 任务前强制检查
 
@@ -14,7 +14,7 @@
 | 4 | **Git 状态** | `git status --short --branch` |
 | 5 | **远端同步** | `git remote -v`；涉及 PR/远端时 `git fetch origin && git log --oneline origin/main..HEAD` |
 
-> WebFetch 硬封禁：即使 URL 看起来可访问，也不得直接调用 WebFetch。优先用 `search-layer` (搜索)、`github-solution-research` (GitHub)、浏览器 MCP (需登录/JS 渲染)。**此规则优先于所有其他工具选择逻辑。**
+> WebFetch 硬封禁：即使 URL 看起来可访问，也不得直接调用 WebFetch。优先用全局 `search-layer` (client-native search + Exa + Tavily + Grok)、`github-solution-research` (GitHub)、浏览器 MCP (需登录/JS 渲染)。Claude / Codex 均已有本地 `search-layer` skill；若某个源不可用，需明确标注可用替代路径。**此规则优先于所有其他工具选择逻辑。**
 
 ## 核心约束
 
@@ -106,7 +106,7 @@
 | `docx-thesis-formatter` | DOCX 格式化 | 论文/报告模板 |
 
 **路由**: `.so`/native 反检测/绕过 → `native-reverse`；`.so` 纯静态分析 → `ida-reverse`/`radare2`；APK Java → `apk-reverse`。
-**Web JS 路由**: **默认 -> `ruyi-reverse`（统一编排器）** — 7 模块 x 两级深度，按任务主动组合。需 CDP 完整断点调试且无反检测需求 -> jsreverser-mcp。
+**Web JS 路由**: **默认 -> `ruyi-reverse`（统一编排器）** — 7 模块 x 两级深度，按任务主动组合。需 CDP 完整断点调试且无反检测需求 -> `js-reverse-mcp`。
 
 ## 工作流速查
 
@@ -116,7 +116,7 @@
   → 产出三件套 → 审查门 → 知识库回填(有跨项目价值的分析)
 ```
 
-> 多源搜索约束见全局 `~/.codex/AGENTS.md`。详细规范: `docs/搜索编排规范.md`。
+> 多源搜索约束见全局 `~/.codex/AGENTS.md` 与 `docs/搜索编排规范.md`。`search-layer` 是全局搜索分级能力：Claude 侧已配置，Codex 侧已迁移本地 skill 副本，不作为项目 `.mcp.json` 冷启动项。
 
 **不得跳阶段。L4 目标不声称完整还原。**
 
@@ -127,11 +127,11 @@
 | `idapro_*` | ida-multi-mcp | 反编译/反汇编/xref/patch/类型/栈帧 (~72 tools) |
 | `idalib_*` | ida-multi-mcp | headless 会话管理 (open/close/list) |
 | `jadx_*` | jadx-ai-mcp | APK 类/方法搜索/反编译/xref |
-| `jsreverser_*` | jsreverser-mcp | JS 逆向调试 — 断点/脚本/网络/运行时 (~73 tools) |
-| `ruyi_*` | ruyi-mcp | Firefox/BiDi 全链路增强 — 反检测/指纹/人类模拟/trace/JS逆向 (~41 tools) |
+| `js-reverse_*` | js-reverse-mcp | JS 逆向调试 — 断点/脚本/网络/运行时 (~22 tools) |
+| `ruyi_*` | ruyi-mcp | Firefox/BiDi 全链路增强 — 反检测/指纹/人类模拟/trace/JS逆向 (56 tools) |
 | `reqable_*` | reqable-mcp | Reqable 抓包数据查询 — HTTP/WebSocket 流量搜索/分析/代码生成 (~17 tools) |
 
-> **Web RE 双 MCP**: jsreverser-mcp (npx/CDP) 调试优先；`ruyi-mcp` (Firefox/BiDi) 增强全能 — 反检测/指纹/trace/人类模拟。按需求能力选择，可互补协作。详见 `docs/Web逆向架构分析.md`。
+> **Web RE 双 MCP**: `js-reverse-mcp` (Chrome/CDP) 调试优先；`ruyi-mcp` (Firefox/BiDi) 增强全能 — 反检测/指纹/trace/人类模拟。按需求能力选择，可互补协作。详见 `docs/Web逆向架构分析.md`。
 
 > MCP 服务详情见 `docs/MCP服务详情.md`
 
@@ -148,17 +148,17 @@
 
 ### Web RE 双 MCP 约束
 
-jsreverser-mcp 和 ruyi-mcp 是两个**互补**的 Web RE MCP 服务，按需求能力选择，可协作：
+`js-reverse-mcp` 和 `ruyi-mcp` 是两个**互补**的 Web RE MCP 服务，按需求能力选择，可协作：
 
 | MCP 服务 | 浏览器/协议 | 核心优势 | 适用场景 |
 |---------|-------------|---------|---------|
-| jsreverser-mcp | Chrome / CDP | **完整 JS 断点调试**（断点/单步/调用栈/作用域） | 需要 CDP 级运行时调试、无强反检测要求 |
-| ruyi-mcp | Firefox / BiDi | **反检测 + 指纹分析 + trace + 人类模拟** | 需要过验证码、指纹取证、DOM trace、人类行为模拟（**所有站点通用**） |
+| `js-reverse-mcp` | Chrome / CDP | **完整 JS 断点调试**（断点/单步/调用栈/作用域） | 需要 CDP 级运行时调试、无强反检测要求 |
+| `ruyi-mcp` | Firefox / BiDi | **反检测 + 指纹分析 + trace + 人类模拟** | 需要过验证码、指纹取证、DOM trace、人类行为模拟（**所有站点通用**） |
 
 **选择规则：**
-1. 需要 CDP 完整断点调试（`get_paused_info`、`step`、调用栈查看）→ 用 jsreverser
+1. 需要 CDP 完整断点调试（`get_paused_info`、`step`、调用栈查看）→ 用 `js-reverse_*`
 2. 需要指纹分析、DOM trace、过 Cloudflare/hCaptcha、反检测浏览 → 用 ruyi（**无论目标站点反检测强度如何**）
-3. 两者可互补：`ruyi_export_session` → 导出 Cookie/Storage → jsreverser 继续 CDP 调试
+3. 两者可互补：`ruyi_export_session` → 导出 Cookie/Storage → `js-reverse-mcp` 继续 CDP 调试
 
 ### 反检测能力边界（指纹伪装）
 
@@ -192,9 +192,9 @@ jsreverser-mcp 和 ruyi-mcp 是两个**互补**的 Web RE MCP 服务，按需求
 
 | 场景 | 走哪个 |
 |------|--------|
-| 搜索/查事实/找资料 | `search-layer`（四源并行 + 去重打分） |
+| 搜索/查事实/找资料 | 全局 `search-layer`（client-native search + Exa + Tavily + Grok 并行 + 去重打分；Claude / Codex 本地 skill 均已配置） |
 | GitHub 代码/Issue/PR 深挖 | `github-solution-research` |
-| 需登录/Cookie/JS 渲染的页面 | `ruyi_*` / `jsreverser_*` 浏览器方案 |
+| 需登录/Cookie/JS 渲染的页面 | `ruyi_*` / `js-reverse_*` 浏览器方案 |
 
 ## 已知坑点
 
@@ -249,11 +249,19 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | Rust | `%USERPROFILE%\.cargo\` |
 | uv | `.venv\Scripts\uv.exe` |
 | Python | `.venv\Scripts\python.exe` |
-| jsreverser-mcp | `tools\node\npx.cmd jsreverser-mcp` |
+| js-reverse-mcp | `powershell -File tools\chromium\start-js-reverse.ps1` |
 | ruyi-mcp | `tools\node\node.exe mcp\ruyi-mcp\build\src\index.js` |
 | reqable-mcp | `.venv\Scripts\reqable-mcp.exe mcp` |
 | First (微信小程序) | `powershell -File tools\First\first-gui.ps1` |
 | Google Chrome | `C:\Program Files\Google\Chrome\Application\chrome.exe` |
+
+## Claude → Codex MCP 迁移规则
+
+1. **先区分配置语义**：`.mcp.json` 是项目级 MCP 声明；`~/.codex/config.toml` 是 Codex 用户级启动配置。两者可以共享命令模板，但不能默认视为“全部冷启动”。
+2. **默认冷启动只保留稳定项**：仅保留无额外前置条件、可在进入项目时立即握手成功的 MCP。当前默认冷启动清单为 `ida-multi-mcp`、`ruyi-mcp`。
+3. **有前置条件的一律按需启用**：依赖 GUI、浏览器调试端口、本地 SSE、桌面客户端上报链的 MCP，迁移到 Codex 时默认注释，不放入自动初始化清单。
+4. **项目规范名优先**：项目文档、`.mcp.json`、`AGENTS.md`、`CLAUDE.md` 统一使用仓库规范名。Web CDP 调试 MCP 的规范名是 `js-reverse-mcp`，不得再混用 `jsreverser-mcp` 作为项目侧别名。
+5. **迁移后必须做能力验证**：至少验证一项默认冷启动 MCP 的真实工具调用成功；按需 MCP 需在满足前置条件后单独验证，不能只看“启动不报错”。
 
 ## 提交前自检（硬门禁）
 

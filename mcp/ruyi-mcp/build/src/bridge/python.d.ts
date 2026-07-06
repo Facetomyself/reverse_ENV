@@ -11,9 +11,11 @@ export declare class PythonBridge {
     private pending;
     private ready;
     private readyResolve;
+    private readyReject;
     private readyPromise;
     private stderrLog;
     constructor();
+    private resetReadyPromise;
     start(): Promise<void>;
     stop(): Promise<void>;
     call(method: string, params?: Record<string, unknown>, timeoutMs?: number): Promise<unknown>;

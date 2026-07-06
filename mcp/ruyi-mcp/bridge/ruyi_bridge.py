@@ -67,12 +67,16 @@ def _serialize(obj: Any, depth: int = 0) -> Any:
 # ---------------------------------------------------------------------------
 # Default paths
 # ---------------------------------------------------------------------------
-DEFAULT_FIREFOX_PATH = (
-    r"C:\Users\mengma\AppData\Local\ruyipage\browsers"
-    r"\firefox-151.0a1-151-ruyi-win64\firefox\firefox.exe"
+DEFAULT_FIREFOX_PATH = os.environ.get(
+    "RUYI_FIREFOX_PATH",
+    (
+        r"C:\Users\mengma\AppData\Local\ruyipage\browsers"
+        r"\firefox-151.0a1-151-ruyi-win64\firefox\firefox.exe"
+    ),
 )
-DEFAULT_TRACE_FIREFOX_PATH = (
-    r"D:\reverse_ENV\tools\ruyitrace\firefox\firefox.exe"
+DEFAULT_TRACE_FIREFOX_PATH = os.environ.get(
+    "RUYI_TRACE_FIREFOX_PATH",
+    r"D:\reverse_ENV\tools\ruyitrace\firefox\firefox.exe",
 )
 
 

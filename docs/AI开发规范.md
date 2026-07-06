@@ -8,7 +8,7 @@
 
 涉及代码、skill、MCP 配置、脚本、工具安装等任务前，必须阅读或重新核对：
 
-1. `CLAUDE.md`（仓库总纲）
+1. `AGENTS.md` / `CLAUDE.md`（Codex / Claude 仓库总纲）
 2. 当前文件
 3. 相关 `skill/*/SKILL.md`
 4. 相关 `skill/*/references/*.md`
@@ -38,7 +38,7 @@ git status --short --branch   # 若已初始化 git
 - 先读现有 skill 定义和脚本，再修改
 - 分析确认"不应存在"的旧路径、旧 fallback、旧用户名引用，修改时一并清理
 - 所有工具和依赖必须安装在 `D:\reverse_ENV\` 内，不得污染系统全局环境
-- 新增或修改 skill 时，同步更新 CLAUDE.md 中的架构说明
+- 新增或修改 skill 时，同步更新 `AGENTS.md` / `CLAUDE.md` 中的架构说明
 
 ### 0.3 执行方案要求
 
@@ -59,21 +59,22 @@ git status --short --branch   # 若已初始化 git
 
 本仓库为**逆向工程环境配置与技能仓库**，核心目录：
 
-- `skill/`：Claude Code skill 定义（11 个 skill）
+- `skill/`：AI 协作 skill 定义
 - `tools/`：便携工具链（JDK, jadx, apktool, radare2, adb, node, vineflower, dex2jar 等）
 - `mcp/`：MCP 服务源码（js-reverse-mcp, ruyi-mcp, jadx-mcp-server, reqable-mcp），清单见 `mcp/README.md`
 - `resource/`：资源文件（IDA Pro 便携版 + 汉化 + 许可补丁）
 - `.venv/`：Python 虚拟环境（所有 MCP 服务和 Python 包）
-- `.mcp.json`：项目级 MCP 服务配置
-- `CLAUDE.md`：仓库总纲
+- `.mcp.json`：项目级 MCP 服务声明
+- `~/.codex/config.toml`：Codex 用户级默认启动配置
+- `AGENTS.md` / `CLAUDE.md`：Codex / Claude 仓库总纲
 
 ### 1.1 MCP 主线 / 脚本兜底
 
 - **MCP 工具（stdio）是主线**：ida-multi-mcp / jadx-ai-mcp / js-reverse-mcp / ruyi-mcp / reqable
 - **PowerShell/Bash 脚本是兜底**：当 MCP 有 schema bug 或需要特殊绕过时才走脚本
 - **MCP 源码统一在 `mcp/` 下**，不得散落根目录或 `tools/`
-- 新增 MCP 服务时，同步更新 `.mcp.json` + `mcp/README.md` + `docs/MCP服务详情.md` + CLAUDE.md
-- 新增 skill 时，同步更新 CLAUDE.md 的 skill 表
+- 新增 MCP 服务时，同步更新 `.mcp.json` + `~/.codex/config.toml`（如需 Codex 默认启用）+ `mcp/README.md` + `docs/MCP服务详情.md` + `AGENTS.md` + `CLAUDE.md`
+- 新增 skill 时，同步更新 `AGENTS.md` / `CLAUDE.md` 的 skill 表
 
 ### 1.2 模块边界
 
@@ -84,12 +85,12 @@ git status --short --branch   # 若已初始化 git
 | `skill/*/references/` | 参考资料、速查表 | 不包含可执行逻辑 |
 | `tools/` | 便携工具二进制/jar/脚本 | 不安装到系统目录 |
 | `.mcp.json` | MCP 服务注册 | 不注册非本仓库安装的服务 |
-| `CLAUDE.md` | 架构概述、约束、依赖清单 | 不重复 skill 内的细节 |
+| `AGENTS.md` / `CLAUDE.md` | 架构概述、约束、依赖清单 | 不重复 skill 内的细节 |
 
 ### 1.3 平台扩展边界
 
 当前覆盖 Web / Android / 二进制 三大逆向领域，各自独立：
-- Web → `mcp-js-reverse-playbook` + js-reverse-mcp
+- Web → 默认 `ruyi-reverse` + ruyi-mcp；仅需 CDP 完整断点且无反检测需求时走 `mcp-js-reverse-playbook` + js-reverse-mcp
 - Android → `apk-reverse` + jadx-ai-mcp + frida + adb
 - 二进制 → `ida-reverse` + `radare2` + ida-multi-mcp
 - 知识参考 → `reverse-engineering`（CTF 向，只读）
@@ -107,7 +108,7 @@ git status --short --branch   # 若已初始化 git
 3. 脚本路径是否使用绝对路径（`D:\reverse_ENV\...`）
 4. 工具引用是否指向 `tools\` 内的便携版本
 5. MCP 依赖是否已在 `.mcp.json` 中注册
-6. CLAUDE.md 是否已同步更新
+6. `AGENTS.md` / `CLAUDE.md` 是否已同步更新
 
 ---
 
@@ -119,7 +120,7 @@ git status --short --branch   # 若已初始化 git
 2. `.mcp.json` 是否已添加对应条目
 3. `command` 和 `args` 是否使用绝对路径
 4. 环境变量（`IDADIR`, `JAVA_HOME` 等）是否正确设置
-5. CLAUDE.md 的 MCP 架构章节是否已更新
+5. `AGENTS.md` / `CLAUDE.md` 的 MCP 架构章节是否已更新
 
 ---
 
@@ -130,7 +131,7 @@ git status --short --branch   # 若已初始化 git
 1. 工具是否安装在 `tools\` 子目录
 2. 包装脚本（`.bat` / `.cmd`）是否自动设置所需环境变量
 3. 已有 skill 脚本中的 fallback 路径是否已更新
-4. CLAUDE.md 的工具依赖章节是否已更新
+4. `AGENTS.md` / `CLAUDE.md` 的工具依赖章节是否已更新
 
 ---
 
@@ -141,7 +142,7 @@ git status --short --branch   # 若已初始化 git
 1. 新增/修改的脚本能否独立运行（PowerShell 语法无误）
 2. 新增/修改的 MCP 服务能否启动（`--help` 或 `--version` 不报错）
 3. 新增的 CLI 工具能否输出预期版本号
-4. CLAUDE.md 中引用的所有路径是否真实存在
+4. `AGENTS.md` / `CLAUDE.md` 中引用的所有路径是否真实存在
 
 ---
 
@@ -159,16 +160,16 @@ git status --short --branch   # 若已初始化 git
 
 每次修改后自问：
 
-1. 操作前是否重新核对了 CLAUDE.md 和相关 skill 文件？
+1. 操作前是否重新核对了 `AGENTS.md` / `CLAUDE.md` 和相关 skill 文件？
 2. 是否先看了真实文件内容而非靠记忆？
 3. 新增/修改的路径是否都在 `D:\reverse_ENV\` 内？
 4. 是否将工具、MCP、skill 的路径引用都更新了？
-5. CLAUDE.md 是否与已安装的工具/MCP 版本一致？
+5. `AGENTS.md` / `CLAUDE.md` 是否与已安装的工具/MCP 版本一致？
 6. 是否有残留的旧用户名（`25286`）、旧路径（`D:\APP\IDA`）引用？
 7. 新增文件是否有中文乱码？
 8. 是否误将临时下载文件、缓存、`__pycache__/` 留在仓库？
 9. diff 中是否混入了 token、密码、cookie 等敏感信息？
-10. 若修改了 `.mcp.json`，JSON 是否合法、路径是否存在？
+10. 若修改了 `.mcp.json` / `~/.codex/config.toml`，配置是否合法、路径是否存在？
 
 ---
 
@@ -179,6 +180,6 @@ git status --short --branch   # 若已初始化 git
 - 改动边界清晰，不跨模块污染
 - 所有路径引用指向 `D:\reverse_ENV\` 内的真实文件
 - 无旧用户名、旧路径残留
-- CLAUDE.md 与实际情况一致
+- `AGENTS.md` / `CLAUDE.md` 与实际情况一致
 - 无中文乱码、BOM 丢失、换行异常
 - 无临时文件、缓存文件残留

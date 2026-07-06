@@ -1,17 +1,41 @@
 # MCP 服务详情
 
-所有 MCP 服务通过 `D:\reverse_ENV\.mcp.json` 注册，stdio 模式由 Claude Code 自动管理。MCP 源码统一在 `mcp/` 目录下，清单见 `mcp/README.md`。
+项目级 MCP 服务通过 `D:\reverse_ENV\.mcp.json` 声明，stdio 模式由 AI client 按配置拉起。Codex 用户级默认启动配置位于 `~/.codex/config.toml`，Claude 全局 MCP 位于 `~/.claude.json`。MCP 源码统一在 `mcp/` 目录下，清单见 `mcp/README.md`。
+
+## Claude → Codex 正式迁移规则
+
+1. **区分配置层级**
+   - `.mcp.json`：项目级可用 MCP 声明
+   - `~/.codex/config.toml`：Codex 用户级默认启动配置
+   - `~/.claude.json`：Claude 全局 MCP 配置
+   - `search-layer` / `content-extract`：全局搜索/提取分级策略，不写入项目 `.mcp.json`
+   - Codex `search-layer`：本地 skill 副本位于 `~/.codex/skills/search-layer`，已通过 `search.py --mode fast` smoke test
+2. **默认冷启动只放稳定项**
+   - 进入项目时必须能立即握手成功、无 GUI/浏览器/外部服务前置条件
+   - 当前默认冷启动建议仅保留 `ida-multi-mcp`、`ruyi-mcp`
+3. **有前置条件的一律按需启用**
+   - `jadx-ai-mcp`：依赖 `jadx-gui` + 已加载 APK
+   - `js-reverse-mcp`：依赖浏览器调试端口或包装脚本拉起浏览器
+   - `reqable`：依赖 Reqable 桌面端与本地上报链
+   - `first-mcp`：依赖 First GUI 与本地 SSE
+4. **规范名统一**
+   - Web CDP 调试 MCP 的项目规范名为 `js-reverse-mcp`
+   - 不再把 `jsreverser-mcp` 作为项目文档、项目配置、工具前缀表中的正式名称
+5. **迁移完成判定**
+   - Codex 启动无默认 MCP 握手噪音
+   - 至少一个默认冷启动 MCP 完成真实工具调用验证
+   - 每个按需 MCP 的前置条件、启用方式、验证方法都已写明
 
 ## 服务总览
 
 | 服务 | 版本 | 工具前缀 | 运行时 | 使用前提 |
 |------|------|----------|--------|---------|
 | `ida-multi-mcp` | 0.1.0 | `idapro_*`, `idalib_*` | Python venv | 无需额外操作 |
-| `jadx-ai-mcp` | 6.4.0 | `jadx_*` | Python venv | **先启动 jadx-gui 并加载 APK** |
-| `js-reverse-mcp` | 3.0.0 | `js-reverse_*` | Node.js 便携版 | Chrome 浏览器 |
+| `jadx-ai-mcp` | 6.4.0 | `jadx_*` | Python venv | **先启动 jadx-gui 并加载 APK**；按需手动启用，默认不自动初始化 |
+| `js-reverse-mcp` | 3.0.0 | `js-reverse_*` | Node.js 便携版 | Chrome 浏览器；按需手动启用，默认不自动初始化 |
 | `ruyi-mcp` | 0.1.0 | `ruyi_*` | Node.js 便携版 + Python venv | ruyipage Firefox 151.0a1 |
-| `reqable` | 0.3.2 | `reqable_*` | Python venv (stdio) | Reqable ≥2.20 桌面端 |
-| `first-mcp` | 1.0.9 | — | SSE (127.0.0.1:4554) | First GUI 运行中 |
+| `reqable` | 0.3.2 | `reqable_*` | Python venv (stdio) | Reqable ≥2.20 桌面端；按需手动启用，默认不自动初始化 |
+| `first-mcp` | 1.0.9 | — | SSE (127.0.0.1:4554) | First GUI 运行中；按需手动启用，默认不自动初始化 |
 
 ## ida-multi-mcp
 
@@ -52,12 +76,12 @@ Claude Code 拉起 ida-multi-mcp (stdio)
 
 ## js-reverse-mcp
 
-- **入口**: `tools\node\node.exe mcp\js-reverse-mcp\node_modules\js-reverse-mcp\build\src\index.js --cloak`
-- **依赖**: CloakBrowser（反检测 Chromium，首次自动下载 ~200MB，已缓存）
-- **备选**: 手动 Chromium 152 (`tools\chromium\chrome-win\chrome.exe`) + `--browserUrl http://127.0.0.1:9222`
+- **入口**: `powershell -NoProfile -ExecutionPolicy Bypass -File tools\chromium\start-js-reverse.ps1`
+- **默认模式**: 包装脚本启动系统 Chrome / bundled Chromium，并通过 `--browserUrl http://127.0.0.1:9222` 连接 js-reverse-mcp
+- **强反检测模式**: 手动传 `-Cloak`，包装脚本改用 js-reverse-mcp `--cloak` 启动 CloakBrowser
 - **关键选项**:
-  - `--cloak` — 反检测 Chromium（源码级指纹补丁: canvas/WebGL/audio/GPU），**默认启用**
-  - `--browserUrl http://127.0.0.1:9222` — 连接已运行的 Chromium
+  - `--browserUrl http://127.0.0.1:9222` — 默认路径，连接已运行的 Chromium/Chrome
+  - `--cloak` — CloakBrowser 反检测 Chromium（源码级指纹补丁: canvas/WebGL/audio/GPU），仅在 `start-js-reverse.ps1 -Cloak` 时启用
   - `--isolated` — 临时隔离浏览器配置文件
 
 ### 核心工具
@@ -69,22 +93,27 @@ Claude Code 拉起 ida-multi-mcp (stdio)
 ## ruyi-mcp
 
 - **入口**: `tools\node\node.exe mcp\ruyi-mcp\build\src\index.js`
-- **依赖**: ruyipage Firefox 151.0a1（`C:\Users\mengma\AppData\Local\ruyipage\browsers\`）
+- **Python**: 默认 `.venv\Scripts\python.exe`，可用 `RUYI_MCP_PYTHON` 覆盖
+- **依赖**: ruyipage Firefox 151.0a1（默认 `C:\Users\mengma\AppData\Local\ruyipage\browsers\`；可用 `RUYI_FIREFOX_PATH` 覆盖）
+- **Trace Firefox**: 默认 `tools\ruyitrace\firefox\firefox.exe`，可用 `RUYI_TRACE_FIREFOX_PATH` 覆盖
 - **架构**: Node.js MCP Server → Python 子进程 (JSON-RPC over stdio) → ruyipage (WebDriver BiDi)
 - **浏览器**: Firefox 151.0a1 定制版（22 维指纹伪装 + 人类行为模拟 + C++ DOM Trace）
 
-### 核心工具（41 tools，分 12 类）
+### 核心工具（56 tools，分 15 类）
 
 | 分类 | 工具 | 说明 |
 |------|------|------|
-| 页面管理 | `ruyi_new_page`, `ruyi_navigate_page`, `ruyi_close_page`, `ruyi_select_page`, `ruyi_list_pages` | 反检测浏览器页面操作，`new_page` 支持 proxy+fingerprint |
+| 页面管理 | `ruyi_new_page`, `ruyi_navigate_page`, `ruyi_close_page`, `ruyi_select_page`, `ruyi_list_pages`, `ruyi_list_frames`, `ruyi_select_frame` | 反检测浏览器页面/iframe 操作，`new_page` 支持 proxy+fingerprint |
 | 脚本分析 | `ruyi_list_scripts`, `ruyi_get_script_source`, `ruyi_save_script_source`, `ruyi_search_in_sources` | JS 脚本枚举/源码获取/搜索 |
 | 运行时求值 | `ruyi_evaluate_script`, `ruyi_list_console_messages` | 页面 JS 执行 + 控制台日志 |
-| 反检测/指纹 | `ruyi_set_fingerprint`, `ruyi_emulate_geolocation`, `ruyi_emulate_timezone`, `ruyi_emulate_locale`, `ruyi_handle_cloudflare` | 22 维指纹伪装 + CF 自动过检 |
+| 反检测/指纹 | `ruyi_set_fingerprint`, `ruyi_emulate_geolocation`, `ruyi_emulate_timezone`, `ruyi_emulate_locale`, `ruyi_emulate_useragent`, `ruyi_set_proxy`, `ruyi_handle_cloudflare` | 22 维指纹伪装 + CF 自动过检；proxy 必须在 `new_page` 时设置 |
 | DOM 交互 | `ruyi_dom_select`, `ruyi_dom_get_info`, `ruyi_dom_input`, `ruyi_dom_click` | 元素定位/读写/交互 |
 | Session 导出 | `ruyi_export_session` | Cookie+Storage 导出（跨工具桥接） |
-| 网络取证 | `ruyi_list_network_requests`, `ruyi_capture_start`, `ruyi_capture_stop`, `ruyi_capture_wait` | 网络请求列表 + 被动抓包 |
-| 软断点调试 | `ruyi_set_breakpoint_on_text`, `ruyi_break_on_xhr`, `ruyi_list_breakpoints`, `ruyi_remove_breakpoint` | preload script 注入 debugger |
+| Cookie 管理 | `ruyi_get_cookies`, `ruyi_set_cookies`, `ruyi_delete_cookies` | Cookie 读取/写入/删除 |
+| 网络取证 | `ruyi_list_network_requests`, `ruyi_capture_start`, `ruyi_capture_stop`, `ruyi_capture_wait`, `ruyi_get_request_initiator` | 网络请求列表、被动抓包、fetch/XHR 调用栈采样 |
+| 请求/响应拦截 | `ruyi_intercept_requests`, `ruyi_intercept_responses`, `ruyi_intercept_wait`, `ruyi_intercept_stop` | BiDi network intercept 队列式消费 |
+| WebSocket | `ruyi_websocket_inject`, `ruyi_get_websocket_messages` | 注入 WebSocket Proxy 并采集 send/receive 消息 |
+| 软断点调试 | `ruyi_set_breakpoint_on_text`, `ruyi_break_on_xhr`, `ruyi_list_breakpoints`, `ruyi_remove_breakpoint`, `ruyi_list_preload_scripts` | preload script + Proxy 软断点 |
 | 人类模拟 | `ruyi_human_move`, `ruyi_human_click`, `ruyi_human_input` | bezier/windmouse 算法鼠标操作 |
 | 指纹追踪 | `ruyi_trace_start`, `ruyi_trace_stop`, `ruyi_trace_get_results` | BiDi 事件 + ruyitrace DOM Hook |
 | 网络增强 | `ruyi_set_extra_headers`, `ruyi_set_cache_behavior` | 全局 Headers + 缓存策略 |
@@ -97,7 +126,7 @@ Claude Code 拉起 ida-multi-mcp (stdio)
 ```
 Web RE 目标 → 按需求能力选择
   ├── 需要 CDP 完整断点调试 → js-reverse-mcp (Chrome/CDP, ~22 tools)
-  ├── 需要反检测/指纹/trace/人类模拟 → ruyi-mcp (Firefox/BiDi, ~41 tools)
+  ├── 需要反检测/指纹/trace/人类模拟 → ruyi-mcp (Firefox/BiDi, 56 tools)
   └── 两者都需要 → ruyi 过检 + export_session → js-reverse 调试
 ```
 
@@ -142,6 +171,16 @@ Claude Code ← stdio ← FastMCP ← reqable_* 工具查询
 - 数据库: `%APPDATA%\reqable-mcp\requests.db`（SQLite）
 - 保留期: 默认 7 天（`REQABLE_RETENTION_DAYS`）
 
+## first-mcp
+
+- **模式**: 远程 SSE (`http://127.0.0.1:4554/sse`)
+- **前提**: 先启动 `First GUI`，并确认本地 SSE 服务已监听 `127.0.0.1:4554`
+- **启用策略**: 按需手动启用，默认不加入 Codex / Claude 的自动初始化清单
+
+### 原因
+
+`first-mcp` 依赖外部 GUI 与本地 SSE 服务。若在工作区启动时直接初始化，而 `First GUI` 尚未运行，MCP client 会在握手阶段报连接失败。为了避免启动噪音，默认从自动初始化配置中移除；只有在需要微信小程序调试时再临时加入配置。
+
 ## .mcp.json 配置
 
 ```json
@@ -152,15 +191,6 @@ Claude Code ← stdio ← FastMCP ← reqable_* 工具查询
       "args": ["-m", "ida_multi_mcp"],
       "env": { "IDADIR": "D:\\reverse_ENV\\resource\\portable_win" }
     },
-    "jadx-ai-mcp": {
-      "command": "D:\\reverse_ENV\\.venv\\Scripts\\python.exe",
-      "args": ["D:\\reverse_ENV\\mcp\\jadx-mcp-server\\jadx_mcp_server.py"],
-      "env": { "JAVA_HOME": "D:\\reverse_ENV\\tools\\jdk" }
-    },
-    "js-reverse-mcp": {
-      "command": "D:\\reverse_ENV\\tools\\node\\node.exe",
-      "args": ["D:\\reverse_ENV\\mcp\\js-reverse-mcp\\node_modules\\js-reverse-mcp\\build\\src\\index.js", "--cloak"]
-    },
     "ruyi-mcp": {
       "command": "D:\\reverse_ENV\\tools\\node\\node.exe",
       "args": ["D:\\reverse_ENV\\mcp\\ruyi-mcp\\build\\src\\index.js"]
@@ -169,10 +199,46 @@ Claude Code ← stdio ← FastMCP ← reqable_* 工具查询
 }
 ```
 
+## Codex 默认启动配置建议
+
+```toml
+[mcp_servers.ida-multi-mcp]
+command = "D:\\reverse_ENV\\.venv\\Scripts\\python.exe"
+args = ["-m", "ida_multi_mcp"]
+
+[mcp_servers.ida-multi-mcp.env]
+IDADIR = "D:\\reverse_ENV\\resource\\portable_win"
+
+[mcp_servers.ruyi-mcp]
+command = "D:\\reverse_ENV\\tools\\node\\node.exe"
+args = ["D:\\reverse_ENV\\mcp\\ruyi-mcp\\build\\src\\index.js"]
+
+# On-demand examples:
+# [mcp_servers.jadx-ai-mcp]
+# command = "D:\\reverse_ENV\\.venv\\Scripts\\python.exe"
+# args = ["D:\\reverse_ENV\\mcp\\jadx-mcp-server\\jadx_mcp_server.py"]
+#
+# [mcp_servers.js-reverse-mcp]
+# command = "powershell"
+# args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "D:\\reverse_ENV\\tools\\chromium\\start-js-reverse.ps1"]
+```
+
+## 迁移后验证
+
+1. 启动 Codex，确认默认 MCP 无握手报错。
+2. 验证默认冷启动 MCP：
+   - `ida-multi-mcp`：至少完成一次 `idalib_open` + `survey_binary` 或同等级真实调用
+   - `ruyi-mcp`：至少完成一次 `ruyi_new_page` 或同等级真实调用
+3. 验证按需 MCP：
+   - 先满足前置条件，再临时加入配置并单独测试
+4. 若只做到“启动不报错”，不能算迁移完成。
+
 ## 新增 MCP 服务时
 
 必须同步：
 1. 更新 `.mcp.json`
-2. 更新 `mcp/README.md` 服务清单
-3. 更新本文档
-4. 更新 `CLAUDE.md` 的 MCP 前缀速查表 + 工具速查表
+2. 如需 Codex 默认冷启动，更新 `~/.codex/config.toml`
+3. 如属 Claude 全局 MCP，更新 `~/.claude.json` 并在项目文档标明“全局分层，不进项目 `.mcp.json`”
+4. 更新 `mcp/README.md` 服务清单
+5. 更新本文档，写清前置条件、启用方式、验证方式
+6. 更新 `AGENTS.md` / `CLAUDE.md` 的 MCP 前缀速查表 + 工具速查表

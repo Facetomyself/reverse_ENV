@@ -6,11 +6,14 @@
  */
 import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
-const PYTHON_EXE = 'D:\\reverse_ENV\\.venv\\Scripts\\python.exe';
-const BRIDGE_SCRIPT = 'D:\\reverse_ENV\\ruyi-mcp\\bridge\\ruyi_bridge.py';
+const PYTHON_EXE = process.env.RUYI_MCP_PYTHON || 'D:\\reverse_ENV\\.venv\\Scripts\\python.exe';
+const MODULE_DIR = dirname(fileURLToPath(import.meta.url));
+const BRIDGE_SCRIPT = resolve(MODULE_DIR, '../../../bridge/ruyi_bridge.py');
 const DEFAULT_CALL_TIMEOUT_MS = 120_000; // 2 minutes for browser ops
 // ---------------------------------------------------------------------------
 // PythonBridge
@@ -22,11 +25,20 @@ export class PythonBridge {
     pending = new Map();
     ready = false;
     readyResolve;
+    readyReject;
     readyPromise;
     stderrLog = [];
     constructor() {
         this.readyPromise = new Promise((resolve) => {
             this.readyResolve = resolve;
+            this.readyReject = () => { };
+        });
+        this.resetReadyPromise();
+    }
+    resetReadyPromise() {
+        this.readyPromise = new Promise((resolve, reject) => {
+            this.readyResolve = resolve;
+            this.readyReject = (reason) => reject(reason ?? new Error('Python bridge failed to become ready'));
         });
     }
     // ------------------------------------------------------------------
@@ -35,6 +47,7 @@ export class PythonBridge {
     async start() {
         if (this.proc)
             return;
+        this.resetReadyPromise();
         console.error('[ruyi-mcp] Starting Python bridge...');
         this.proc = spawn(PYTHON_EXE, [BRIDGE_SCRIPT], {
             stdio: ['pipe', 'pipe', 'pipe'],
@@ -84,6 +97,12 @@ export class PythonBridge {
         // Process exit
         this.proc.on('exit', (code) => {
             console.error(`[ruyi-mcp] Python bridge exited with code ${code}`);
+            if (!this.ready) {
+                const details = this.stderrLog.length
+                    ? ` Last stderr: ${this.stderrLog[this.stderrLog.length - 1]}`
+                    : '';
+                this.readyReject(new Error(`Python bridge exited before ready (code ${code}).${details}`));
+            }
             this.ready = false;
             // Reject all pending
             for (const [id, p] of this.pending) {
@@ -94,6 +113,9 @@ export class PythonBridge {
         });
         this.proc.on('error', (err) => {
             console.error(`[ruyi-mcp] Python bridge spawn error: ${err.message}`);
+            if (!this.ready) {
+                this.readyReject(new Error(`Python bridge spawn error: ${err.message}`));
+            }
             this.ready = false;
         });
         // Wait for ready signal

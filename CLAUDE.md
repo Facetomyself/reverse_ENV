@@ -11,7 +11,7 @@
 | 3 | **Git 状态** | `git status --short --branch` |
 | 4 | **远端同步** | `git remote -v`；涉及 PR/远端时 `git fetch origin && git log --oneline origin/main..HEAD` |
 
-> WebFetch 硬封禁：即使 URL 看起来可访问，也不得直接调用 WebFetch。优先用 `search-layer` (搜索)、`content-extract` (国内文章/Markdown)、`github-solution-research` (GitHub)、浏览器 MCP (需登录/JS 渲染)。**此规则优先于所有其他工具选择逻辑。**
+> WebFetch 硬封禁：即使 URL 看起来可访问，也不得直接调用 WebFetch。优先用全局 `search-layer` (WebSearch+Exa+Tavily+Grok 并行)、`content-extract` (国内文章/Markdown)、`github-solution-research` (GitHub)、浏览器 MCP (需登录/JS 渲染)。这些搜索/提取能力属于 Claude 全局 MCP 分级策略，不放入项目 `.mcp.json`。**此规则优先于所有其他工具选择逻辑。**
 
 ## 核心约束
 
@@ -19,7 +19,7 @@
 
 - venv: `.venv\` ｜ JDK: `tools\jdk\` ｜ Node: `tools\node\`
 - NDK r29: `tools\android-ndk\` ｜ Rust: `%USERPROFILE%\.cargo\`
-- IDA Pro 9.3: `resource\portable_win\` ｜ MCP 配置: `.mcp.json`
+- IDA Pro 9.3: `resource\portable_win\` ｜ MCP 配置: `.mcp.json` + `~/.codex/config.toml`（Codex）+ `~/.claude.json`（Claude 全局）
 - **所有逆向项目在 `workspace\<项目名>\` 下起新文件夹**。产出物均落地到对应项目目录。
 - **待分析二进制文件**（`.dll`, `.so`, `.exe`, `.bin` 等）**必须先放入 `workspace\<项目名>\`**，再打开 IDA/radare2。禁止将二进制文件直接放在 `workspace\` 根目录。
 - **IDA 数据库文件**（`.id0`, `.id1`, `.id2`, `.nam`, `.til`, `.i64`）由 IDA 在二进制文件所在目录自动生成。确保二进制文件在项目子目录内，即可避免 IDA 产物污染根目录。
@@ -34,7 +34,7 @@
 **操作纪律：**
 1. **不得凭记忆** — 修改文件前 Read 实际内容，不基于摘要操作。
 2. **先确认、再动手** — 确认当前目录、文件存在、工具可用。
-3. **改动闭环** — 改脚本 → 同步 CLAUDE.md；改工具路径 → 同步 skill 文档；加项目 MCP → 同步 `.mcp.json`；加用户 MCP → 同步 `~/.claude.json`。
+3. **改动闭环** — 改脚本 → 同步 CLAUDE.md + AGENTS.md；改工具路径 → 同步 skill 文档；加项目 MCP → 同步 `.mcp.json`；加 Codex 默认 MCP → 同步 `~/.codex/config.toml`；加 Claude 全局 MCP → 同步 `~/.claude.json`。
 4. **禁止猜测** — 工具安装、命令执行必须有真实输出为证。
 
 **编码：**
@@ -53,7 +53,7 @@
 13. **不得假装** — 不对 L4 目标声称"已完整复现"。
 
 **修改闭环：**
-14. 自检：CLAUDE.md 路径一致？`.mcp.json` 合法？临时文件已清理？敏感数据已脱敏？
+14. 自检：CLAUDE.md/AGENTS.md 路径一致？`.mcp.json` / `~/.codex/config.toml` / `~/.claude.json` 合法？临时文件已清理？敏感数据已脱敏？
 
 ## 仓库入口
 
@@ -112,7 +112,7 @@
   → 产出三件套 → 审查门 → 知识库回填(有跨项目价值的分析)
 ```
 
-> 多源搜索约束见全局 `~/.claude/CLAUDE.md`。详细规范: `docs/搜索编排规范.md`。
+> 多源搜索约束见全局 `~/.claude/CLAUDE.md` 与 `docs/搜索编排规范.md`。`search-layer` / `content-extract` 属 Claude 全局分级能力；Codex 侧已迁移 `search-layer` 本地 skill 副本到 `~/.codex/skills/search-layer`，并完成 `search.py --mode fast` smoke test。
 
 **不得跳阶段。L4 目标不声称完整还原。**
 
@@ -124,7 +124,7 @@
 | `idalib_*` | ida-multi-mcp | headless 会话管理 (open/close/list) |
 | `jadx_*` | jadx-ai-mcp | APK 类/方法搜索/反编译/xref |
 | `js-reverse_*` | js-reverse-mcp | Chrome/CDP 调试优先 — 断点/脚本/网络/运行时 (~22 tools) |
-| `ruyi_*` | ruyi-mcp | Firefox/BiDi 全链路增强 — 反检测/指纹/人类模拟/trace/JS逆向 (~41 tools) |
+| `ruyi_*` | ruyi-mcp | Firefox/BiDi 全链路增强 — 反检测/指纹/人类模拟/trace/JS逆向 (56 tools) |
 | `reqable_*` | reqable-mcp | Reqable 抓包数据查询 — HTTP/WebSocket 流量搜索/分析/代码生成 (~17 tools) |
 | `serena_*` | serena (user) | 代码符号搜索/引用追踪/语义搜索/项目导航 |
 | `deepcon_*` | deepcon (user) | 包文档语义搜索/API 参考/代码示例检索 |
@@ -133,6 +133,13 @@
 
 > MCP 服务详情见 `docs/MCP服务详情.md`
 
+### Claude → Codex MCP 迁移规则
+
+1. `.mcp.json` 是**项目级声明**，`~/.codex/config.toml` 是 **Codex 用户级启动配置**。迁移时不得把项目级可用清单直接提升为 Codex 默认冷启动清单。
+2. 默认冷启动只保留无额外前置条件、可在进入项目时立即握手成功的 MCP；依赖 GUI、浏览器调试端口、本地 SSE、桌面客户端上报链的 MCP 一律改为按需启用。
+3. 项目规范名优先。Web CDP 调试 MCP 的规范名统一为 `js-reverse-mcp`；如 Codex 侧实验过其他包名，也不得反向污染项目文档与项目配置。
+4. 迁移完成的判定标准不是“配置能被加载”，而是“默认冷启动无噪音 + 至少一个默认 MCP 能真实调用成功 + 按需 MCP 的前置条件和验证步骤已写清楚”。
+
 ### MCP 服务组织约束
 
 **所有 MCP 服务代码统一在 `mcp/` 目录下管理。** pip 安装的 MCP（ida-multi-mcp、reqable-mcp 运行时）标注来源即可，不移动 venv 文件。
@@ -140,7 +147,7 @@
 | 规则 | 说明 |
 |------|------|
 | 源码归属 | MCP 源码/项目必须在 `mcp/` 下，不得散落根目录或 `tools/` |
-| 配置同步 | 新增/变更 MCP 路径时，同步更新 `.mcp.json` + `CLAUDE.md` + `mcp/README.md` + `docs/MCP服务详情.md` |
+| 配置同步 | 新增/变更 MCP 路径时，同步更新 `.mcp.json` + `~/.codex/config.toml`（如需 Codex 默认启用）+ `CLAUDE.md` + `AGENTS.md` + `mcp/README.md` + `docs/MCP服务详情.md` |
 | pip 管理标注 | pip 安装的 MCP 在 `mcp/README.md` 中标注包名和 venv 位置 |
 | 硬编码路径 | MCP 启动脚本（如 `start-js-reverse.ps1`）中的路径必须使用 `mcp/` 前缀 |
 
@@ -183,7 +190,7 @@
 **选择规则：**
 1. 需要 CDP 完整断点调试（`get_paused_info`、`step`、调用栈查看）→ 用 `js-reverse_*`
 2. 需要指纹分析、DOM trace、过 Cloudflare/hCaptcha、反检测浏览 → 用 `ruyi_*`（**无论目标站点反检测强度如何**）
-3. ruyi-mcp 功能更全面（41 tools vs 22），指纹分析和 trace 能力在弱检测站点同样实用
+3. ruyi-mcp 功能更全面（56 tools vs 22），指纹分析和 trace 能力在弱检测站点同样实用
 4. 两者可互补：`ruyi_export_session` → 导出 Cookie/Storage → js-reverse-mcp 继续 CDP 调试
 5. **禁止** 在强反检测站点上单独用 js-reverse-mcp（Chrome 无指纹伪装，会被封）— 需先经 ruyi-mcp 过检
 
@@ -243,12 +250,12 @@
 
 | 场景 | 走哪个 |
 |------|--------|
-| 搜索/查事实/找资料 | `search-layer`（四源并行 + 去重打分） |
-| 微信公众号/国内文章/需解析的 URL | `content-extract`（MinerU API） |
+| 搜索/查事实/找资料 | 全局 `search-layer`（client-native search + Exa + Tavily + Grok 并行 + 去重打分） |
+| 微信公众号/国内文章/需解析的 URL | 全局 `content-extract`（MinerU API） |
 | GitHub 代码/Issue/PR 深挖 | `github-solution-research` |
 | 需登录/Cookie/JS 渲染的页面 | `ruyi_*` / `js-reverse_*` 浏览器方案 |
 
-WebFetch 仅限以上工具均不可用时的最后 fallback，且结论须标注「来源: WebFetch，置信度低」。
+本项目不使用 WebFetch fallback。若全局文档允许 WebFetch 兜底，以本项目 `AGENTS.md` / `CLAUDE.md` 的硬封禁为准；搜索能力不可用时，应先迁移/修复 `search-layer` 或改走 GitHub / 浏览器方案，并在结论中标注能力缺口。
 
 ## 已知坑点
 
@@ -349,9 +356,9 @@ git diff --check
 
 - 提交信息须描述真实改动，不写 "update" / "fix"
 - 确认无临时文件、敏感数据、调试日志混入 diff
-- 涉及脚本/工具路径变更 → 同步 CLAUDE.md + skill 文档
-- 涉及 MCP 配置变更 → 同步 `.mcp.json`
-- 涉及用户 MCP 变更 → 同步 `~/.claude.json`
+- 涉及脚本/工具路径变更 → 同步 CLAUDE.md + AGENTS.md + skill 文档
+- 涉及 MCP 配置变更 → 同步 `.mcp.json`；如需 Codex 默认启用，同步 `~/.codex/config.toml`
+- 涉及 Claude 全局 MCP 变更 → 同步 `~/.claude.json`
 
 ## 大任务自动刷新
 
