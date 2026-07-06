@@ -34,8 +34,8 @@
 
 在目标工程根目录执行：
 
-```bash
-python D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py . --with-runner
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py" . --with-runner
 ```
 
 安装脚本默认保留已有工具目录和 runner，且不写入 IDA 插件目录，也不把 `INP.py` 复制到项目 `scripts/`。需要替换时显式加 `--force`，需要保留旧副本时加 `--backup-existing`；需要使用 IDA 导出数据时，再用 `--with-inp` 复制项目批处理副本，或用 `--install-ida-plugin`、`--ida-root`、`--ida-plugin-dir` 复制 `INP.py` 到 IDA `plugins` 目录。
@@ -43,7 +43,7 @@ python D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py . --wi
 Windows PowerShell：
 
 ```powershell
-python D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py . --with-runner
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py" . --with-runner
 ```
 
 安装后常用目录：
@@ -64,7 +64,7 @@ scripts/INP.py（仅在显式 --with-inp / --install-project-inp 时）
 <IDA目录>/plugins/INP.py（仅在显式安装 IDA 插件时）
 ```
 
-`xiaojianbang-syscall-filter` 的 Unix 入口 `load.sh`、`capture_live.sh`、`capture_test.sh` 和 Windows 入口 `load.ps1` 都支持 `ADB` 覆盖 adb 路径；`load.sh` / `load.ps1` 支持 `KP_SUPERKEY` 覆盖 KernelPatch/APatch superkey。
+`xiaojianbang-syscall-filter` 的 Unix 入口 `load.sh`、`capture_live.sh`、`capture_test.sh` 和 Windows 入口 `load.ps1` 都支持 `ADB` 覆盖 adb 路径；`load.sh` / `load.ps1` 的 superkey 优先级为显式参数、`KP_SUPERKEY`、`XJB_KP_SUPERKEY`，未提供时拒绝执行 KPM 操作。
 
 分发或复制工具前可先运行 `scripts/install_skill_tools.py --self-check` 自检；只想审计目标路径时使用 `--audit`/`--dry-run`。
 
@@ -93,9 +93,9 @@ scripts/INP.py（仅在显式 --with-inp / --install-project-inp 时）
 
 通用依赖：
 
-```bash
-python -m pip install frida-tools frida
-python -m pip install capstone unicorn keystone-engine
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" -m pip install frida-tools frida
+"D:\reverse_ENV\.venv\Scripts\python.exe" -m pip install capstone unicorn keystone-engine
 ```
 
 `adb` 路径查找顺序：
@@ -125,7 +125,8 @@ python -m pip install capstone unicorn keystone-engine
 | `MEMDUMPER_ROOT` | 覆盖 MemDumper 根目录 |
 | `ECAPTURE_ROOT` | 覆盖 eCapture 根目录 |
 | `STEALTH_HOOK_ROOT` | 覆盖 stealth-hook 根目录 |
-| `KP_SUPERKEY` | 覆盖 KernelPatch superkey，由用户设定，通过 KP_SUPERKEY 传入 |
+| `KP_SUPERKEY` | KernelPatch superkey，优先级高于兼容变量 `XJB_KP_SUPERKEY` |
+| `XJB_KP_SUPERKEY` | 兼容旧脚本的 KernelPatch superkey 变量，优先级低于显式参数和 `KP_SUPERKEY` |
 
 ## 推荐工作流
 

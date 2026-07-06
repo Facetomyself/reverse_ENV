@@ -27,8 +27,8 @@
 
 稳定 pid 示例：
 
-```bash
-python3 scripts/memdump_so.py \
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\workspace\<项目名>\scripts\memdump_so.py" \
   --pid 12345 \
   --name libtarget.so \
   --out-dir artifacts/dumps/libtarget_mdump \
@@ -37,8 +37,8 @@ python3 scripts/memdump_so.py \
 
 短窗口示例：
 
-```bash
-python3 scripts/frida_memdump_so.py \
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\workspace\<项目名>\scripts\frida_memdump_so.py" \
   --package com.example.target \
   --name libtarget.so \
   --out-dir artifacts/dumps/libtarget_fast \
@@ -66,8 +66,8 @@ python3 scripts/frida_memdump_so.py \
 
 示例：
 
-```bash
-python3 scripts/frida_memdump_so.py \
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\workspace\<项目名>\scripts\frida_memdump_so.py" \
   --package com.example.target \
   --name libtarget.so \
   --out-dir artifacts/dumps/libtarget_fast \
@@ -120,10 +120,10 @@ IDA 批处理示例：
 
 需要使用 IDA 导出数据时再复制/安装 `INP.py`：
 
-```bash
-python3 D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py /path/to/project --with-inp
-python3 D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py /path/to/project --install-ida-plugin --ida-root /path/to/ida-pro
-python3 D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py /path/to/project --ida-plugin-dir /path/to/ida-pro/plugins
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py" /path/to/project --with-inp
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py" /path/to/project --install-ida-plugin --ida-root /path/to/ida-pro
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py" /path/to/project --ida-plugin-dir /path/to/ida-pro/plugins
 ```
 
 分析前先检查现有 `artifacts/inp/`，不要重复导出同一版本；重导出时保留旧目录或使用时间/版本后缀，并在实验记录记录来源 so、偏移口径、`INP.py` 来源、函数范围修正和 OLLVM 状态。
@@ -177,14 +177,14 @@ IDA 批处理示例：
 项目使用规则：
 
 - 优先使用项目副本 `third_party/OLLVM_Deobfuscator/ollvm_deobfuscator.py`，不要直接在 Skill 原始目录改工具。
-- 项目没有副本时，先运行 `python3 D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py . --with-runner`，或从项目 Skill `scripts/tools/ollvm_deobfuscator/` 复制到项目 `third_party/OLLVM_Deobfuscator/`。
+- 项目没有副本时，先运行 `"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py" . --with-runner`，或从项目 Skill `scripts/tools/ollvm_deobfuscator/` 复制到项目 `third_party/OLLVM_Deobfuscator/`。
 - 目标样本存在魔改 OLLVM、状态变量宽度变化、寄存器预加载、异常跳转表或模拟执行失败时，可以修改项目副本工具代码适配；必须记录改动文件、算法假设、输入/输出 so、函数范围和失败边界。
 - 还原输出不能单独作为结论，必须重新导入 IDA 或重新导出关键函数文本，并与 Frida/syscall-filter/logcat 的 pc/lr/callsite 交叉验证。
 
 基本命令：
 
-```bash
-python3 third_party/OLLVM_Deobfuscator/ollvm_deobfuscator.py \
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\workspace\<项目名>\third_party\OLLVM_Deobfuscator\ollvm_deobfuscator.py" \
   <input.so> <start_hex> <end_hex> \
   --type auto \
   -o <output.so>
@@ -217,8 +217,8 @@ indirect
 
 Wrapper 示例：
 
-```bash
-python3 scripts/memdump_so.py \
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\workspace\<项目名>\scripts\memdump_so.py" \
   --package com.example.target \
   --name libtarget.so \
   --abi arm64-v8a \
@@ -227,8 +227,8 @@ python3 scripts/memdump_so.py \
 
 按 pid dump：
 
-```bash
-python3 scripts/memdump_so.py \
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\workspace\<项目名>\scripts\memdump_so.py" \
   --pid 12345 \
   --name libtarget.so \
   --out-dir dumps/memdumper/libtarget_by_pid
@@ -236,8 +236,8 @@ python3 scripts/memdump_so.py \
 
 手动地址范围 dump：
 
-```bash
-python3 scripts/memdump_so.py \
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\workspace\<项目名>\scripts\memdump_so.py" \
   --pid 12345 \
   --manual \
   --name anon_rx_0x70000000_0x70100000.bin \

@@ -63,7 +63,7 @@ python stealth-runner.py --deploy-gadget-config --package com.example --mode all
 | 信号链 ART 兼容 | ✅ setExceptionHandler | ✅ sigaction chain |
 | OAT NULL header fix | ⚠️ 检测但无法寄存器级修复 | ✅ ucontext 寄存器替换 |
 
-> **Frida JS 版是"过滤器"**，C 原生版是"摘除器"。对于绝大多数通过公开 API 检测的 SDK，Frida JS 版已够用。需要对抗内核级或 linker 内部遍历时，使用 C 原生版（`tools/hide-soinfo/`）。
+> **Frida JS 版是"过滤器"**，C 原生版是"摘除器"。对于绝大多数通过公开 API 检测的 SDK，Frida JS 版已够用。C 原生版目录 `tools/hide-soinfo/` 当前未内置，属于待建资产；需要对抗内核级或 linker 内部遍历时，先补齐该工程副本并记录来源、license 和 hash。
 
 ## 与 C 原生工具的关系
 
@@ -73,7 +73,7 @@ python stealth-runner.py --deploy-gadget-config --package com.example --mode all
                     └───────────┬─────────────┘
                                 │ 桥接（编译后 LD_PRELOAD）
                     ┌───────────▼─────────────┐
-                    │  tools/hide-soinfo/       │  ← C 原生 .so
+                    │  tools/hide-soinfo/       │  ← 待建：C 原生 .so
                     │  libhide_soinfo.so        │     .init_array 自动执行
                     └──────────────────────────┘
 ```

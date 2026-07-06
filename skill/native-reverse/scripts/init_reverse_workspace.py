@@ -19,6 +19,9 @@ DIRS = [
 ]
 
 DOCS = {
+    "report.md": "# 分析报告\n\n",
+    "findings.json": "{\n  \"findings\": []\n}\n",
+    "triage.md": "# Triage\n\n",
     "docs/experiment_record.md": "# 实验记录\n\n",
     "docs/detection_summary.md": "# 检测点汇总\n\n",
     "docs/reproduction.md": "# 手工复现记录\n\n",

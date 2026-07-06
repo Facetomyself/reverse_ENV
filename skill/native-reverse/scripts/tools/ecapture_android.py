@@ -70,11 +70,27 @@ def adb(*args: str, **kwargs) -> subprocess.CompletedProcess:
 
 
 def adb_su(command: str, **kwargs) -> subprocess.CompletedProcess:
-    return adb("shell", f"su -c {shell_quote(command)}", **kwargs)
+    return adb("shell", "su", "-c", command, **kwargs)
 
 
 def shell_quote(value: str) -> str:
     return "'" + value.replace("'", "'\\''") + "'"
+
+
+def shell_join(argv: list[str]) -> str:
+    return " ".join(shell_quote(str(item)) for item in argv)
+
+
+def validate_device_dir(value: str) -> str:
+    path = value.rstrip("/")
+    if not path:
+        raise ValueError("--device-dir must not be empty")
+    dangerous = {"/", "/data", "/data/", "/data/local", "/data/local/", "/data/local/tmp", "/data/local/tmp/"}
+    if value in dangerous or path in {"/", "/data", "/data/local", "/data/local/tmp"}:
+        raise ValueError(f"refusing dangerous --device-dir: {value!r}")
+    if not path.startswith("/data/local/tmp/"):
+        raise ValueError("--device-dir must stay under /data/local/tmp/")
+    return path
 
 
 def remote_output_path(value: str, device_out_dir: str, allow_url: bool = False) -> str:
@@ -131,6 +147,10 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         args.ecapture_args = ["tls", "-m", "text"]
     if args.timestamp_device_dir:
         args.device_dir = f"{args.device_dir}_{time.strftime('%Y%m%d_%H%M%S')}"
+    try:
+        args.device_dir = validate_device_dir(args.device_dir)
+    except ValueError as exc:
+        parser.error(str(exc))
     return args
 
 
@@ -153,12 +173,11 @@ def main(argv: list[str]) -> int:
     device_out_dir = f"{args.device_dir}/out"
     remote_bin = f"{device_bin_dir}/ecapture"
     quoted_device_dir = shell_quote(args.device_dir)
-    quoted_bin_dir = shell_quote(device_bin_dir)
     quoted_out_dir = shell_quote(device_out_dir)
     prepare_device_dir = (
-        f"mkdir -p {quoted_bin_dir} {quoted_out_dir}; "
-        f"chmod 777 {quoted_bin_dir}; "
-        f"chmod 777 {quoted_out_dir}"
+        f"{shell_join(['mkdir', '-p', device_bin_dir, device_out_dir])}; "
+        f"{shell_join(['chmod', '777', device_bin_dir])}; "
+        f"{shell_join(['chmod', '777', device_out_dir])}"
     )
     if args.no_clean_device_dir:
         adb_su(prepare_device_dir)
@@ -169,7 +188,7 @@ def main(argv: list[str]) -> int:
     print(push.stderr, end="", file=sys.stderr)
     if push.returncode != 0:
         return push.returncode
-    adb_su(f"chmod 755 {shell_quote(remote_bin)}")
+    adb_su(shell_join(["chmod", "755", remote_bin]))
 
     remote_args = rewrite_output_args(args.ecapture_args, device_out_dir)
 
@@ -189,7 +208,10 @@ def main(argv: list[str]) -> int:
 
     time.sleep(max(0.1, args.duration))
     if remote_pid:
-        adb_su(f"kill -INT {remote_pid} 2>/dev/null || kill {remote_pid} 2>/dev/null || true")
+        adb_su(
+            f"{shell_join(['kill', '-INT', remote_pid])} 2>/dev/null || "
+            f"{shell_join(['kill', remote_pid])} 2>/dev/null || true"
+        )
     else:
         adb_su("pkill -INT ecapture 2>/dev/null || pkill ecapture 2>/dev/null || true")
     time.sleep(1.0)
@@ -202,7 +224,7 @@ def main(argv: list[str]) -> int:
         rc = pull.returncode
 
     if not args.keep_device_files:
-        adb_su(f"rm -rf {args.device_dir}", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        adb_su(shell_join(["rm", "-rf", args.device_dir]), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     print(f"[ecapture] output_dir={local_out}", flush=True)
     return rc

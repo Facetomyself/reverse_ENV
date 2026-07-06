@@ -7,13 +7,21 @@ description: 在使用 js-reverse-mcp 做前端 JavaScript 逆向时使用，适
 
 ## 适用范围
 
-当任务属于以下场景时优先使用本 skill：
+Web JS 逆向默认先走 `ruyi-reverse`。只有同时满足以下条件，才使用本 skill：
+
+- 任务明确需要 CDP 级暂停、单步、调用栈或作用域查看
+- 目标没有强反检测、强指纹对抗、验证码绕过或 TLS/CDP 痕迹检测需求
+- 需要用 `js-reverse-mcp` 对具体请求或脚本做断点级取证
+
+当任务属于以下场景，且满足上面的 CDP 条件时使用本 skill：
 
 - 定位接口签名、加密参数、风控字段
 - 观察页面请求链路与脚本来源
 - 在运行时抓取函数入参与返回值
 - 追踪某个 XHR/Fetch/WebSocket 的触发点
 - 把页面证据带回 Node 做本地复现与补环境
+
+涉及反检测、指纹、Cloudflare/hCaptcha、行为模拟、Cookie/Storage 登录态准备时，先用 `ruyi-reverse`。需要把 ruyi 会话交给本 skill 继续 CDP 调试时，桥接顺序固定为 `ruyi_export_session` 导出 Cookie/Storage，再导入 `js-reverse-mcp` 页面后继续断点取证。
 
 如果目标是二进制、APK、PE、ELF、DLL、SO，请改用 `ida-reverse`、`radare2` 或 `reverse-engineering`。
 
@@ -25,6 +33,7 @@ description: 在使用 js-reverse-mcp 做前端 JavaScript 逆向时使用，适
 
 - `list_scripts` -> `js-reverse_list_scripts`
 - `get_script_source` -> `js-reverse_get_script_source`
+- `save_script_source` -> `js-reverse_save_script_source`，`filePath` 必填，且必须是 `"D:\reverse_ENV\workspace\<项目名>\..."` 下的绝对路径
 - `search_in_sources` -> `js-reverse_search_in_sources`
 - `break_on_xhr` -> `js-reverse_break_on_xhr`
 - `evaluate_script` -> `js-reverse_evaluate_script`
@@ -77,12 +86,13 @@ description: 在使用 js-reverse-mcp 做前端 JavaScript 逆向时使用，适
 
 - 用 `js-reverse_new_page` 或 `js-reverse_navigate_page` 打开目标页面
 - 用 `js-reverse_list_network_requests` 找目标请求
-- 用 `js-reverse_get_request_initiator` 回溯调用来源
+- 先记录目标请求 `requestId`，再用 `js-reverse_get_request_initiator({ "requestId": "<requestId>" })` 回溯调用来源
 - 用 `js-reverse_list_scripts`、`js-reverse_search_in_sources` 缩小脚本范围
 
 必须产出：
 
 - 目标请求 URL 或特征
+- requestId
 - initiator 线索
 - 可疑脚本 URL
 - 初始任务记录

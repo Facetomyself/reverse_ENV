@@ -144,7 +144,7 @@ for i in range(patch_offset, patch_offset + 144):
     dex[i] ^= xor_key
 
 # 4. Recompute DEX checksum and SHA-1 hash
-# 5. Decompile with jadx or baksmali
+# 5. Decompile with D:\reverse_ENV\tools\jadx\bin\jadx.bat or a verified local baksmali path
 ```
 
 **Key insight:** Native libraries can modify DEX bytecode in memory via `/proc/self/maps` + `mprotect`, making static analysis of the APK alone insufficient. The XOR key and patch offsets must be extracted from the native `.so` to reconstruct the actual runtime DEX. Only works on Dalvik (API < 21), not ART.
@@ -430,10 +430,12 @@ A secure messenger app logs cryptographic material via Android's `Log.d()`:
 - Ephemeral shared key per message
 - Message IDs and shift counters
 
-The AES-CBC IV derives from the logged ephemeral/shared value; the key derives from the logged base agreement and an accumulated shift counter. Collect all log entries with `adb logcat`, then reconstruct AES-CBC parameters to decrypt intercepted messages.
+The AES-CBC IV derives from the logged ephemeral/shared value; the key derives from the logged base agreement and an accumulated shift counter. Collect all log entries with the local `adb.exe`, then reconstruct AES-CBC parameters to decrypt intercepted messages.
 
-```bash
-adb logcat | grep -E "(agreement|ephemeral|shared|key)" > crypto_log.txt
+```powershell
+& "D:\reverse_ENV\tools\adb\adb.exe" logcat |
+  Select-String -Pattern "(agreement|ephemeral|shared|key)" |
+  Set-Content -Encoding UTF8 -Path "D:\reverse_ENV\workspace\<项目名>\crypto_log.txt"
 # Parse log entries to reconstruct: key = f(base_agreement, shift_counter)
 #                                   iv  = f(ephemeral_shared)
 ```
@@ -453,14 +455,16 @@ A JNI native library handles request signing using an XOR-obfuscated key stored 
 2. Set a breakpoint after the XOR decryption routine
 3. Dump the memory region containing the decrypted key
 4. Use `baksmali` to disassemble the APK's DEX, identify the smali file that constructs the signed POST request
-5. Patch the smali to change which parameter gets signed, then rebuild with `apktool` and reinstall
+5. Patch the smali to change which parameter gets signed, then rebuild with the local `apktool.bat` and reinstall in the authorized lab device/emulator
 
-```bash
+```powershell
 # Decompile APK
-apktool d target.apk -o target_decompiled/
+& "D:\reverse_ENV\tools\apktool\apktool.bat" d "D:\reverse_ENV\workspace\<项目名>\target.apk" `
+  -o "D:\reverse_ENV\workspace\<项目名>\target_decompiled"
 # Edit smali: change signed parameter from original to desired value
 # Rebuild
-apktool b target_decompiled/ -o target_patched.apk
+& "D:\reverse_ENV\tools\apktool\apktool.bat" b "D:\reverse_ENV\workspace\<项目名>\target_decompiled" `
+  -o "D:\reverse_ENV\workspace\<项目名>\target_patched.apk"
 # Sign and install
 ```
 

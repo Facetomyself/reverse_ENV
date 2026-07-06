@@ -581,8 +581,8 @@ Beyond basic switch-case (see patterns.md): modern OLLVM variants use:
 # ~(~x & ~y) == x | y (De Morgan's)
 # (x | y) & ~(x & y) == x ^ y
 
-# SiMBA tool for automated simplification:
-# pip install simba-simplifier
+# SiMBA tool for automated simplification, installed only in the project venv:
+# D:\reverse_ENV\.venv\Scripts\python.exe -m pip install simba-simplifier
 from simba import simplify_mba
 expr = "(a | b) + (a & b) - (~a & b)"
 print(simplify_mba(expr))  # → a

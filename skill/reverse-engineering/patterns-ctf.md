@@ -395,7 +395,7 @@ void dfs(int fd, int x, int y, int z) {
 // After decoy hit: reset via ioctl 0x6489, clear visited, re-run DFS
 ```
 
-**Remote deployment:** Upload binary via base64 chunks over netcat shell, decode, execute.
+**Remote deployment guardrail:** Only upload/execute helper binaries on explicitly authorized CTF infrastructure or a local lab VM you control. Prefer local initramfs/qemu reproduction first. If remote execution is unavoidable, record target scope, helper hash, timestamp, command transcript, and cleanup steps in `workspace\<项目名>\triage.md`; never use this pattern against third-party systems.
 
 **Key insight:** For kernel module challenges, injecting test binaries into initramfs and probing ioctls dynamically is faster than static RE of stripped kernel modules. Keep solver binary minimal (raw syscalls, no libc) for fast upload.
 
@@ -533,20 +533,32 @@ decrypted = cipher.decrypt(encrypted)
 Rather than reversing the full hash resolution and key derivation, hook the crypto functions that the malware ultimately calls:
 
 ```c
-// hook_crypto.c — captures AES key used by the ransomware
+// hook_crypto.c — captures AES key used by the ransomware into the mounted workspace output dir
 #define _GNU_SOURCE
 #include <dlfcn.h>
 #include <openssl/evp.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 int EVP_CipherInit_ex(EVP_CIPHER_CTX *ctx, const EVP_CIPHER *type,
                        ENGINE *impl, const unsigned char *key,
                        const unsigned char *iv) {
+    const char *out_dir = getenv("RE_OUT_DIR");
+    if (!out_dir) out_dir = ".";
+    char key_path[512], iv_path[512];
+    snprintf(key_path, sizeof(key_path), "%s/aes_key.bin", out_dir);
+    snprintf(iv_path, sizeof(iv_path), "%s/aes_iv.bin", out_dir);
     if (key) {
-        FILE *f = fopen("/tmp/aes_key.bin", "wb");
+        FILE *f = fopen(key_path, "wb");
         fwrite(key, 1, 32, f);  // AES-256
         fclose(f);
         fprintf(stderr, "[HOOK] AES key captured\n");
+    }
+    if (iv) {
+        FILE *f = fopen(iv_path, "wb");
+        fwrite(iv, 1, 16, f);
+        fclose(f);
+        fprintf(stderr, "[HOOK] AES IV captured\n");
     }
     typedef int (*orig_t)(EVP_CIPHER_CTX*, const EVP_CIPHER*, ENGINE*,
                           const unsigned char*, const unsigned char*);
@@ -556,11 +568,14 @@ int EVP_CipherInit_ex(EVP_CIPHER_CTX *ctx, const EVP_CIPHER *type,
 ```
 
 ```bash
-# Compile and run
+# Compile inside an isolated copy of workspace\<项目名>, not beside originals
 gcc -shared -fPIC -o hook.so hook_crypto.c -ldl
-# Run in Docker container (ransomware may be destructive!)
-docker run --rm -v $(pwd):/work -w /work ubuntu:22.04 \
-  bash -c "LD_PRELOAD=./hook.so ./ransomware; xxd /tmp/aes_key.bin"
+# Dynamic execution requires explicit authorization. Disable network, drop caps,
+# mount the sample read-only, and write captured keys only to workspace output.
+mkdir -p out
+docker run --rm --network none --read-only --cap-drop ALL --pids-limit 128 --memory 512m \
+  -v "$(pwd):/work:ro" -v "$(pwd)/out:/out" -w /work ubuntu:22.04 \
+  bash -c "RE_OUT_DIR=/out LD_PRELOAD=./hook.so ./ransomware; xxd /out/aes_key.bin"
 ```
 
 **Hash resolution patterns:**
@@ -572,8 +587,8 @@ docker run --rm -v $(pwd):/work -w /work ubuntu:22.04 \
 ```python
 from Crypto.Cipher import AES
 
-key = open('/tmp/aes_key.bin', 'rb').read()
-iv = open('/tmp/aes_iv.bin', 'rb').read()  # Also hookable
+key = open('D:/reverse_ENV/workspace/<项目名>/out/aes_key.bin', 'rb').read()
+iv = open('D:/reverse_ENV/workspace/<项目名>/out/aes_iv.bin', 'rb').read()
 cipher = AES.new(key, AES.MODE_CBC, iv)
 
 with open('flag.txt.enc', 'rb') as f:
@@ -584,9 +599,9 @@ pt = pt[:-pt[-1]]
 print(pt.decode())
 ```
 
-**Key insight:** When a binary resolves all imports via hashing, don't waste time reversing the hash function and building a rainbow table. Instead, let the malware resolve everything itself by running it in a sandboxed environment with `LD_PRELOAD` hooks on the functions you care about (OpenSSL crypto functions, file I/O, network calls). The AES key is deterministic across runs — if it works once, it works always.
+**Key insight:** When a binary resolves all imports via hashing, don't waste time reversing the hash function and building a rainbow table. For authorized CTF/lab samples, static triage first; dynamic execution is triage-only in an isolated snapshot with `--network none`, read-only sample mounts, dropped capabilities, and `LD_PRELOAD` hooks on the functions you care about (OpenSSL crypto functions, file I/O, network calls). Treat captured keys as sensitive evidence and keep them under `workspace\<项目名>`.
 
-**Safety:** Always run suspected ransomware in a Docker container or VM. Mount only copies of the encrypted files, never originals.
+**Safety:** Do not run suspected ransomware unless the user confirms authorization and isolation. Use a disposable VM/container snapshot, no network, read-only sample/input mounts, writable workspace output only, and never mount originals or host home directories.
 
 **References:** BSidesSF 2026 "Ran Somewhere"
 

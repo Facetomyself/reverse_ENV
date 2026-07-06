@@ -108,7 +108,8 @@ AArch64 (ARM 64-bit) appears in mobile apps, cloud servers (AWS Graviton), Apple
 
 ```bash
 # Install cross-toolchain and emulator
-apt install gcc-aarch64-linux-gnu gdb-multiarch qemu-user-static
+# External Linux package reference only; do not run system apt from D:\reverse_ENV by default.
+# Prefer verified tools under D:\reverse_ENV\tools\ or a disposable lab VM/container.
 
 # Run AArch64 binary on x86 host
 qemu-aarch64-static -L /usr/aarch64-linux-gnu/ ./arm64_binary

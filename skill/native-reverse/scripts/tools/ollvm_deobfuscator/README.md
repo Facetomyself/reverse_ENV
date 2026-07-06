@@ -35,7 +35,7 @@
 - keystone-engine >= 0.9
 
 ```bash
-pip install capstone unicorn keystone-engine
+D:\reverse_ENV\.venv\Scripts\python.exe -m pip install capstone unicorn keystone-engine
 ```
 
 ## 使用方法

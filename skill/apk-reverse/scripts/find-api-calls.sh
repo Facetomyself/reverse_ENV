@@ -68,7 +68,7 @@ if [[ ! -d "$SOURCE_DIR" ]]; then
   exit 1
 fi
 
-GREP_OPTS="-rn --include=*.java --include=*.kt"
+GREP_OPTS=(-rn --include='*.java' --include='*.kt')
 
 section() {
   echo
@@ -77,9 +77,16 @@ section() {
 }
 
 run_grep() {
-  local pattern="$1"
-  # shellcheck disable=SC2086
-  grep $GREP_OPTS -E "$pattern" "$SOURCE_DIR" 2>/dev/null || true
+  if [[ $# -lt 1 ]]; then
+    echo "run_grep requires a pattern" >&2
+    return 1
+  fi
+  local grep_args=("$@")
+  local last_index pattern
+  last_index=$((${#grep_args[@]} - 1))
+  pattern="${grep_args[$last_index]}"
+  unset "grep_args[$last_index]"
+  grep "${GREP_OPTS[@]}" "${grep_args[@]}" -E "$pattern" "$SOURCE_DIR" 2>/dev/null || true
 }
 
 # Print a one-screen summary FIRST so a reader knows what to expect from
@@ -205,7 +212,7 @@ if [[ "$SEARCH_ALL" == true || "$SEARCH_PATHS" == true ]]; then
       | sort -u || true
   echo
   section "Endpoint-Shaped Path Literals — call sites"
-  grep $GREP_OPTS -E "$PATHS_REGEX" "$SOURCE_DIR" 2>/dev/null \
+  grep "${GREP_OPTS[@]}" -E "$PATHS_REGEX" "$SOURCE_DIR" 2>/dev/null \
       | grep -Ev ":[0-9]+:.*${EXCLUDE#^}" || true
 fi
 

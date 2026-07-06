@@ -19,12 +19,23 @@
 #
 # 环境变量:
 #   XJB_ADB=/path/to/adb             覆盖 adb；未设置时用 ADB，再回退 PATH 中的 adb
-#   XJB_KP_SUPERKEY=your_superkey    覆盖 KernelPatch/APatch superkey
+#   KP_SUPERKEY=your_superkey        KernelPatch/APatch superkey
+#   XJB_KP_SUPERKEY=your_superkey    兼容旧变量，优先级低于 KP_SUPERKEY
 
 set -e
 ADB="${XJB_ADB:-${ADB:-adb}}"
 KP="/data/local/tmp/kpatch"
-SK="${XJB_KP_SUPERKEY:-xiaojianbang8888}"
+SK=""
+if [ "${1:-}" = "--superkey" ] || [ "${1:-}" = "-k" ]; then
+  if [ -z "${2:-}" ]; then
+    echo "--superkey/-k 需要 superkey 参数" >&2
+    exit 1
+  fi
+  SK="$2"
+  shift 2
+else
+  SK="${KP_SUPERKEY:-${XJB_KP_SUPERKEY:-}}"
+fi
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 KPM_LOCAL="$SCRIPT_DIR/syscallhook.kpm"
 KPM_DEV=/data/local/tmp/scfilter.kpm
@@ -32,32 +43,45 @@ NAME=xiaojianbang-syscall-filter
 
 adb_cmd() { "$ADB" "$@"; }
 dev() { adb_cmd shell su -c "$*"; }
+sq() { printf "'%s'" "$(printf "%s" "$1" | sed "s/'/'\\\\''/g")"; }
+need_superkey() {
+  if [ -z "$SK" ]; then
+    echo "KernelPatch superkey 不能为空；请使用 --superkey <key> 或设置 KP_SUPERKEY / XJB_KP_SUPERKEY" >&2
+    exit 1
+  fi
+}
 
 case "$1" in
   load)
-    dev "$KP $SK kpm load $KPM_DEV"
+    need_superkey
+    dev "$(sq "$KP") $(sq "$SK") kpm load $(sq "$KPM_DEV")"
     ;;
   unload)
-    dev "$KP $SK kpm unload $NAME"
+    need_superkey
+    dev "$(sq "$KP") $(sq "$SK") kpm unload $(sq "$NAME")"
     ;;
   status)
-    dev "$KP $SK kpm ctl0 $NAME status >/dev/null"
+    need_superkey
+    dev "$(sq "$KP") $(sq "$SK") kpm ctl0 $(sq "$NAME") status >/dev/null"
     dev "dmesg | grep -E '\[scfilter\] status(_cat|_uid)?:' | tail -4"
     echo
     ;;
   list)
-    dev "$KP $SK kpm list"
+    need_superkey
+    dev "$(sq "$KP") $(sq "$SK") kpm list"
     echo
     ;;
   info)
-    dev "$KP $SK kpm info $NAME"
+    need_superkey
+    dev "$(sq "$KP") $(sq "$SK") kpm info $(sq "$NAME")"
     ;;
   ctl)
+    need_superkey
     if [ -z "${2:-}" ]; then
       echo "ctl 需要一个无空格控制命令，例如: $0 ctl 'resolve=on'" >&2
       exit 1
     fi
-    dev "$KP $SK kpm ctl0 $NAME '$2' >/dev/null"
+    dev "$(sq "$KP") $(sq "$SK") kpm ctl0 $(sq "$NAME") $(sq "$2") >/dev/null"
     dev "dmesg | grep -E '\[scfilter\] status(_cat|_uid)?:' | tail -4"
     echo
     ;;
@@ -67,10 +91,11 @@ case "$1" in
     ;;
   reload)
     adb_cmd push "$KPM_LOCAL" "$KPM_DEV"
-    dev "$KP $SK kpm unload $NAME 2>/dev/null; $KP $SK kpm load $KPM_DEV"
+    need_superkey
+    dev "$(sq "$KP") $(sq "$SK") kpm unload $(sq "$NAME") 2>/dev/null; $(sq "$KP") $(sq "$SK") kpm load $(sq "$KPM_DEV")"
     ;;
   *)
-    echo "用法: $0 {load|unload|status|list|info|push|reload|ctl '<cmd>'}"
+    echo "用法: $0 [--superkey <key>|-k <key>] {load|unload|status|list|info|push|reload|ctl '<cmd>'}"
     exit 1
     ;;
 esac

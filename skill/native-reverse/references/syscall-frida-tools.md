@@ -29,7 +29,7 @@ cat logs/target_resolved.log
 
 注意：
 
-- `load.sh` 默认依赖设备端 `/data/local/tmp/kpatch` 和 superkey 配置；superkey 通过 `KP_SUPERKEY` 环境变量传入。`load.sh` 会先用环境变量 superkey 探测，失败时（`push` 分支除外）交互询问 superkey。
+- `load.sh` 默认依赖设备端 `/data/local/tmp/kpatch` 和 superkey 配置；superkey 优先从 `--superkey/-k` 显式参数读取，其次读取 `KP_SUPERKEY`，再兼容 `XJB_KP_SUPERKEY`。除 `push` 外，未提供 superkey 会直接拒绝执行。
 - 若 `adb` 不在 `PATH` 中，使用 `ADB=/path/to/adb` 覆盖。
 - `exitmon` 只记录退出/信号 syscall，不应默认伪造退出结果。
 - 重新编译 KPM 时，按本机 toolchain 指定 `CLANG=/path/to/clang LD_LLD=/path/to/ld.lld`。
@@ -47,8 +47,8 @@ cat logs/target_resolved.log
 
 示例：
 
-```bash
-python3 scripts/frida_scfilter_runner.py \
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\workspace\<项目名>\scripts\frida_scfilter_runner.py" \
   --package com.example.target \
   --script ./scripts/agent_main.js \
   --pre-script ./bypass_frida_detection.js \
@@ -73,8 +73,8 @@ python3 scripts/frida_scfilter_runner.py \
 
 示例：
 
-```bash
-python3 scripts/collect_key_evidence.py logs/ docs/experiment_record.md \
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\workspace\<项目名>\scripts\collect_key_evidence.py" logs/ docs/experiment_record.md \
   --so libtarget.so \
   --pattern 'uid:10239|pc=.*libtarget' \
   --context 2 \

@@ -1,33 +1,37 @@
 #!/usr/bin/env python3
-"""快代理 API 提取器 — 多产品提取 + 诊断 + 可选验证。
+r"""快代理 API 提取器 — 多产品提取 + 诊断 + 可选验证。
 
 支持产品: dps(私密代理) / kps(独享代理) / tps(隧道代理) / ops(开放代理)
 
 用法:
     # 先诊断账号状态 (推荐第一步)
-    python kuaidaili_extract.py --diagnose
+    D:\reverse_ENV\.venv\Scripts\python.exe kuaidaili_extract.py --diagnose
 
     # 提取私密代理
-    python kuaidaili_extract.py --product dps --count 3 --check
+    D:\reverse_ENV\.venv\Scripts\python.exe kuaidaili_extract.py --product dps --count 3 --check
 
     # 提取隧道代理
-    python kuaidaili_extract.py --product tps --count 1
+    D:\reverse_ENV\.venv\Scripts\python.exe kuaidaili_extract.py --product tps --count 1
 
     # 提取开放代理 (无需签名)
-    python kuaidaili_extract.py --product ops --count 5
+    D:\reverse_ENV\.venv\Scripts\python.exe kuaidaili_extract.py --product ops --count 5
 
 凭证方式 (优先级: 命令行 > .env > 环境变量):
     $env:KDL_SECRET_ID = "xxx"
     $env:KDL_SECRET_KEY = "yyy"
-    python kuaidaili_extract.py --product dps --count 3 --check
+    D:\reverse_ENV\.venv\Scripts\python.exe kuaidaili_extract.py --product dps --count 3 --check
 """
 
 import argparse
+import ipaddress
 import json
 import os
+import re
 import sys
 import time
-from typing import Optional
+import urllib.parse
+
+PYTHON_EXE = r"D:\reverse_ENV\.venv\Scripts\python.exe"
 
 try:
     from dotenv import load_dotenv
@@ -46,14 +50,14 @@ PRODUCT_MAP = {
 def _load_env_file(path: str):
     """加载 .env 文件。"""
     if load_dotenv:
-        load_dotenv(path)
+        load_dotenv(path, encoding="utf-8-sig")
     else:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8-sig") as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith("#") and "=" in line:
                     key, _, val = line.partition("=")
-                    os.environ[key.strip()] = val.strip().strip('"').strip("'")
+                    os.environ[key.strip().lstrip("\ufeff")] = val.strip().strip('"').strip("'")
 
 
 def _get_client(secret_id: str, secret_key: str):
@@ -61,9 +65,57 @@ def _get_client(secret_id: str, secret_key: str):
     try:
         import kdl
     except ImportError:
-        print("ERR  需要安装快代理 SDK: pip install kdl", file=sys.stderr)
+        print(f"ERR  需要安装快代理 SDK: {PYTHON_EXE} -m pip install kdl", file=sys.stderr)
         sys.exit(1)
     return kdl.Client(kdl.Auth(secret_id, secret_key))
+
+
+def _mask_secret(value: str) -> str:
+    if not value:
+        return ""
+    if len(value) <= 4:
+        return "***"
+    return f"{value[:2]}***{value[-2:]}"
+
+
+def _mask_host(host: str) -> str:
+    if not host:
+        return host
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        parts = host.split(".")
+        if len(parts) >= 3:
+            return ".".join([parts[0], "***", parts[-1]])
+        return "***"
+    if ip.version == 4:
+        octets = host.split(".")
+        return ".".join(octets[:2] + ["*", "*"])
+    exploded = ip.exploded.split(":")
+    return ":".join(exploded[:2] + ["****"] * 6)
+
+
+def redact_proxy_url(proxy_url: str) -> str:
+    parsed = urllib.parse.urlparse(proxy_url)
+    if not parsed.scheme or not parsed.netloc:
+        return re.sub(r"://([^:@/\s]+):([^@/\s]+)@", r"://***:***@", proxy_url)
+
+    host = _mask_host(parsed.hostname or "")
+    if ":" in host and not host.startswith("["):
+        host = f"[{host}]"
+    port = f":{parsed.port}" if parsed.port else ""
+    auth = "***:***@" if parsed.username or parsed.password else ""
+    return urllib.parse.urlunparse((parsed.scheme, f"{auth}{host}{port}", "", "", "", ""))
+
+
+def redact_validation_result(result: dict, show_secret: bool = False) -> dict:
+    output = dict(result)
+    proxy_url = str(output.get("proxy") or "")
+    if proxy_url and not show_secret:
+        output["proxy"] = redact_proxy_url(proxy_url)
+    if output.get("error") and proxy_url:
+        output["error"] = str(output["error"]).replace(proxy_url, redact_proxy_url(proxy_url))
+    return output
 
 
 def diagnose(secret_id: str, secret_key: str) -> dict:
@@ -173,7 +225,9 @@ def get_auth_info(secret_id: str, secret_key: str) -> dict:
 def build_proxy_url(ip_port: str, username: str = "", password: str = "") -> str:
     """将 IP:PORT + 账密拼接为标准代理 URL。"""
     if username and password:
-        return f"http://{username}:{password}@{ip_port}"
+        encoded_user = urllib.parse.quote(username, safe="")
+        encoded_pass = urllib.parse.quote(password, safe="")
+        return f"http://{encoded_user}:{encoded_pass}@{ip_port}"
     return f"http://{ip_port}"
 
 
@@ -200,8 +254,11 @@ def main():
     parser.add_argument("--with-auth", action="store_true", help="同时获取鉴权信息(用户名密码)")
     parser.add_argument("--json", action="store_true", help="JSON 输出")
     parser.add_argument("--timeout", type=int, default=10, help="验证超时秒数")
+    parser.add_argument("--show-secret", action="store_true", help="输出完整代理 URL、用户名和密码")
+    parser.add_argument("--print-raw", action="store_true", help="明文逐行输出代理 URL")
 
     args = parser.parse_args()
+    show_secret = args.show_secret or args.print_raw
 
     # 加载凭证
     if args.env:
@@ -225,7 +282,7 @@ def main():
         if args.json:
             print(json.dumps(result, ensure_ascii=False, indent=2))
         print("\nTIP: 确认产品可用后，运行:", file=sys.stderr)
-        print("   python kuaidaili_extract.py --product <产品> --count N --check", file=sys.stderr)
+        print(f"   {PYTHON_EXE} kuaidaili_extract.py --product <产品> --count N --check", file=sys.stderr)
         # 如果全部不可用，exit 1
         available = [k for k, v in result["products"].items() if v["status"].startswith("PASS")]
         sys.exit(0 if available else 1)
@@ -262,6 +319,7 @@ def main():
         print(f"WARN: 获取鉴权信息失败: {auth_info['error']}", file=sys.stderr)
         print("  代理可能使用白名单认证，直接 ip:port 连接", file=sys.stderr)
     proxy_urls = [build_proxy_url(ip, username, password) for ip in proxy_list]
+    display_proxy_urls = proxy_urls if show_secret else [redact_proxy_url(url) for url in proxy_urls]
 
     # 验证
     validation = []
@@ -270,8 +328,14 @@ def main():
             print(f" 验证 {len(proxy_urls)} 个代理...", file=sys.stderr)
         validation = check_proxies(proxy_urls, args.timeout)
         for v in validation:
+            display_v = redact_validation_result(v, show_secret)
             status = "PASS" if v["ok"] else "ERR "
-            print(f"  {status} {v['proxy']} → {v.get('exit_ip', 'N/A')} ({v.get('latency_ms', '?')}ms)", file=sys.stderr)
+            print(f"  {status} {display_v['proxy']} → {display_v.get('exit_ip', 'N/A')} ({display_v.get('latency_ms', '?')}ms)", file=sys.stderr)
+
+    if args.print_raw:
+        for url in proxy_urls:
+            print(url)
+        sys.exit(0 if not validation or all(v["ok"] for v in validation) else 1)
 
     # 输出
     output = {
@@ -280,23 +344,28 @@ def main():
         "product_name": name,
         "count": len(proxy_list),
         "proxies": proxy_list,
-        "proxy_urls": proxy_urls,
+        "proxy_urls": proxy_urls if show_secret else display_proxy_urls,
     }
     if auth_info and "error" not in auth_info:
-        output["auth"] = {"username": username, "password": password}
+        output["auth"] = {
+            "username": username if show_secret else _mask_secret(username),
+            "password": password if show_secret else "***",
+        }
     if validation:
         output["validation"] = {
             "total": len(validation),
             "ok": len([v for v in validation if v["ok"]]),
-            "results": validation,
+            "results": [redact_validation_result(v, show_secret) for v in validation],
         }
 
     if args.json:
         print(json.dumps(output, ensure_ascii=False, indent=2))
     else:
         print(f"\nPASS 提取到 {len(proxy_list)} 个{name}:", file=sys.stderr)
-        for url in proxy_urls:
+        for url in display_proxy_urls:
             print(f"  {url}", file=sys.stderr)
+        if not show_secret:
+            print("  TIP: 需要明文代理 URL 时显式加 --show-secret 或 --print-raw", file=sys.stderr)
         print(file=sys.stderr)
 
 

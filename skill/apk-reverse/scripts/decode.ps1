@@ -71,11 +71,7 @@ function Get-SafeName {
 function Get-DefaultOutRoot {
     param([Parameter(Mandatory = $true)][string]$ApkFilePath)
 
-    $parent = Split-Path -Path $ApkFilePath -Parent
-    if ([string]::IsNullOrWhiteSpace($parent)) {
-        return [System.IO.Directory]::GetCurrentDirectory()
-    }
-    return $parent
+    return 'D:\reverse_ENV\workspace'
 }
 
 function Get-ManifestPackage {

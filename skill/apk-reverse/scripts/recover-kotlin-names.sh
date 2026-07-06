@@ -41,9 +41,12 @@ SRC="$1"
 OUT="${2:-$(dirname "$SRC")/mapping}"
 [[ ! -d "$SRC" ]] && { echo "not a directory: $SRC" >&2; exit 1; }
 
+PYTHON_EXE="${PYTHON_EXE:-D:/reverse_ENV/.venv/Scripts/python.exe}"
+[[ ! -x "$PYTHON_EXE" ]] && { echo "Python not found or not executable: $PYTHON_EXE (set PYTHON_EXE)" >&2; exit 1; }
+
 mkdir -p "$OUT/by_package"
 
-python3 - "$SRC" "$OUT" <<'PY'
+"$PYTHON_EXE" - "$SRC" "$OUT" <<'PY'
 import os, re, sys, json
 from collections import defaultdict
 
@@ -83,7 +86,8 @@ for dp, _, files in os.walk(SRC):
         if obf.startswith(SKIP_PREFIXES):
             continue
         try:
-            text = open(path, "r", errors="replace").read()
+            with open(path, "r", encoding="utf-8", errors="replace", newline=None) as fh:
+                text = fh.read()
         except OSError:
             continue
         real = None
@@ -113,13 +117,14 @@ for dp, _, files in os.walk(SRC):
             mapping[obf] = real
             file_real[obf] = path
 
-with open(os.path.join(OUT, "mapping.tsv"), "w") as f:
+with open(os.path.join(OUT, "mapping.tsv"), "w", encoding="utf-8", newline="\n") as f:
     f.write("obf_fqn\treal_fqn\tfile\n")
     for k in sorted(mapping):
         f.write(f"{k}\t{mapping[k]}\t{file_real[k]}\n")
 
-with open(os.path.join(OUT, "mapping.json"), "w") as f:
-    json.dump(mapping, f, indent=2, sort_keys=True)
+with open(os.path.join(OUT, "mapping.json"), "w", encoding="utf-8", newline="\n") as f:
+    json.dump(mapping, f, indent=2, sort_keys=True, ensure_ascii=False)
+    f.write("\n")
 
 by_pkg = defaultdict(list)
 for obf, real in mapping.items():
@@ -128,7 +133,7 @@ for obf, real in mapping.items():
 
 for pkg, rows in by_pkg.items():
     safe = os.path.basename(pkg).replace(".", "_") or "default"
-    with open(os.path.join(OUT, "by_package", f"{safe}.txt"), "w") as f:
+    with open(os.path.join(OUT, "by_package", f"{safe}.txt"), "w", encoding="utf-8", newline="\n") as f:
         for real, obf, p in sorted(rows):
             f.write(f"{real}\t{obf}\t{p}\n")
 

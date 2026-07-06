@@ -68,7 +68,7 @@ Native 早期加载不要只靠轮询模块：
 - 需要落盘时，在实验记录中写明 so 名称、关键时机、所用工具、运行命令、检测代码明细和结论。
 - 需要 dump 加密、自解密、壳化或运行时重建的 so 时，优先在 `call_constructors` 命中时 dump/fix；无法覆盖该时机时，再选择 `dlopen/android_dlopen_ext` 返回后、JNI_OnLoad 前后或 maps 稳定后的时机，并记录原因。
 - **硬门禁：使用 Frida 前先确认 frida-server 已启动**。任何 `frida-ps`、spawn、attach、runner 或 Frida hook 前，必须先用设备侧 `ps`/`pidof` 确认 frida-server 活跃进程；若未启动，先在 `/data/local/tmp` 查找 `frida-server*` 并用已有文件启动；若没有找到 frida-server 文件，停止 Frida 动作并询问用户 frida-server 路径。不能把仅能枚举设备或进程当作 frida-server 已启动证据。
-- **硬门禁：禁止自行更换 Frida 版本**。发现宿主 Frida 与设备端 frida-server 版本不匹配时，只能记录风险并建议用户自行更换；禁止自行 `pip install`、创建/切换 venv、推送替换 frida-server 或改用其它版本。
+- **硬门禁：禁止自行更换 Frida 版本**。发现宿主 Frida 与设备端 frida-server 版本不匹配时，只能记录风险并建议用户自行更换；禁止自行安装/升级 Python Frida 包、创建/切换 venv、推送替换 frida-server 或改用其它版本。
 - **硬门禁：Frida spawn/attach 异常先设备状态闭环**。Frida spawn、spawn-gating、attach、早期注入或 runner 出现长时间卡住、`closed`、server 不可用、启动后立刻断开、目标未起或只剩 server 可见时，必须按顺序先检查设备是否亮屏/解锁，执行唤醒解锁后复测；仍异常时执行 `adb reboot`，等待设备恢复、确认解锁状态、重新启动 frida-server，再用同一最小命令复测。该闭环完成前，禁止优先归因到 frida 版本、端口、脚本问题、目标检测链或继续叠加 hook/patch。复测命令、结果和判断写入实验记录。
 
 ## 3. syscall-filter 定位

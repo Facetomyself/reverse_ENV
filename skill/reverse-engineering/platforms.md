@@ -155,7 +155,8 @@ otool -l extracted/Payload/*.app/binary | grep -A4 "LC_ENCRYPTION_INFO"
 
 # Decrypt with frida-ios-dump (requires jailbroken device)
 # Or use Clutch / bfdecrypt on device
-frida-ios-dump -H jailbroken_ip -p 22 "App Name"
+# External iOS lab reference only; install/use inside an authorized isolated device setup.
+# If a local wrapper exists, call it through D:\reverse_ENV\.venv\Scripts\... and write output to workspace\<项目名>.
 
 # Analyze decrypted binary
 class-dump decrypted_binary > headers.h
@@ -265,7 +266,8 @@ binwalk -e firmware.bin
 **ARM (most common in IoT):**
 ```bash
 # Cross-toolchain
-apt install gcc-arm-linux-gnueabihf gdb-multiarch
+# External Linux package reference only; do not run system apt from D:\reverse_ENV by default.
+# Prefer verified tools under D:\reverse_ENV\tools\ or a disposable lab VM/container.
 
 # QEMU emulation
 qemu-arm -L /usr/arm-linux-gnueabihf/ ./arm_binary

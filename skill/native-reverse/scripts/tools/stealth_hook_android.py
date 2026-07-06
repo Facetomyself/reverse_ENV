@@ -76,6 +76,16 @@ def shell_quote(value: str) -> str:
     return "'" + value.replace("'", "'\\''") + "'"
 
 
+def shell_join(argv: list[str]) -> str:
+    return " ".join(shell_quote(str(item)) for item in argv)
+
+
+def choose_kp_superkey(explicit: str | None) -> str:
+    if explicit:
+        return explicit
+    return os.environ.get("KP_SUPERKEY") or os.environ.get("XJB_KP_SUPERKEY") or ""
+
+
 def push_if_exists(local_file: pathlib.Path, remote_file: str, chmod: bool = True) -> int:
     if not local_file.exists():
         return 0
@@ -130,6 +140,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--kpm-list", action="store_true", help="Run kpm_loader list after pushing files.")
     parser.add_argument("--load-kpm", action="store_true", help="Run kpm_loader load <kpm-remote> after pushing files.")
     parser.add_argument("--reload-kpm", action="store_true", help="Run kpm_loader reload <kpm-remote> after pushing files.")
+    parser.add_argument("--kp-superkey", help="KernelPatch/APatch superkey. Overrides KP_SUPERKEY and XJB_KP_SUPERKEY.")
     parser.add_argument("--sh-status", action="store_true", help="Run sh_control status after pushing files.")
     parser.add_argument("--package", help="Resolve target pid with pidof before running the hook tool.")
     parser.add_argument("--pid", help="Target pid. Overrides --package.")
@@ -151,9 +162,13 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     return args
 
 
-def run_helper(device_dir: str, helper: str, helper_args: list[str]) -> int:
+def run_helper(device_dir: str, helper: str, helper_args: list[str], *, kp_superkey: str = "") -> int:
     remote_bin = f"{device_dir}/{helper}"
-    command = " ".join([shell_quote(remote_bin), *(shell_quote(item) for item in helper_args)])
+    argv = [remote_bin]
+    if helper == "kpm_loader" and kp_superkey:
+        argv += ["--superkey", kp_superkey]
+    argv += helper_args
+    command = shell_join(argv)
     result = adb_su(command, stdout=sys.stdout, stderr=sys.stderr)
     return result.returncode
 
@@ -188,6 +203,7 @@ def main(argv: list[str]) -> int:
     args = parse_args(argv)
     print(f"STEALTH_ROOT={STEALTH_ROOT}", flush=True)
     print(f"ADB={ADB}", flush=True)
+    kp_superkey = choose_kp_superkey(args.kp_superkey)
 
     rc = push_release_files(args.device_dir, args.kpm_remote)
     if rc != 0 or args.push_only:
@@ -207,7 +223,7 @@ def main(argv: list[str]) -> int:
         if not enabled:
             continue
         ran_helper = True
-        rc = run_helper(args.device_dir, helper, helper_args)
+        rc = run_helper(args.device_dir, helper, helper_args, kp_superkey=kp_superkey)
         if rc != 0:
             return rc
     if ran_helper and not (args.native_args or args.pid or args.package or args.so or args.offset):
@@ -223,9 +239,8 @@ def main(argv: list[str]) -> int:
     remote_bin = f"{args.device_dir}/xiaojianbang_hook"
     if args.duration > 0:
         remote_log = f"{args.device_dir}/stealth_hook.log"
-        command = "{bin} {argv} > {log} 2>&1 & echo $!".format(
-            bin=shell_quote(remote_bin),
-            argv=" ".join(shell_quote(item) for item in native_args),
+        command = "{argv} > {log} 2>&1 & echo $!".format(
+            argv=shell_join([remote_bin, *native_args]),
             log=shell_quote(remote_log),
         )
         start = adb_su(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -236,7 +251,7 @@ def main(argv: list[str]) -> int:
         adb_su(f"cat {shell_quote(remote_log)}", stdout=sys.stdout, stderr=sys.stderr)
         return 0
 
-    command = " ".join([shell_quote(remote_bin), *(shell_quote(item) for item in native_args)])
+    command = shell_join([remote_bin, *native_args])
     result = adb_su(command, stdout=sys.stdout, stderr=sys.stderr)
     return result.returncode
 

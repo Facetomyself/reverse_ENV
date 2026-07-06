@@ -4,7 +4,9 @@
   一键配置: Frida server + 可选 Magisk 引导
 
 .PARAMETER Instance
-  雷电模拟器实例名 (通过 re-list.ps1 查看)
+  已废弃。不要用实例名猜测 ADB serial；请使用 -DeviceSerial。
+.PARAMETER DeviceSerial
+  ADB serial，例如 127.0.0.1:7555。未指定时只允许当前恰好一个 device。
 .PARAMETER FridaServerPath
   frida-server 本地路径 (默认从 tools 自动匹配)
 
@@ -13,33 +15,84 @@
   init-ldplayer-re.ps1
 
   # 指定实例
-  init-ldplayer-re.ps1 -Instance "re-instance-001"
+  init-ldplayer-re.ps1 -DeviceSerial "127.0.0.1:7555"
 #>
 
 param(
     [string]$Instance = "",
+    [string]$DeviceSerial = "",
     [string]$FridaServerPath = ""
 )
 
 $ErrorActionPreference = "Stop"
 $ADB = "D:\reverse_ENV\tools\adb\adb.exe"
 
+function Get-AdbDevices {
+    $lines = & $ADB devices 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "adb devices failed: $($lines -join "`n")"
+    }
+
+    $result = @()
+    foreach ($line in $lines) {
+        if ($line -match '^\s*(\S+)\s+device\s*$') {
+            $result += $Matches[1]
+        }
+    }
+    return @($result)
+}
+
+function Resolve-AdbSerial {
+    param(
+        [string]$RequestedSerial,
+        [string]$RequestedInstance
+    )
+
+    $devices = @(Get-AdbDevices)
+    if ($devices.Count -eq 0) {
+        throw "No ADB device found. Start LDPlayer first."
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($RequestedInstance) -and [string]::IsNullOrWhiteSpace($RequestedSerial)) {
+        if ($devices -contains $RequestedInstance) {
+            Write-Warning "-Instance matched an ADB serial. Prefer -DeviceSerial for clarity."
+            return $RequestedInstance
+        }
+        throw "-Instance '$RequestedInstance' is not an ADB serial and this script does not map LDPlayer names to serials. Pass -DeviceSerial explicitly. Connected serials: $($devices -join ', ')"
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($RequestedSerial)) {
+        if ($devices -notcontains $RequestedSerial) {
+            throw "ADB device '$RequestedSerial' is not connected. Connected serials: $($devices -join ', ')"
+        }
+        return $RequestedSerial
+    }
+
+    if ($devices.Count -ne 1) {
+        throw "Multiple ADB devices connected; pass -DeviceSerial explicitly. Connected serials: $($devices -join ', ')"
+    }
+
+    return $devices[0]
+}
+
+function Invoke-Adb {
+    param([Parameter(ValueFromRemainingArguments = $true)][string[]]$AdbArgs)
+
+    & $ADB -s $DeviceSerial @AdbArgs
+}
+
 # ------------------------------------------------------------------
 # 1. 确认模拟器连接
 # ------------------------------------------------------------------
 Write-Host "=== Step 1: Check ADB connection ==="
-$devices = & $ADB devices 2>&1 | Select-String "device$"
-if (-not $devices) {
-    Write-Error "No ADB device found. Start LDPlayer first."
-    exit 1
-}
-Write-Host "[OK] Device connected"
+$DeviceSerial = Resolve-AdbSerial -RequestedSerial $DeviceSerial -RequestedInstance $Instance
+Write-Host "[OK] Device connected: $DeviceSerial"
 
 # ------------------------------------------------------------------
 # 2. 确认 root 权限
 # ------------------------------------------------------------------
 Write-Host "`n=== Step 2: Verify root ==="
-$rootCheck = & $ADB shell "su -c 'echo ROOT_OK'" 2>&1
+$rootCheck = Invoke-Adb shell "su -c 'echo ROOT_OK'" 2>&1
 if ($rootCheck -match "ROOT_OK") {
     Write-Host "[OK] Root access confirmed"
 } else {
@@ -51,7 +104,7 @@ if ($rootCheck -match "ROOT_OK") {
 # 3. 确认系统可写
 # ------------------------------------------------------------------
 Write-Host "`n=== Step 3: Verify writable system ==="
-$rwCheck = & $ADB shell "su -c 'mount | grep /system'" 2>&1 | Select-String "rw,"
+$rwCheck = Invoke-Adb shell "su -c 'mount | grep /system'" 2>&1 | Select-String "rw,"
 if ($rwCheck) {
     Write-Host "[OK] System partition is writable"
 } else {
@@ -65,14 +118,14 @@ Write-Host "`n=== Step 4: Frida server ==="
 
 # Remount system rw (needed for some tools)
 Write-Host "Remounting system as rw..."
-& $ADB shell "su -c 'mount -o rw,remount /'" 2>&1 | Out-Null
+Invoke-Adb shell "su -c 'mount -o rw,remount /'" 2>&1 | Out-Null
 
 # Stop existing frida-server
-& $ADB shell "su -c 'killall frida-server'" 2>&1 | Out-Null
+Invoke-Adb shell "su -c 'killall frida-server'" 2>&1 | Out-Null
 Start-Sleep -Seconds 1
 
 # Push frida-server if not already on device
-$fridaExists = & $ADB shell "test -f /data/local/tmp/frida-server && echo EXISTS" 2>&1
+$fridaExists = Invoke-Adb shell "test -f /data/local/tmp/frida-server && echo EXISTS" 2>&1
 if ($fridaExists -notmatch "EXISTS") {
     if (-not $FridaServerPath) {
         $FridaServerPath = "D:\reverse_ENV\temp\ldplayer-setup\frida-server"
@@ -84,17 +137,17 @@ if ($fridaExists -notmatch "EXISTS") {
         exit 1
     }
     Write-Host "Pushing frida-server..."
-    & $ADB push $FridaServerPath /data/local/tmp/frida-server 2>&1
-    & $ADB shell "su -c 'chmod 755 /data/local/tmp/frida-server'" 2>&1
+    Invoke-Adb push $FridaServerPath /data/local/tmp/frida-server 2>&1
+    Invoke-Adb shell "su -c 'chmod 755 /data/local/tmp/frida-server'" 2>&1
 }
 
 # Start frida-server in background
 Write-Host "Starting frida-server..."
-& $ADB shell "su -c 'nohup /data/local/tmp/frida-server -D &'" 2>&1
+Invoke-Adb shell "su -c 'nohup /data/local/tmp/frida-server -D &'" 2>&1
 Start-Sleep -Seconds 2
 
 # Verify
-$fridaProc = & $ADB shell "su -c 'ps -A | grep frida-server'" 2>&1
+$fridaProc = Invoke-Adb shell "su -c 'ps -A | grep frida-server'" 2>&1
 if ($fridaProc -match "frida-server") {
     Write-Host "[OK] Frida server running"
 } else {
@@ -113,4 +166,4 @@ Write-Host ""
 Write-Host "Next steps:"
 Write-Host "  - DEX dump:  frida -U -f <pkg> -l D:\reverse_ENV\skill\apk-reverse\scripts\dex-dump.js"
 Write-Host "  - Magisk:    Launch Magisk app on emulator -> Install -> Direct Install"
-Write-Host "  - SSL bypass: adb shell su -c ' ... '"
+Write-Host "  - SSL bypass: D:\reverse_ENV\tools\adb\adb.exe -s $DeviceSerial shell su -c ' ... '"

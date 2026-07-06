@@ -23,8 +23,8 @@
 
 安装推送：
 
-```bash
-python3 scripts/stealth_hook_android.py --push-only
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\workspace\<项目名>\scripts\stealth_hook_android.py" --push-only
 ```
 
 默认推送结果：
@@ -36,21 +36,21 @@ python3 scripts/stealth_hook_android.py --push-only
 /data/local/tmp/xjb_stealth_hook/sh_control
 ```
 
-KPM 可以通过 APatch App 加载，也可以在设备 KernelPatch supercall/superkey 匹配时尝试用项目自带 `kpm_loader` 加载。wrapper 默认只推送文件；只有显式传入 `--load-kpm` 或 `--reload-kpm` 时才尝试动态加载。
+KPM 可以通过 APatch App 加载，也可以在设备 KernelPatch supercall/superkey 匹配时尝试用项目自带 `kpm_loader` 加载。wrapper 默认只推送文件；只有显式传入 `--load-kpm` 或 `--reload-kpm` 时才尝试动态加载。superkey 优先传 `--kp-superkey <key>`，其次读取 `KP_SUPERKEY`，再兼容 `XJB_KP_SUPERKEY`；未提供时 `kpm_loader` 会拒绝执行。
 
 常用命令：
 
-```bash
-python3 scripts/stealth_hook_android.py --kpm-hello
-python3 scripts/stealth_hook_android.py --kpm-list
-python3 scripts/stealth_hook_android.py --load-kpm
-python3 scripts/stealth_hook_android.py --sh-status
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\workspace\<项目名>\scripts\stealth_hook_android.py" --kp-superkey "$KP_SUPERKEY" --kpm-hello
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\workspace\<项目名>\scripts\stealth_hook_android.py" --kp-superkey "$KP_SUPERKEY" --kpm-list
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\workspace\<项目名>\scripts\stealth_hook_android.py" --kp-superkey "$KP_SUPERKEY" --load-kpm
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\workspace\<项目名>\scripts\stealth_hook_android.py" --sh-status
 ```
 
 按包名解析 pid 并 live trace：
 
-```bash
-python3 scripts/stealth_hook_android.py \
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\workspace\<项目名>\scripts\stealth_hook_android.py" \
   --package com.example.target \
   --so libtarget.so \
   --offset 0x41ac0,0x41d7c \
@@ -60,8 +60,8 @@ python3 scripts/stealth_hook_android.py \
 
 替换返回值：
 
-```bash
-python3 scripts/stealth_hook_android.py \
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\workspace\<项目名>\scripts\stealth_hook_android.py" \
   --package com.example.target \
   --so libtarget.so \
   --offset 0x4161c \
@@ -71,8 +71,8 @@ python3 scripts/stealth_hook_android.py \
 
 修改参数：
 
-```bash
-python3 scripts/stealth_hook_android.py \
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\workspace\<项目名>\scripts\stealth_hook_android.py" \
   --pid 12345 \
   --so libtarget.so \
   --offset 0x4161c \
@@ -102,8 +102,8 @@ python3 scripts/stealth_hook_android.py \
 
 Wrapper text 模式示例：
 
-```bash
-python3 scripts/ecapture_android.py \
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\workspace\<项目名>\scripts\ecapture_android.py" \
   --duration 60 \
   --out-dir logs/ecapture_text \
   -- tls -m text
@@ -111,8 +111,8 @@ python3 scripts/ecapture_android.py \
 
 pcapng 模式示例：
 
-```bash
-python3 scripts/ecapture_android.py \
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\workspace\<项目名>\scripts\ecapture_android.py" \
   --duration 60 \
   --out-dir logs/ecapture_pcap \
   -- tls -m pcap -i wlan0 --pcapfile save_android.pcapng tcp port 443
@@ -120,8 +120,8 @@ python3 scripts/ecapture_android.py \
 
 keylog 模式示例：
 
-```bash
-python3 scripts/ecapture_android.py \
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\workspace\<项目名>\scripts\ecapture_android.py" \
   --duration 60 \
   --out-dir logs/ecapture_keylog \
   -- tls -m keylog --keylogfile ecapture_masterkey.log
@@ -129,8 +129,8 @@ python3 scripts/ecapture_android.py \
 
 指定 Android BoringSSL 路径示例：
 
-```bash
-python3 scripts/ecapture_android.py \
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\workspace\<项目名>\scripts\ecapture_android.py" \
   --duration 60 \
   --out-dir logs/ecapture_boringssl \
   -- tls -m pcap -i wlan0 \

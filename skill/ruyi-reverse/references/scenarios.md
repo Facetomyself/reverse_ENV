@@ -10,22 +10,23 @@
 
 ```
 1. ruyi_new_page { url, proxy?, fingerprint? }
-2. ruyi_handle_cloudflare { timeout: 15 }
+2. ruyi_handle_cloudflare { timeout: 15 }  ← 仅 Cloudflare Turnstile / 5s 盾
 3. ruyi_take_screenshot → 确认加载成功
 4. (可选) ruyi_list_scripts + ruyi_list_network_requests
-5. (可选) ruyi_export_session → 保存登录态
+5. (可选) ruyi_export_session { outputFile: "D:\reverse_ENV\workspace\<project>\session.json" } → 保存登录态
 ```
 
 ### 升级: CF 超时 (T2)
 
 ```
-触发: ruyi_handle_cloudflare 超时 30s+
+触发: Cloudflare Turnstile / 5s 盾场景下 `ruyi_handle_cloudflare` 超时 30s+
 
 1. ruyi_dom_select { selector: "tag:iframe" } → 找到 CF iframe
-2. ruyi_select_frame { contextId: "<from step1>" }
-3. ruyi_human_move { target: "#checkbox", algorithm: "windmouse" }
-4. ruyi_human_click { target: "#checkbox", algorithm: "windmouse" }
-5. ruyi_select_frame → 切回主 frame → 等 3-5s → screenshot 验证
+2. ruyi_list_frames → 找到目标 iframe 的 contextId
+3. ruyi_select_frame { contextId: "<from step2>" }
+4. ruyi_human_move { target: "#checkbox", algorithm: "windmouse" }
+5. ruyi_human_click { target: "#checkbox", algorithm: "windmouse" }
+6. ruyi_list_frames → 选择主 frame contextId → ruyi_select_frame { contextId: "<main>" } → 等 3-5s → screenshot 验证
 ```
 
 ### 坑点
@@ -33,7 +34,7 @@
 | 坑点 | 现象 | 解决 |
 |------|------|------|
 | 代理不可用 | new_page 超时 | 检查代理，或去 proxy |
-| CF 版本更新 | handle_cloudflare 找不到 checkbox | 升级 T2 手动 |
+| CF 版本更新 | ruyi_handle_cloudflare 找不到 checkbox | 升级 T2 手动 |
 | 指纹不匹配 | "unsupported browser" | 调整 requireCountry |
 | 代理出口不匹配 | CountryMismatchError | 换代理或调整国家 |
 
@@ -52,13 +53,15 @@ Phase 1 — 侦察 (T0):
 3. ruyi_search_in_sources { query: "canvas|webgl|audio|navigator|screen" }
 
 Phase 2 — 动态追踪 (T2):
-4. ruyi_trace_start
-5. ruyi_navigate_page { type: "reload" }  ← 触发指纹采集
-6. ruyi_trace_stop
-7. ruyi_trace_get_results { limit: 200 }
+4. 如页面已打开但未启用 trace: ruyi_browser_quit
+5. ruyi_new_page { url, proxy?, fingerprint?, traceEnabled: true }
+6. ruyi_trace_start { outputFile: "D:\reverse_ENV\workspace\<project>\trace-bidi.ndjson" }
+7. ruyi_navigate_page { type: "reload" }  ← 触发指纹采集
+8. ruyi_trace_stop
+9. ruyi_trace_get_results { limit: 200 }
 
 Phase 3 — 分析:
-8. 按 API 分类统计 → 交叉引用 stack 和 scripts 定位具体函数
+10. 按 BiDi 协议事件分类统计 → 交叉引用 scripts 定位可疑函数；不要声称完整 DOM API 覆盖
 ```
 
 ### 升级: BiDi 缺维度 (T3)
@@ -66,14 +69,14 @@ Phase 3 — 分析:
 ```
 触发: trace_get_results 缺失 canvas/webgl/audio
 
-1. ruyi_export_session → workspace/<project>/trace-session.json
+1. ruyi_export_session { outputFile: "D:\reverse_ENV\workspace\<project>\trace-session.json" }
 2. 启动 ruyitrace:
    powershell -File "D:\reverse_ENV\tools\ruyitrace\ruyitrace.ps1" `
-     -Url "https://target.com" -Output "workspace/<project>/trace.ndjson"
+     -Url "https://target.com" -Output "D:\reverse_ENV\workspace\<project>\trace.ndjson"
 3. 在 trace 浏览器注入 session.json cookies
 4. 刷新 → 操作 → 关闭浏览器
-5. python tools\ruyitrace\trace_analyzer.py workspace/<project>/trace.ndjson
-6. python trace_analyzer.py trace.ndjson -c canvas/webgl/audio
+5. "D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\tools\ruyitrace\trace_analyzer.py" "D:\reverse_ENV\workspace\<project>\trace.ndjson"
+6. "D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\tools\ruyitrace\trace_analyzer.py" "D:\reverse_ENV\workspace\<project>\trace.ndjson" -c canvas
 ```
 
 ### 坑点
@@ -105,16 +108,16 @@ Phase 2 — Capture:
 5b. XHR 断点: ruyi_break_on_xhr → (触发) → ruyi_evaluate_script 采样
 
 Phase 3 — Rebuild:
-6. ruyi_save_script_source → workspace/<project>/target.js
-7. ruyi_export_session → workspace/<project>/session.json
+6. ruyi_save_script_source { url, filePath: "D:\reverse_ENV\workspace\<project>\target.js" }
+7. ruyi_export_session { outputFile: "D:\reverse_ENV\workspace\<project>\session.json" }
 8. Node.js 加载 → 开始补环境
 
 Phase 4 — Patch:
 9. first divergence → 补齐 → 验证 → 迭代
-10. 参考 ruyi_trace_get_results 确认调用哪些 API
+10. 如已通过 `ruyi_new_page { traceEnabled:true }` 预启用，可参考 ruyi_trace_get_results 查看 BiDi 协议事件；需要完整环境 API 列表转 T3
 
 Phase 5 — DeepDive (可选):
-11. ruyi_trace_start → 触发加密 → ruyi_trace_stop → 确认底层 API
+11. Trace L1: ruyi_new_page { traceEnabled:true } → ruyi_trace_start → 触发加密 → ruyi_trace_stop → 只做协议事件辅助
 ```
 
 ### 升级: 需 CDP 调试 (T4)
@@ -122,14 +125,15 @@ Phase 5 — DeepDive (可选):
 ```
 触发: 需要单步进入加密函数内部
 
-1. ruyi_export_session → workspace/<project>/session.json
-2. 切 mcp-js-reverse-playbook skill
-3. js-reverse_new_page { url }
-4. js-reverse_evaluate_script: 注入 cookies + localStorage
-5. js-reverse_set_breakpoint_on_text { text: "encrypt" }
-6. (触发) → js-reverse_get_paused_info { includeScopes: true }
-7. js-reverse_step { direction: "into" }
-8. js-reverse_evaluate_script: 读取中间变量
+1. ruyi_export_session { outputFile: "D:\reverse_ENV\workspace\<project>\session.json" }
+2. Gate: 无强反检测、Cookie/Storage 可迁移、Chrome/CDP 行为差异不会影响结论
+3. 切 js-reverse-mcp 相关 playbook
+4. js-reverse_new_page { url }
+5. js-reverse_evaluate_script: 注入 cookies + localStorage
+6. js-reverse_set_breakpoint_on_text { text: "encrypt" }
+7. (触发) → js-reverse_get_paused_info { includeScopes: true }
+8. js-reverse_step { direction: "into" }
+9. js-reverse_evaluate_script: 读取中间变量
 ```
 
 ### 坑点
@@ -152,19 +156,21 @@ Phase 5 — DeepDive (可选):
 ```
 Phase 1 — 自动 (T0):
 1. ruyi_new_page { url, proxy, fingerprint: { requireCountry: "US" } }
-2. ruyi_handle_cloudflare { timeout: 15 }
+2. ruyi_handle_cloudflare { timeout: 15 }  ← 仅 Cloudflare Turnstile / 5s 盾
 
 Phase 2 — 手动人类模拟 (T2, CF 超时):
 3. ruyi_dom_select { selector: "tag:iframe" }
-4. ruyi_select_frame → 进入 iframe
-5. 识别类型: CF checkbox / hCaptcha / reCAPTCHA
-6. ruyi_human_move { target: "<checkbox>", algorithm: "windmouse" }
-7. ruyi_human_click { target: "<checkbox>", algorithm: "windmouse" }
+4. ruyi_list_frames → 找到目标 iframe contextId
+5. ruyi_select_frame { contextId: "<challenge-frame>" } → 进入 iframe
+6. 识别类型: Cloudflare Turnstile / hCaptcha / reCAPTCHA / Akamai
+7. Cloudflare Turnstile 可继续 human_move/human_click；hCaptcha/reCAPTCHA/Akamai 只做人工/外部能力辅助，不承诺自动破解
+8. ruyi_human_move { target: "<checkbox>", algorithm: "windmouse" }
+9. ruyi_human_click { target: "<checkbox>", algorithm: "windmouse" }
 
 Phase 3 — 验证:
-8. ruyi_select_frame → 切回主 frame
-9. ruyi_take_screenshot → 确认通过
-10. ruyi_list_console_messages → 检查无 "blocked"
+10. ruyi_list_frames → 选择主 frame contextId → ruyi_select_frame { contextId: "<main>" }
+11. ruyi_take_screenshot → 确认通过
+12. ruyi_evaluate_script { function: "() => ({ url: location.href, title: document.title, blocked: document.body?.innerText?.includes('blocked') })" }
 ```
 
 ### 坑点
@@ -187,37 +193,38 @@ Phase 3 — 验证:
 ```
 Phase 1 — ruyi 过检 (T0):
 1. ruyi_new_page { url, proxy, fingerprint }
-2. ruyi_handle_cloudflare
+2. ruyi_handle_cloudflare  ← 仅 Cloudflare Turnstile / 5s 盾
 3. (登录) ruyi_dom_input → ruyi_dom_click
 4. ruyi_take_screenshot → 确认已登录
 
 Phase 2 — 导出 (T0):
 5. ruyi_export_session {
-     outputFile: "workspace/<project>/session.json",
+     outputFile: "D:\reverse_ENV\workspace\<project>\session.json",
      include: ["cookies", "localStorage", "sessionStorage"]
    }
 
 Phase 3 — 桥接 CDP (T4):
-6. 切 mcp-js-reverse-playbook skill
-7. js-reverse_new_page { url }
-8. js-reverse_evaluate_script {
+6. Gate: 无强反检测、Cookie/Storage 可迁移、Chrome/CDP 行为差异不会影响结论
+7. 切 js-reverse-mcp 相关 playbook
+8. js-reverse_new_page { url }
+9. js-reverse_evaluate_script {
      function: "async ({ localFile }) => {
        const s = JSON.parse(localFile.text);
        s.cookies.forEach(c => document.cookie = `${c.name}=${c.value}; domain=${c.domain}; path=${c.path}`);
        Object.entries(s.localStorage||{}).forEach(([k,v]) => localStorage.setItem(k,v));
      }",
-     localFilePath: "workspace/<project>/session.json"
+     localFilePath: "D:\reverse_ENV\workspace\<project>\session.json"
    }
-9. js-reverse_navigate_page { type: "reload" } → 刷新使 cookie 生效
+10. js-reverse_navigate_page { type: "reload" } → 刷新使 cookie 生效
 
 Phase 4 — CDP 调试:
-10. js-reverse_set_breakpoint_on_text { text: "目标函数" }
-11. (触发) → js-reverse_get_paused_info { includeScopes: true }
-12. js-reverse_step { direction: "into" }
-13. js-reverse_evaluate_script: 查看变量值
+11. js-reverse_set_breakpoint_on_text { text: "目标函数" }
+12. (触发) → js-reverse_get_paused_info { includeScopes: true }
+13. js-reverse_step { direction: "into" }
+14. js-reverse_evaluate_script: 查看变量值
 
 Phase 5 — 返回 ruyi (可选):
-14. 切回 ruyi-reverse → ruyi_new_page 重新过检
+15. 切回 ruyi-reverse → ruyi_new_page 重新过检
 ```
 
 ### 坑点

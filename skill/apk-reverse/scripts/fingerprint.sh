@@ -236,6 +236,7 @@ case "$FRAMEWORK" in
     echo "  jadx will only show the Mono host."
     ;;
   *)
-    echo "  Proceed with Phase 2: bash scripts/decompile.sh <file>"
+    echo "  Proceed with Phase 1 decode:"
+    echo "    powershell -File \"D:\\reverse_ENV\\skill\\apk-reverse\\scripts\\decode.ps1\" -ApkPath \"<file>\" -Clean"
     ;;
 esac

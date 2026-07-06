@@ -24,6 +24,12 @@
         "source": "",
         "value": ""
       },
+      "redaction": {
+        "redacted": false,
+        "redaction_method": "none|mask|hash|truncate|omit|synthetic",
+        "raw_value_stored": false,
+        "notes": ""
+      },
       "confidence": "high|medium|low",
       "rebuild_status": "extracted|partial|not_applicable",
       "rebuild_path": ""

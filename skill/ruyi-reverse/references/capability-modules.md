@@ -15,27 +15,28 @@ ruyi_new_page { url, proxy? }
 **API:** `ruyi_new_page`, `ruyi_navigate_page`
 
 **能做到：** 代理访问、基础指纹差异化
-**做不到：** 22维硬件指纹匹配、CF/hCaptcha 自动过检、地理/时区/语言一致性
+**做不到：** 22维硬件指纹匹配、Cloudflare 自动辅助、hCaptcha/reCAPTCHA/Akamai 自动破解、地理/时区/语言一致性
 
 ### L2: 完整反检测
 
 ```
 ruyi_new_page { url, proxy, fingerprint: { requireCountry: "US" } }
 → ruyi_handle_cloudflare { timeout: 15 }
-→ ruyi_set_fingerprint / ruyi_emulate_geolocation / ruyi_emulate_timezone / ruyi_emulate_locale
+→ ruyi_set_fingerprint { geolocation, timezone, locale, userAgent, viewport }
 ```
 
-**API:** 上述 + `ruyi_handle_cloudflare`, `ruyi_set_fingerprint`, `ruyi_emulate_*`
+**API:** 上述 + `ruyi_handle_cloudflare`, `ruyi_set_fingerprint`
 
-**能做到：** 22维硬件指纹、代理出口IP地理匹配、CF自动过检、组合仿真
-**做不到：** 验证码图片识别（需人工或AI）
+**能做到：** 22维硬件指纹、代理出口 IP 地理匹配、Cloudflare Turnstile / 5s 盾自动辅助、组合仿真
+**做不到：** hCaptcha/reCAPTCHA/Akamai 自动破解、验证码图片识别（需人工或外部识别能力）
 
 ### 升级到 L2 的触发
 
 | 特征 | 动作 |
 |------|------|
-| 目标域名已知使用 CF/hCaptcha/akamai | 直接 L2 |
-| `ruyi_new_page` 后页面显示 challenge | 升级 L2 |
+| 目标域名已知使用 Cloudflare Turnstile / 5s 盾 | 直接 L2 + `ruyi_handle_cloudflare` |
+| 目标域名已知使用 hCaptcha / reCAPTCHA / Akamai | 直接 L2 + [Human-Sim]，标注人工/外部能力边界 |
+| `ruyi_new_page` 后页面显示 challenge | 升级 L2，并先识别 challenge 类型 |
 | console 有 "bot"/"automation" 检测日志 | 升级 L2 + fingerprint |
 | 需要多标签独立代理 | → `references/ruyipage-api.md` L3 |
 
@@ -73,13 +74,13 @@ ruyi_list_scripts { filter? }
 ### L2: 深度侦察
 
 ```
-ruyi_save_script_source { url, filePath }  (全部目标脚本)
+ruyi_save_script_source { url, filePath: "D:\reverse_ENV\workspace\<project>\target.js" }  (全部目标脚本)
 + ruyi_search_in_sources { query, isRegex: true }  (正则)
-+ ruyi_list_frames → ruyi_select_frame  (iframe 内侦察)
++ ruyi_list_frames → ruyi_select_frame { contextId }  (iframe 内侦察)
 ```
 
 **能做到：** 批量落盘、正则搜索、iframe 内侦察
-**做不到：** CDP 级 script source map 解析
+**做不到：** CDP 级 script source map 解析；`ruyi_select_frame` 只是把后续操作绑定到指定 context，切回主 frame 需重新选择主 frame 的 `contextId` 或回到 page 级 API
 
 ### 升级到 L2 的触发
 
@@ -87,7 +88,7 @@ ruyi_save_script_source { url, filePath }  (全部目标脚本)
 |------|------|
 | 需要离线分析脚本 | 批量 save_script_source |
 | 关键字搜索需要正则 | search_in_sources(isRegex) |
-| 页面含 iframe | list_frames + select_frame |
+| 页面含 iframe | `ruyi_list_frames` + `ruyi_select_frame { contextId }` |
 
 ---
 
@@ -106,56 +107,56 @@ ruyi_capture_start { pattern: "/api/", method? }
 **能做到：** 按 URL 模式捕获请求/响应 (headers + body)
 **做不到：** 流式实时推送、JS 调用栈定位、自定义拦截/修改
 
-### L2: 主动拦截
+### L2: 拦截观察与队列消费
 
 ```
 ruyi_break_on_xhr { url: "/api/" }            ← XHR 断点
-+ ruyi_intercept_requests { urlPatterns }      ← 请求拦截
-+ ruyi_intercept_responses { urlPatterns }     ← 响应拦截
-+ ruyi_set_extra_headers { headers }           ← 全局 header 注入
-+ ruyi_get_request_initiator                   ← JS 调用栈 (Error().stack)
++ ruyi_intercept_wait { timeout, pageIdx? }     ← 消费拦截队列中的请求/响应
++ ruyi_evaluate_script { function: "() => ({ stack: new Error().stack })" }  ← 调用栈字符串采样
 + ruyi_websocket_inject → ruyi_get_websocket_messages
 ```
 
-**能做到：** XHR 断点采样、请求/响应拦截修改、WebSocket 消息捕获、调用栈 (字符串)
-**做不到：** 流式实时推送（→ ruyipage Python）、结构化调用栈（→ Debug L2）
+**能做到：** XHR 断点采样、拦截队列观察/消费、WebSocket 消息捕获、调用栈字符串采样
+**做不到：** 当前 MCP 文档不承诺请求/响应改写；需要结构化调用栈转 Debug L2，需要自定义改写逻辑转 ruyipage Python 回退
 
 ### 升级到 L2 的触发
 
 | 特征 | 动作 |
 |------|------|
-| 需要修改请求内容 | intercept_requests |
+| 需要观察拦截命中的请求/响应 | `ruyi_intercept_wait` |
 | 需要捕获 WebSocket | websocket_inject |
-| 需要确认哪个 JS 发起的请求 | get_request_initiator |
+| 需要确认哪个 JS 发起的请求 | `ruyi_evaluate_script` 采样 `Error().stack` 或业务 wrapper |
 | 需要自定义拦截逻辑 (Python 闭包) | → `references/ruyipage-api.md` L3 |
 
 ---
 
 ## 模块 4: [Trace] Trace — 指纹/API 追踪
 
-**职责：** 追踪页面调用的 DOM API，用于指纹取证和补环境指导。
+**职责：** 用 BiDi 协议事件做有限辅助追踪；需要完整 DOM/Canvas/WebGL/Audio 等 API 追踪时转 C++ trace。
 
 ### L1: BiDi Trace
 
 ```
-ruyi_trace_start
+ruyi_new_page { url, traceEnabled: true }
+→ (如果页面已打开: ruyi_browser_quit 后重开，不能在旧页补完整 trace)
+→ ruyi_trace_start { outputFile?: "D:\reverse_ENV\workspace\<project>\trace-bidi.ndjson" }
 → (触发操作)
 → ruyi_trace_stop
 → ruyi_trace_get_results { limit }
 ```
 
-**能做到：** BiDi 事件级 API 调用记录
-**做不到：** canvas/webgl/audio 维度、C++ 级调用栈、页面无感知隐身
+**能做到：** BiDi 协议事件记录、有限辅助定位导航/网络/运行时事件
+**做不到：** 完整 DOM API 追踪、canvas/webgl/audio 维度、C++ 级调用栈、页面无感知隐身
 
 ### L2: C++ 内核 Trace
 
 ```
-ruyi_export_session → session.json
+ruyi_export_session { outputFile: "D:\reverse_ENV\workspace\<project>\trace-session.json" }
 → ruyitrace CLI (独立 Firefox 进程)
-→ python trace_analyzer.py trace.ndjson
+→ "D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\tools\ruyitrace\trace_analyzer.py" "D:\reverse_ENV\workspace\<project>\trace.ndjson"
 ```
 
-**API:** `tools\ruyitrace\ruyitrace.ps1`, `trace_analyzer.py`
+**API:** `"D:\reverse_ENV\tools\ruyitrace\ruyitrace.ps1"`, `"D:\reverse_ENV\tools\ruyitrace\trace_analyzer.py"`
 
 **能做到：** 全 11 维 (canvas/webgl/audio/webrtc/navigator/screen/crypto/storage/font/time/webgpu)、C++ 调用栈、页面完全无感知
 **做不到：** 与 ruyipage 同进程并发（需独立 Firefox）
@@ -215,10 +216,9 @@ ruyi_human_move { target, algorithm: "bezier"|"windmouse", style: "arc"|"linear"
 ### L1: 软断点 (MCP)
 
 ```
-ruyi_break_on_xhr { url }                       ← URL XHR 断点
-+ ruyi_set_breakpoint_on_text { text }           ← 代码文本匹配断点
-+ ruyi_evaluate_script (采样)                    ← 在断点上下文采样
-+ ruyi_get_paused_info                           ← Error().stack 字符串
+ruyi_break_on_xhr { url }                         ← URL XHR 断点
++ ruyi_set_breakpoint_on_text { text }             ← 代码文本匹配软断点
++ ruyi_evaluate_script { function: "() => ({ stack: new Error().stack })" }  ← 调用栈字符串采样
 ```
 
 **能做到：** URL/函数名匹配断点、`Error().stack` 调用栈字符串、入参/返回值 JSON 采样
@@ -227,8 +227,8 @@ ruyi_break_on_xhr { url }                       ← URL XHR 断点
 ### L2: CDP 真断点 (桥接 js-reverse-mcp)
 
 ```
-ruyi_export_session → session.json
-→ 切 mcp-js-reverse-playbook
+ruyi_export_session { outputFile: "D:\reverse_ENV\workspace\<project>\session.json" }
+→ 仅在无强反检测、session 可迁移、Chrome 行为差异可接受时切 js-reverse-mcp
 → js-reverse_set_breakpoint_on_text
 → js-reverse_get_paused_info { includeScopes: true }   ← 结构化调用栈 + 作用域
 → js-reverse_step { direction: "into"|"over"|"out" }   ← 单步
@@ -236,7 +236,7 @@ ruyi_export_session → session.json
 ```
 
 **能做到：** 结构化调用栈、单步执行、作用域变量枚举、任意行断点、异常断点
-**做不到：** 指纹伪装（Chrome 无反检测）
+**做不到：** 指纹伪装（Chrome 无反检测）；遇强反检测、行为一致性要求高或 Cloudflare 过检态不可迁移时不要桥接
 
 ### 什么时候用 L2（主动推荐）
 
@@ -256,7 +256,7 @@ ruyi_export_session → session.json
 ### L1: 基础导出
 
 ```
-ruyi_export_session { outputFile, include: ["cookies","localStorage"] }
+ruyi_export_session { outputFile: "D:\reverse_ENV\workspace\<project>\session.json", include: ["cookies","localStorage"] }
 ```
 
 **能做到：** 导出 cookies + storage → JSON 文件
@@ -265,10 +265,10 @@ ruyi_export_session { outputFile, include: ["cookies","localStorage"] }
 ### L2: 完整产出
 
 ```
-ruyi_save_script_source { url, filePath }            ← 脚本落盘
-+ ruyi_export_session { outputFile }                  ← session 导出
+ruyi_save_script_source { url, filePath: "D:\reverse_ENV\workspace\<project>\target.js" }  ← 脚本落盘
++ ruyi_export_session { outputFile: "D:\reverse_ENV\workspace\<project>\session.json" }    ← session 导出
 + (切 protocol-recovery)                              ← 补环境 → Python 采集器
-+ (切 mcp-js-reverse-playbook)                        ← CDP 调试
++ (切 js-reverse-mcp，需通过反检测/行为一致性 gate)       ← CDP 调试
 + ruyi_trace_get_results → 补环境 API 列表            ← Trace 辅助补环境
 ```
 

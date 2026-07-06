@@ -334,7 +334,7 @@ def decode_font_ligatures(font_path, encoded_text):
     # Search for <LigatureSubst> entries
 
 # Command-line approach:
-# pip install fonttools
+# D:\reverse_ENV\.venv\Scripts\python.exe -m pip install fonttools
 # ttx font.otf  # converts to XML
 # grep -A5 'LigatureSubst' font.ttx
 ```
@@ -487,9 +487,9 @@ def race():
 
 **Pattern (Internet of Fail):** ESP32 firmware (Xtensa architecture) with no native IDA support. Use radare2 with the ESP32 ROM linker script (`esp32.rom.ld`) to map function addresses to names. Cross-reference with public ESP32 HTTP server source code to identify the password-checking logic, composed of ~20 conditional XOR functions operating on a global state variable.
 
-```bash
+```powershell
 # Load ESP32 firmware in radare2
-r2 -a xtensa -b 32 firmware.bin
+& "D:\reverse_ENV\tools\radare2\bin\radare2.exe" -a xtensa -b 32 "D:\reverse_ENV\workspace\<项目名>\firmware.bin"
 
 # Apply ROM symbol map from ESP-IDF
 # esp32.rom.ld maps addresses like:

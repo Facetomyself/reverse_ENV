@@ -247,6 +247,10 @@ def shell_quote(value: str) -> str:
     return "'" + value.replace("'", "'\\''") + "'"
 
 
+def shell_join(argv: list[str]) -> str:
+    return " ".join(shell_quote(str(item)) for item in argv)
+
+
 def make_agent(target_name: str, hold_ms: int, fallback_offset: int | None) -> str:
     fallback_js = "null" if fallback_offset is None else f"0x{fallback_offset:x}"
     return (
@@ -264,13 +268,16 @@ def prepare_memdumper(remote_dir: str, abi: str) -> str:
             f"memdumper not found: {dumper}; set MEMDUMPER_ROOT if needed"
         )
     remote_bin = f"{remote_dir}/memdumper"
-    adb_su(f"rm -rf {shell_quote(remote_dir)}; mkdir -p {shell_quote(remote_dir)}")
+    adb_su("; ".join([
+        shell_join(["rm", "-rf", remote_dir]),
+        shell_join(["mkdir", "-p", remote_dir]),
+    ]))
     pushed = adb("push", str(dumper), remote_bin, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     print(pushed.stdout, end="")
     print(pushed.stderr, end="", file=sys.stderr)
     if pushed.returncode != 0:
         raise RuntimeError(f"adb push memdumper failed: {pushed.returncode}")
-    chmod = adb_su(f"chmod 755 {shell_quote(remote_bin)}", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    chmod = adb_su(shell_join(["chmod", "755", remote_bin]), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     print(chmod.stdout, end="")
     print(chmod.stderr, end="", file=sys.stderr)
     if chmod.returncode != 0:
@@ -295,7 +302,7 @@ def dump_with_memdumper(
     if fast:
         cmd.append("-f")
     cmd += ["-o", remote_dir]
-    dump_cmd = " ".join(cmd)
+    dump_cmd = shell_join(cmd)
     dumped = adb_su(dump_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     elapsed = time.monotonic() - started
     log_text = dumped.stdout + dumped.stderr + f"\n[host] memdumper_elapsed={elapsed:.3f}s returncode={dumped.returncode}\n"
@@ -373,7 +380,7 @@ def main(argv: list[str]) -> int:
                 json.dumps(payload, indent=2, sort_keys=True) + "\n",
                 encoding="utf-8",
             )
-            maps = adb_su(f"cat /proc/{pid_value}/maps", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            maps = adb_su(shell_join(["cat", f"/proc/{pid_value}/maps"]), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             (out_dir / "maps.txt").write_text(maps.stdout + maps.stderr, encoding="utf-8", errors="replace")
             result["rc"] = dump_with_memdumper(
                 pid=pid_value,
@@ -448,7 +455,7 @@ def main(argv: list[str]) -> int:
         if not args.no_force_stop_after:
             adb("shell", "am", "force-stop", args.package, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if not args.keep_device_files:
-            adb_su(f"rm -rf {shell_quote(remote_dir)}", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            adb_su(shell_join(["rm", "-rf", remote_dir]), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     out_file = out_dir / args.name
     if out_file.exists():

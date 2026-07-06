@@ -17,7 +17,7 @@ description: |
 - 需要命令行反汇编、看函数、看字符串、看导入导出、查交叉引用、做 patch
 - 需要写 `radare2` 批处理命令、`-c` 自动化命令、或 `r2pipe` 脚本
 
-如果用户明确要 GUI 逆向、Hex-Rays 风格伪代码、或 IDA 工作流，优先考虑 `ida-reverse`。如果是网页 JS 逆向，优先考虑 `reverse-engineering`。
+如果用户明确要 GUI 逆向、Hex-Rays 风格伪代码、或 IDA 工作流，优先考虑 `ida-reverse`。如果是网页 JS 逆向，默认路由到 `ruyi-reverse`；只有明确需要 Chrome/CDP 级断点、单步、调用栈、作用域调试且没有强反检测要求时，才路由到 `js-reverse-mcp`。
 
 ## 本机已安装
 
@@ -53,7 +53,8 @@ D:\reverse_ENV\tools\radare2\bin\rax2.exe
 - 导入
 - 导出
 - 字符串
-- 可选的 `r2 -A` 自动分析摘要
+- 可选的 `D:\reverse_ENV\tools\radare2\bin\radare2.exe -A` 自动分析摘要
+- raw outputs 与 `report.md` / `findings.json` / `triage.md`
 
 调用方式：
 
@@ -61,10 +62,22 @@ D:\reverse_ENV\tools\radare2\bin\rax2.exe
 powershell -File "D:\reverse_ENV\skill\radare2\scripts\recon.ps1" -TargetPath "C:\path\to\sample.exe"
 ```
 
-如果需要附带 `r2` 自动分析：
+默认会落盘到 `D:\reverse_ENV\workspace\<样本名>\radare2-recon\<样本名>-<时间戳>\`。推荐显式指定项目名：
 
 ```powershell
-powershell -File "D:\reverse_ENV\skill\radare2\scripts\recon.ps1" -TargetPath "C:\path\to\sample.exe" -RunAnalysis
+powershell -File "D:\reverse_ENV\skill\radare2\scripts\recon.ps1" -TargetPath "C:\path\to\sample.exe" -ProjectName "demo"
+```
+
+或指定 workspace 下的输出目录：
+
+```powershell
+powershell -File "D:\reverse_ENV\skill\radare2\scripts\recon.ps1" -TargetPath "C:\path\to\sample.exe" -OutputDir "D:\reverse_ENV\workspace\demo\radare2-recon\manual"
+```
+
+如果需要附带自动分析，脚本会调用便携版 `D:\reverse_ENV\tools\radare2\bin\radare2.exe`：
+
+```powershell
+powershell -File "D:\reverse_ENV\skill\radare2\scripts\recon.ps1" -TargetPath "C:\path\to\sample.exe" -ProjectName "demo" -RunAnalysis
 ```
 
 ### `references/cheatsheet.md`
@@ -93,17 +106,17 @@ ERROR: Cannot find ...\share\format\dll\*.sdb
 
 `radare2` 命令非常多，用户通常只需要最短路径：
 
-- 看文件信息：`rabin2 -I`
-- 看字符串：`rabin2 -z`
-- 看导入导出：`rabin2 -i` / `rabin2 -E`
-- 交互分析：`r2 <file>` 后再执行局部命令
+- 看文件信息：`D:\reverse_ENV\tools\radare2\bin\rabin2.exe -I`
+- 看字符串：`D:\reverse_ENV\tools\radare2\bin\rabin2.exe -z`
+- 看导入导出：`D:\reverse_ENV\tools\radare2\bin\rabin2.exe -i` / `D:\reverse_ENV\tools\radare2\bin\rabin2.exe -E`
+- 交互分析：`D:\reverse_ENV\tools\radare2\bin\radare2.exe <file>` 后再执行局部命令
 
 ### 3. 修改前保持谨慎
 
 如果用户要 patch 二进制：
 
-- 默认先只读打开：`r2 <file>`
-- 只有在明确需要修改时再用写模式：`r2 -w <file>` 或会话中 `oo+`
+- 默认先只读打开：`D:\reverse_ENV\tools\radare2\bin\radare2.exe <file>`
+- 只有在明确需要修改时再用写模式：`D:\reverse_ENV\tools\radare2\bin\radare2.exe -w <file>` 或会话中 `oo+`
 - 修改前先告知风险，避免无意覆盖原文件
 
 ## 常用工作流
@@ -121,10 +134,10 @@ powershell -File "D:\reverse_ENV\skill\radare2\scripts\recon.ps1" -TargetPath "s
 如果只需要手动最小命令，则使用：
 
 ```powershell
-rabin2 -I sample.exe
-rabin2 -z sample.exe
-rabin2 -i sample.exe
-rabin2 -E sample.exe
+D:\reverse_ENV\tools\radare2\bin\rabin2.exe -I sample.exe
+D:\reverse_ENV\tools\radare2\bin\rabin2.exe -z sample.exe
+D:\reverse_ENV\tools\radare2\bin\rabin2.exe -i sample.exe
+D:\reverse_ENV\tools\radare2\bin\rabin2.exe -E sample.exe
 ```
 
 关注点：
@@ -137,7 +150,7 @@ rabin2 -E sample.exe
 ## 工作流 2：交互式分析函数
 
 ```powershell
-r2 sample.exe
+D:\reverse_ENV\tools\radare2\bin\radare2.exe sample.exe
 ```
 
 进入后常用：
@@ -189,7 +202,7 @@ pxa          # 更友好的十六进制视图
 仅当用户明确要求修改文件时使用：
 
 ```powershell
-r2 -w sample.exe
+D:\reverse_ENV\tools\radare2\bin\radare2.exe -w sample.exe
 ```
 
 进入后例如：
@@ -214,7 +227,7 @@ wq
 适合一次性输出结果：
 
 ```powershell
-r2 -A -q -c "afl;iz;ii;q" sample.exe
+D:\reverse_ENV\tools\radare2\bin\radare2.exe -A -q -c "afl;iz;ii;q" sample.exe
 ```
 
 常用参数：
@@ -234,13 +247,13 @@ r2 -A -q -c "afl;iz;ii;q" sample.exe
 适合静态信息提取：
 
 ```powershell
-rabin2 -I sample.exe   # 基本信息
-rabin2 -S sample.exe   # 节区
-rabin2 -s sample.exe   # 符号
-rabin2 -i sample.exe   # 导入
-rabin2 -E sample.exe   # 导出
-rabin2 -z sample.exe   # 字符串
-rabin2 -zz sample.exe  # 更详细字符串
+D:\reverse_ENV\tools\radare2\bin\rabin2.exe -I sample.exe   # 基本信息
+D:\reverse_ENV\tools\radare2\bin\rabin2.exe -S sample.exe   # 节区
+D:\reverse_ENV\tools\radare2\bin\rabin2.exe -s sample.exe   # 符号
+D:\reverse_ENV\tools\radare2\bin\rabin2.exe -i sample.exe   # 导入
+D:\reverse_ENV\tools\radare2\bin\rabin2.exe -E sample.exe   # 导出
+D:\reverse_ENV\tools\radare2\bin\rabin2.exe -z sample.exe   # 字符串
+D:\reverse_ENV\tools\radare2\bin\rabin2.exe -zz sample.exe  # 更详细字符串
 ```
 
 ### `rasm2`
@@ -248,8 +261,8 @@ rabin2 -zz sample.exe  # 更详细字符串
 适合快速汇编/反汇编：
 
 ```powershell
-rasm2 -d "9090"
-rasm2 -a x86 -b 64 "xor eax, eax"
+D:\reverse_ENV\tools\radare2\bin\rasm2.exe -d "9090"
+D:\reverse_ENV\tools\radare2\bin\rasm2.exe -a x86 -b 64 "xor eax, eax"
 ```
 
 ### `radiff2`
@@ -257,8 +270,8 @@ rasm2 -a x86 -b 64 "xor eax, eax"
 适合对比两个二进制：
 
 ```powershell
-radiff2 old.exe new.exe
-radiff2 -C old.exe new.exe
+D:\reverse_ENV\tools\radare2\bin\radiff2.exe old.exe new.exe
+D:\reverse_ENV\tools\radare2\bin\radiff2.exe -C old.exe new.exe
 ```
 
 ### `rahash2`
@@ -266,8 +279,8 @@ radiff2 -C old.exe new.exe
 适合算哈希：
 
 ```powershell
-rahash2 -a md5 sample.exe
-rahash2 -a sha256 sample.exe
+D:\reverse_ENV\tools\radare2\bin\rahash2.exe -a md5 sample.exe
+D:\reverse_ENV\tools\radare2\bin\rahash2.exe -a sha256 sample.exe
 ```
 
 ### `rax2`
@@ -275,9 +288,9 @@ rahash2 -a sha256 sample.exe
 适合进制和编码转换：
 
 ```powershell
-rax2 0x401000
-rax2 4198400
-rax2 -s hello
+D:\reverse_ENV\tools\radare2\bin\rax2.exe 0x401000
+D:\reverse_ENV\tools\radare2\bin\rax2.exe 4198400
+D:\reverse_ENV\tools\radare2\bin\rax2.exe -s hello
 ```
 
 ## 渐进式披露阶段
@@ -286,22 +299,22 @@ rax2 -s hello
 
 | 阶段 | 深度 | 操作 | 工具 |
 |------|------|------|------|
-| 分类 | L0 | 确认文件格式、架构、位数、入口点 | `rabin2 -I` |
-| 侦察 | L1 | 字符串、导入/导出、节区 | `rabin2 -z/-i/-E/-S` |
+| 分类 | L0 | 确认文件格式、架构、位数、入口点 | `D:\reverse_ENV\tools\radare2\bin\rabin2.exe -I` |
+| 侦察 | L1 | 字符串、导入/导出、节区 | `D:\reverse_ENV\tools\radare2\bin\rabin2.exe -z/-i/-E/-S` |
 | 决策 | — | 判断复杂度：有混淆标记？异常段？ | 基于 marker 判定 |
-| 深挖 | L2 | 交互式分析入口和关键函数 | `r2` → `aaa` → `afl` → `pdf` |
-| 深挖+ | L3 | 交叉引用、patch、对比 | `axt` / `r2 -w` / `radiff2` |
+| 深挖 | L2 | 交互式分析入口和关键函数 | `D:\reverse_ENV\tools\radare2\bin\radare2.exe` → `aaa` → `afl` → `pdf` |
+| 深挖+ | L3 | 交叉引用、patch、对比 | `axt` / `D:\reverse_ENV\tools\radare2\bin\radare2.exe -w` / `D:\reverse_ENV\tools\radare2\bin\radiff2.exe` |
 
-> 遵循 `reverse-coordinator` 约定：先 `rabin2 -I/-z/-i` 做无风险侦察，再决定是否进入交互式 `r2`。不要在未侦察前直接 `r2 -A` 全量分析大文件。
+> 遵循 `reverse-coordinator` 约定：先 `D:\reverse_ENV\tools\radare2\bin\rabin2.exe -I/-z/-i` 做无风险侦察，再决定是否进入交互式 `D:\reverse_ENV\tools\radare2\bin\radare2.exe`。不要在未侦察前直接 `D:\reverse_ENV\tools\radare2\bin\radare2.exe -A` 全量分析大文件。
 
 ## 推荐分析顺序
 
 遇到未知样本时，按这个顺序做：
 
-1. `rabin2 -I` 看格式、架构、入口点
-2. `rabin2 -z` 看字符串
-3. `rabin2 -i` 看导入函数
-4. 如需交互分析，再进 `r2`
+1. `D:\reverse_ENV\tools\radare2\bin\rabin2.exe -I` 看格式、架构、入口点
+2. `D:\reverse_ENV\tools\radare2\bin\rabin2.exe -z` 看字符串
+3. `D:\reverse_ENV\tools\radare2\bin\rabin2.exe -i` 看导入函数
+4. 如需交互分析，再进 `D:\reverse_ENV\tools\radare2\bin\radare2.exe`
 5. 先 `aaa`，再 `afl` / `iz` / `pdf`
 6. 通过字符串引用、导入调用、入口流程逐步定位关键函数
 
@@ -310,7 +323,7 @@ rax2 -s hello
 ## Windows 注意事项
 
 - 路径里有空格时，命令必须正确加引号
-- 如果当前终端找不到 `r2`，可能是 `PATH` 刚更新，开一个新终端再试
+- 默认使用 `D:\reverse_ENV\tools\radare2\bin\*.exe` 绝对路径；只有用户明确要求验证 PATH 时，才把 PATH 当作显式 fallback
 - 有些样本需要管理员权限读取，但默认不要主动提升权限，除非用户明确需要
 - 对可疑样本做动态调试前，要先确认用户意图，避免误操作
 
@@ -332,8 +345,8 @@ rax2 -s hello
 
 处理方式：
 
-1. 先用 `rabin2 -I/-z/-i`
-2. 判断是否需要进入 `r2`
+1. 先用 `D:\reverse_ENV\tools\radare2\bin\rabin2.exe -I/-z/-i`
+2. 判断是否需要进入 `D:\reverse_ENV\tools\radare2\bin\radare2.exe`
 3. 用 `aaa`、`afl`、`pdf` 深挖入口和关键字符串引用
 
 ### 示例 2：找字符串在哪被调用
@@ -362,7 +375,7 @@ rax2 -s hello
 - 不要把 `radare2` 当成只有 `aaa` 一个命令的工具
 - 不要在未说明风险时直接写模式打开用户文件
 - 不要在还没做基础侦察前就下结论
-- 不要把网页 JS 逆向误导到这个 skill；那是 `reverse-engineering` 的范围
+- 不要把网页 JS 逆向误导到这个 skill；默认用 `ruyi-reverse`，只有明确需要 Chrome/CDP 级断点调试且无强反检测要求时才用 `js-reverse-mcp`
 
 ## 参考资料
 

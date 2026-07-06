@@ -30,7 +30,8 @@ ruyi_new_page { url, proxy?, fingerprint? }         ← [Anti-Detect]
 ```
 
 **特征驱动的深度选择：**
-- CF/hCaptcha → [Anti-Detect] L2 (handle_cloudflare)
+- Cloudflare Turnstile / 5s 盾 → [Anti-Detect] L2 (`ruyi_handle_cloudflare`)
+- hCaptcha / reCAPTCHA / Akamai → [Anti-Detect] L2 + [Human-Sim]，标注人工/外部能力边界
 - 搜索命中 "encrypt\|sign" → 标记：后续需 [Capture] L2 + [Debug] L2
 - 搜索命中 "fingerprint\|canvas\|webgl" → 标记：后续需 [Trace] L2
 - 脚本数量 > 20 → 考虑 [Observe] L2 批量落盘
@@ -51,16 +52,18 @@ ruyi_new_page { url, proxy?, fingerprint? }         ← [Anti-Detect]
   → (触发操作)
   → ruyi_capture_wait
 
-方式 B — 主动 ([Capture] L2):
+方式 B — 拦截观察 ([Capture] L2):
   ruyi_break_on_xhr { url: "/api/" }
   → (触发)
   → ruyi_evaluate_script (采样 headers/body)
-  + ruyi_get_request_initiator (调用栈)
+  + ruyi_intercept_wait { timeout: 10 } (消费拦截队列)
+  + ruyi_evaluate_script { function: "() => ({ stack: new Error().stack })" } (调用栈字符串)
 ```
 
 **特征驱动的深度选择：**
 - Observe 命中 "encrypt" → [Capture] L2 + 准备 [Debug] L1
-- 需要修改请求 → [Capture] L2 (intercept)
+- 需要观察命中的请求/响应 → [Capture] L2 (`ruyi_intercept_wait`)
+- 需要修改请求/响应 → ruyipage Python 回退，不在当前 MCP 能力中承诺
 - 有 WebSocket → [Capture] L2 (websocket_inject)
 
 ---
@@ -72,9 +75,9 @@ ruyi_new_page { url, proxy?, fingerprint? }         ← [Anti-Detect]
 **默认模块：[Export](L1-L2)**
 
 ```
-ruyi_save_script_source { url, filePath }            ← [Observe] L2
-ruyi_export_session { outputFile }                   ← [Export] L1
-→ (如需 CDP 调试) 切 mcp-js-reverse-playbook         ← [Export] L2 (桥接)
+ruyi_save_script_source { url, filePath: "D:\reverse_ENV\workspace\<project>\target.js" }   ← [Observe] L2
+ruyi_export_session { outputFile: "D:\reverse_ENV\workspace\<project>\session.json" }       ← [Export] L1
+→ (如需 CDP 调试且通过 gate) 切 js-reverse-mcp       ← [Export] L2 (桥接)
 → (如需补环境) 加载 session.json + target.js          ← [Export] L2
 ```
 
@@ -89,12 +92,13 @@ ruyi_export_session { outputFile }                   ← [Export] L1
 ```
 1. Node.js 加载 session.json + target.js
 2. 运行 → first divergence → 补齐 → 验证 → 迭代
-3. ruyi_trace_get_results → 查哪些 DOM API 被实际调用  ← [Trace] L1
-4. (如需全量 API 列表) ruyitrace CLI → NDJSON          ← [Trace] L2
+3. Trace L1 前置: `ruyi_new_page { traceEnabled:true }`；已打开页面需 `ruyi_browser_quit` 后重开
+4. ruyi_trace_get_results → 查 BiDi 协议事件，作为补环境有限辅助  ← [Trace] L1
+5. (如需全量 API 列表) ruyitrace CLI → NDJSON          ← [Trace] L2
 ```
 
 **特征驱动的深度选择：**
-- Capture 阶段发现大量 DOM API 调用 → [Trace] L2
+- Capture 阶段发现大量指纹/环境 API 调用 → [Trace] L2
 - 补环境循环超过 5 轮 → [Trace] L2 获取全量 API 列表一次性补齐
 
 ---
@@ -130,6 +134,10 @@ ruyi_export_session { outputFile }                   ← [Export] L1
 [Debug] (debug_samples) → 验证 [Export] (补环境正确性)
 ```
 
-每个模块的产出供下游模块消费。`workspace/<project>/ruyi-session.json` 追踪模块执行状态和产出物路径。
+每个模块的产出供下游模块消费。`"D:\reverse_ENV\workspace\<project>\ruyi-session.json"` 追踪模块执行状态和产出物路径。
+
+## 交付落点
+
+三件套必须落在项目 workspace：`"D:\reverse_ENV\workspace\<project>\report.md"`、`"D:\reverse_ENV\workspace\<project>\findings.json"`、`"D:\reverse_ENV\workspace\<project>\triage.md"`。`findings.json` 每条记录必须带 `evidence`、`source`、`request_id`、`redaction`；`report.md` 禁止明文 token/cookie；`triage.md` 对 WASM/VM/重混淆等目标标注 L4 triage-only。
 
 > 状态管理详见 `references/state-lifecycle.md`

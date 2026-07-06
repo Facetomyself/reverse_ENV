@@ -64,12 +64,12 @@ description: |
 
 | 产物 | 内容 | 模板 |
 |------|------|------|
-| `report.md` | 人类可读分析报告 | `templates/report.md` |
-| `findings.json` | 结构化发现列表 | `templates/findings.json` |
-| `triage.md` | 未完成项 + 原因 + 下一步 | `templates/triage.md` |
+| `workspace/<项目名>/report.md` | 人类可读分析报告 | `templates/report.md` |
+| `workspace/<项目名>/findings.json` | 结构化发现列表 | `templates/findings.json` |
+| `workspace/<项目名>/triage.md` | 未完成项 + 原因 + 下一步 | `templates/triage.md` |
 
 辅助产物：
-- `workspace.json` — 会话状态：目标信息、当前阶段、已完成/待完成项
+- `workspace/<项目名>/workspace.json` — 会话状态：目标信息、当前阶段、已完成/待完成项；`artifacts` 必须记录三件套实际路径
 
 ## 四个分析深度等级
 
@@ -110,14 +110,21 @@ description: |
 
 > ruyipage 和 ruyitrace 不再是独立 skill — 它们是 `ruyi-reverse` 内部能力模块的 L2 回退参考。
 
-混合目标（如 APK 含多个 .so）：先走主 skill 的侦察阶段，发现 native 层信号后切 `ida-reverse`。
+混合目标（如 APK 含多个 .so）：先走主 skill 的侦察阶段，发现 native 层信号后**按 marker 分类**，不要固定切 `ida-reverse`。
+
+| Native marker | 路由 |
+|---------------|------|
+| 反调试、反 Hook、反 Frida、反模拟器、壳化、闪退、完整性校验、Root 检测 | `native-reverse` |
+| 核心签名/加密在 .so 中，且需要运行时上下文或 Hook 验证 | `native-reverse` 先中和/取证，再视需要交给 `ida-reverse` 深挖函数 |
+| 纯算法、无保护、无运行时依赖的静态二进制 | `ida-reverse` 或 `radare2` |
+| 仅需快速判断架构、导入、字符串、段信息 | `radare2` 轻量侦察 |
 
 ### 阶段 1：最小侦察
 
 委托给对应 skill 的侦察阶段：
 
 - **APK**: 先 `fingerprint.sh` 做 Phase 0 指纹（框架/混淆度/HTTP栈/下一步建议）；确认 Native Android 后再 `decode.ps1`
-- **二进制**: 字符串 + 导入表 + 段信息（`rabin2 -I/-z/-i` 或 `idapro_survey_binary`）
+- **二进制**: 字符串 + 导入表 + 段信息（`rabin2 -I/-z/-i` 或 IDA MCP 的 `mcp__ida_multi_mcp.survey_binary` / `survey_binary`；IDA proxied tools 调用时必须提供有效 `instance_id`）
 - **Web JS**: `ruyi_new_page`（默认）+ `ruyi_list_scripts` + `ruyi_list_network_requests` + `ruyi_search_in_sources`；需 CDP 调试时 `js-reverse_new_page`（T4 桥接）
 - **网络抓包分析**: `reqable_ingest_status` → `reqable_list_requests` / `reqable_search_requests` / `reqable_get_domains`（前提：Reqable 桌面端已抓包并推送到 18765）
 
@@ -157,14 +164,15 @@ description: |
 
 ### 阶段 4：产出汇总
 
-1. 汇总各阶段发现 → 写入 `report.md`
-2. 提取结构化数据 → 写入 `findings.json`（每条有 address/evidence/confidence）
-3. 标注未完成项 → 写入 `triage.md`（原因 + 建议）
-4. 自检审查门：
+1. 汇总各阶段发现 → 写入 `workspace/<项目名>/report.md`
+2. 提取结构化数据 → 写入 `workspace/<项目名>/findings.json`（每条有 address/evidence/confidence/redaction）
+3. 标注未完成项 → 写入 `workspace/<项目名>/triage.md`（原因 + 建议）
+4. 更新 `workspace/<项目名>/workspace.json`，在 `artifacts.report` / `artifacts.findings` / `artifacts.triage` 中记录三件套实际路径
+5. 自检审查门：
    - 所有 claim 有 evidence 支撑？
    - triage 遗留项已标注原因？
    - 产出文件路径正确？
-   - 敏感数据已脱敏？
+   - 敏感数据已脱敏，且 finding 级 `redaction.redacted` / `redaction.redaction_method` / `redaction.raw_value_stored` 已填写？
 
 ## 禁止事项
 
@@ -176,9 +184,12 @@ description: |
 
 ## 快速入口
 
-```bash
+```powershell
 # 创建分析工作目录
-mkdir D:\reverse_ENV\workspace\<target_name>
+$ProjectName = "sample-target"
+$WorkspaceRoot = "D:\reverse_ENV\workspace"
+$ProjectDir = Join-Path -Path $WorkspaceRoot -ChildPath $ProjectName
+New-Item -ItemType Directory -Path $ProjectDir -Force | Out-Null
 
 # 从目标分类开始
 # → 对应 skill 的最小侦察

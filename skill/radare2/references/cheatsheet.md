@@ -3,17 +3,17 @@
 ## 基础侦察
 
 ```powershell
-rabin2 -I sample.exe
-rabin2 -S sample.exe
-rabin2 -i sample.exe
-rabin2 -E sample.exe
-rabin2 -zz sample.exe
+D:\reverse_ENV\tools\radare2\bin\rabin2.exe -I sample.exe
+D:\reverse_ENV\tools\radare2\bin\rabin2.exe -S sample.exe
+D:\reverse_ENV\tools\radare2\bin\rabin2.exe -i sample.exe
+D:\reverse_ENV\tools\radare2\bin\rabin2.exe -E sample.exe
+D:\reverse_ENV\tools\radare2\bin\rabin2.exe -zz sample.exe
 ```
 
 ## 进入交互
 
 ```powershell
-r2 sample.exe
+D:\reverse_ENV\tools\radare2\bin\radare2.exe sample.exe
 ```
 
 ```text
@@ -49,7 +49,7 @@ pxa
 ## patch
 
 ```powershell
-r2 -w sample.exe
+D:\reverse_ENV\tools\radare2\bin\radare2.exe -w sample.exe
 ```
 
 ```text
@@ -62,7 +62,7 @@ wq
 ## 非交互模式
 
 ```powershell
-r2 -A -q -c "afl;iz;ii;q" sample.exe
+D:\reverse_ENV\tools\radare2\bin\radare2.exe -A -q -c "afl;iz;ii;q" sample.exe
 ```
 
 ## 其他工具
@@ -70,28 +70,28 @@ r2 -A -q -c "afl;iz;ii;q" sample.exe
 ### rasm2
 
 ```powershell
-rasm2 -d "9090"
-rasm2 -a x86 -b 64 "xor eax, eax"
+D:\reverse_ENV\tools\radare2\bin\rasm2.exe -d "9090"
+D:\reverse_ENV\tools\radare2\bin\rasm2.exe -a x86 -b 64 "xor eax, eax"
 ```
 
 ### radiff2
 
 ```powershell
-radiff2 old.exe new.exe
-radiff2 -C old.exe new.exe
+D:\reverse_ENV\tools\radare2\bin\radiff2.exe old.exe new.exe
+D:\reverse_ENV\tools\radare2\bin\radiff2.exe -C old.exe new.exe
 ```
 
 ### rahash2
 
 ```powershell
-rahash2 -a md5 sample.exe
-rahash2 -a sha256 sample.exe
+D:\reverse_ENV\tools\radare2\bin\rahash2.exe -a md5 sample.exe
+D:\reverse_ENV\tools\radare2\bin\rahash2.exe -a sha256 sample.exe
 ```
 
 ### rax2
 
 ```powershell
-rax2 0x401000
-rax2 4198400
-rax2 -s hello
+D:\reverse_ENV\tools\radare2\bin\rax2.exe 0x401000
+D:\reverse_ENV\tools\radare2\bin\rax2.exe 4198400
+D:\reverse_ENV\tools\radare2\bin\rax2.exe -s hello
 ```

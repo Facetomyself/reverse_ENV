@@ -1,0 +1,52 @@
+{
+  "schema": "native-reverse-third-party-assets-v1",
+  "updated": "2026-07-06",
+  "notes": [
+    "Hashes are recorded as placeholders when upstream archive provenance has not been re-verified in this review pass.",
+    "Before redistributing or updating bundled binaries, replace TODO hashes with sha256 values computed from the exact files."
+  ],
+  "assets": [
+    {
+      "name": "MemDumper-master",
+      "path": "scripts/tools/MemDumper-master",
+      "source": "Upstream MemDumper project snapshot, exact upstream URL pending verification",
+      "license": "See scripts/tools/MemDumper-master/LICENSE",
+      "sha256": "TODO: compute per distributed archive or file tree"
+    },
+    {
+      "name": "ecapture-v2.3.0-android-arm64",
+      "path": "scripts/tools/ecapture-v2.3.0-android-arm64",
+      "source": "eCapture v2.3.0 Android arm64 release snapshot, exact upstream URL pending verification",
+      "license": "See scripts/tools/ecapture-v2.3.0-android-arm64/LICENSE",
+      "sha256": "TODO: compute for ecapture binary and release archive"
+    },
+    {
+      "name": "xiaojianbang-syscall-filter",
+      "path": "scripts/tools/xiaojianbang-syscall-filter",
+      "source": "Xiaojianbang syscall-filter KPM bundle, exact upstream URL pending verification",
+      "license": "TODO: verify upstream license before redistribution",
+      "sha256": "TODO: compute for bundled syscallhook.kpm and source snapshot"
+    },
+    {
+      "name": "xiaojianbang-stealth-hook-main",
+      "path": "scripts/tools/xiaojianbang-stealth-hook-main",
+      "source": "Xiaojianbang stealth-hook bundle, exact upstream URL pending verification",
+      "license": "TODO: verify upstream license before redistribution",
+      "sha256": "TODO: compute for release binaries, KPM, and source snapshot"
+    },
+    {
+      "name": "OLLVM_Deobfuscator",
+      "path": "scripts/tools/ollvm_deobfuscator",
+      "source": "Xiaojianbang OLLVM deobfuscator snapshot, exact upstream URL pending verification",
+      "license": "TODO: verify upstream license before redistribution",
+      "sha256": "TODO: compute for source snapshot"
+    },
+    {
+      "name": "shadow-hook Frida JS agents",
+      "path": "scripts/tools/shadow-hook",
+      "source": "Adapted from rust-frida-shadow-hook source files listed in scripts/tools/shadow-hook/README.md",
+      "license": "TODO: verify rust-frida-shadow-hook upstream license and adaptation obligations",
+      "sha256": "TODO: compute for adapted JS/Python files"
+    }
+  ]
+}

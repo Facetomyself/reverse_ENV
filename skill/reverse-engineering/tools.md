@@ -43,7 +43,7 @@
   - [Convert to Assembly](#convert-to-assembly)
 - [RISC-V Binary Analysis (EHAX 2026)](#risc-v-binary-analysis-ehax-2026)
 - [Binary Ninja](#binary-ninja)
-- [Decompiler Comparison with dogbolt.org](#decompiler-comparison-with-dogboltorg)
+- [Decompiler Comparison](#decompiler-comparison)
 - [Useful Commands](#useful-commands)
 
 For dynamic instrumentation tools (Frida, angr, lldb, x64dbg), see [tools-dynamic.md](tools-dynamic.md).
@@ -95,8 +95,8 @@ x/10i $rip               # 10 instructions from RIP
 ## Radare2
 
 ### Basic Session
-```bash
-r2 -d ./binary           # Open in debug mode
+```powershell
+& "D:\reverse_ENV\tools\radare2\bin\radare2.exe" -d "D:\reverse_ENV\workspace\<项目名>\binary"
 aaa                      # Analyze all
 afl                      # List functions
 pdf @ main               # Disassemble main
@@ -110,7 +110,8 @@ dr eax=0                 # Modify register
 ### r2pipe Automation
 ```python
 import r2pipe
-r2 = r2pipe.open('./binary', flags=['-d'])
+binary_path = r'D:\reverse_ENV\workspace\<项目名>\binary'
+r2 = r2pipe.open(binary_path, flags=['-d'])
 r2.cmd('aaa')
 r2.cmd('db 0x401234')
 
@@ -152,9 +153,12 @@ byte[] decrypted = emu.readMemory(outputAddress, length);
 ```
 
 ### MCP Commands
-- Recon: `list_functions`, `list_imports`, `list_strings`
-- Analysis: `decompile_function`, `get_xrefs_to`
-- Annotation: `rename_function`, `rename_variable`
+Use current `ida-multi-mcp` tool names, and always pass the active `instance_id`.
+
+- Recon: `survey_binary`
+- Analysis: `decompile`, `disasm`, `analyze_function`
+- Data flow: `trace_data_flow`
+- Annotation/patching: use the current IDA MCP rename/patch tools only after confirming the target address in the opened database.
 
 ---
 
@@ -294,10 +298,11 @@ gcc -O3 checker.c wasm-rt-impl.c -o checker
 ## Android APK
 
 ### Extraction
-```bash
-apktool d app.apk -o decoded/   # Best - decodes XML
-jadx app.apk                     # Decompile to Java
-unzip app.apk -d extracted/      # Simple extraction
+```powershell
+$Project = "D:\reverse_ENV\workspace\<项目名>"
+& "D:\reverse_ENV\tools\apktool\apktool.bat" d "$Project\app.apk" -o "$Project\decoded"
+& "D:\reverse_ENV\tools\jadx\bin\jadx.bat" -d "$Project\jadx" "$Project\app.apk"
+Expand-Archive -LiteralPath "$Project\app.apk" -DestinationPath "$Project\extracted" -Force
 ```
 
 ### Key Locations
@@ -307,39 +312,51 @@ unzip app.apk -d extracted/      # Simple extraction
 - `assets/`, `res/raw/` - Resources
 
 ### Search
-```bash
-grep -r "flag\|CTF" decoded/
-strings decoded/classes*.dex | grep -i flag
+```powershell
+$Project = "D:\reverse_ENV\workspace\<项目名>"
+rg -n "flag|CTF" "$Project\decoded"
+Get-ChildItem -LiteralPath "$Project\decoded" -Filter "classes*.dex" | ForEach-Object {
+  & "D:\reverse_ENV\tools\radare2\bin\radare2.exe" -q -c "izz~flag" $_.FullName
+}
 ```
 
 ### Flutter APK (Blutter)
 
-```bash
-# Run Blutter on arm64 build
-python3 blutter.py path/to/app/lib/arm64-v8a out_dir
+```powershell
+# Run Blutter on arm64 build only after installing/verifying it at this path (待验证)
+& "D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\tools\blutter\blutter.py" `
+  "D:\reverse_ENV\workspace\<项目名>\decoded\lib\arm64-v8a" `
+  "D:\reverse_ENV\workspace\<项目名>\blutter"
 ```
 
 ### HarmonyOS HAP/ABC (abc-decompiler)
 
-Repository: `https://github.com/ohos-decompiler/abc-decompiler`
+Repository reference: `https://github.com/ohos-decompiler/abc-decompiler`. If this tool is needed, install/verify it under `D:\reverse_ENV\tools\abc-decompiler\` first (待验证); do not run a jar from the working directory.
 
-```bash
+```powershell
 # Extract .hap first to obtain .abc files
-unzip app.hap -d hap_extracted/
+Expand-Archive -LiteralPath "D:\reverse_ENV\workspace\<项目名>\app.hap" `
+  -DestinationPath "D:\reverse_ENV\workspace\<项目名>\hap_extracted" -Force
 ```
 
 Critical startup mode:
-```bash
+```powershell
 # Use CLI entrypoint (avoid java -jar GUI mode)
-java -cp "./jadx-dev-all.jar" jadx.cli.JadxCLI [options] <input>
+& "D:\reverse_ENV\tools\jdk\bin\java.exe" -cp "D:\reverse_ENV\tools\abc-decompiler\jadx-dev-all.jar" `
+  jadx.cli.JadxCLI [options] "D:\reverse_ENV\workspace\<项目名>\hap_extracted\modules.abc"
 ```
 
-```bash
+```powershell
 # Basic decompile
-java -cp "./jadx-dev-all.jar" jadx.cli.JadxCLI -d "out" ".abc"
+& "D:\reverse_ENV\tools\jdk\bin\java.exe" -cp "D:\reverse_ENV\tools\abc-decompiler\jadx-dev-all.jar" `
+  jadx.cli.JadxCLI -d "D:\reverse_ENV\workspace\<项目名>\abc_out" `
+  "D:\reverse_ENV\workspace\<项目名>\hap_extracted\modules.abc"
 
 # Recommended for .abc
-java -cp "./jadx-dev-all.jar" jadx.cli.JadxCLI -m simple --log-level ERROR -d "out_abc_simple" ".abc"
+& "D:\reverse_ENV\tools\jdk\bin\java.exe" -cp "D:\reverse_ENV\tools\abc-decompiler\jadx-dev-all.jar" `
+  jadx.cli.JadxCLI -m simple --log-level ERROR `
+  -d "D:\reverse_ENV\workspace\<项目名>\abc_out_simple" `
+  "D:\reverse_ENV\workspace\<项目名>\hap_extracted\modules.abc"
 ```
 
 Notes:
@@ -498,23 +515,18 @@ for func in bv.functions:
 
 ---
 
-## Decompiler Comparison with dogbolt.org
+## Decompiler Comparison
 
-**dogbolt.org** runs multiple decompilers simultaneously on the same binary and shows results side-by-side.
+Prefer local comparison first: IDA/Hex-Rays through `ida-multi-mcp`, Ghidra headless if installed, Binary Ninja if licensed, radare2/Rizin, angr, RetDec CLI, and other local tools available under `D:\reverse_ENV\tools\`.
 
 **Supported decompilers:** Hex-Rays (IDA), Ghidra, Binary Ninja, angr, RetDec, Snowman, dewolf, Reko, Relyze.
 
 **When to use:**
 - Decompiler output is confusing — compare with alternatives for clarity
 - One decompiler mishandles a construct — another may get it right
-- Quick triage without installing every tool locally
 - Validate decompiler correctness by cross-referencing outputs
 
-```bash
-# Upload via web interface: https://dogbolt.org/
-# Or use the API:
-curl -F "file=@binary" https://dogbolt.org/api/binaries/
-```
+Public decompiler services are not a default workflow. Use them only after explicit human authorization for the exact sample, confirm the sample is authorized for upload, remove sensitive/customer data when possible, and record sample hash, upload time, service name, and reason in `workspace\<项目名>\triage.md`.
 
 **Key insight:** Different decompilers excel at different constructs. When one produces unreadable output, another often generates clearer pseudocode. Cross-referencing catches decompiler bugs.
 

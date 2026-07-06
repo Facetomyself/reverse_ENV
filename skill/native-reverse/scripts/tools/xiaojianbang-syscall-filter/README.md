@@ -41,7 +41,7 @@
   内核 **5.10 (android13)** / kpver c02。
 - **架构**：arm64 (aarch64)。
 - **加载工具**：设备端 `/data/local/tmp/kpatch`（`load.sh` / `load.ps1` 里已配置）。
-- **superkey**：APatch 安装时设置的密码，默认 `xiaojianbang8888`；可用环境变量 `XJB_KP_SUPERKEY` 覆盖。
+- **superkey**：APatch 安装时设置的密码；显式参数优先，其次读取 `KP_SUPERKEY`，再兼容 `XJB_KP_SUPERKEY`。未提供时拒绝执行 KPM 操作。
 - **PC 端**：`adb` + `python3`（解析脚本用）。
 - **编译（仅改代码时）**：clang（推荐 AOSP 自带，见下文「重新编译」）。
 
@@ -76,7 +76,7 @@ Windows PowerShell 入口：
 
 ```powershell
 $env:XJB_ADB = "C:\Android\platform-tools\adb.exe"
-$env:XJB_KP_SUPERKEY = "xiaojianbang8888"
+$env:KP_SUPERKEY = "<your-superkey>"
 .\load.ps1 reload
 .\load.ps1 ctl resolve=on
 .\load.ps1 ctl exitmon=on
@@ -412,7 +412,7 @@ pahole -C vm_area_struct /tmp/vmlinux.btf | grep -E 'vm_start|vm_file'
 
 ### 其它
 
-- 默认 superkey 可通过 `XJB_KP_SUPERKEY` 覆盖；不要外传含真实 superkey 的命令历史、脚本或实验记录。
+- superkey 可通过显式参数、`KP_SUPERKEY` 或兼容变量 `XJB_KP_SUPERKEY` 提供；不要外传含真实 superkey 的命令历史、脚本或实验记录。
 - 加固壳的检测代码常在匿名可执行内存（解析显示 `anon:基址+偏移`）——dump 该段内存
   （`/proc/<tgid>/mem` 从基址起）即可逆向定位检测逻辑。
 

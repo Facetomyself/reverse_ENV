@@ -27,11 +27,15 @@ EOF
 DIR="$1"; shift
 [[ ! -f "$DIR/mapping.json" ]] && { echo "no mapping.json in $DIR" >&2; exit 1; }
 
-python3 - "$DIR" "$@" <<'PY'
+PYTHON_EXE="${PYTHON_EXE:-D:/reverse_ENV/.venv/Scripts/python.exe}"
+[[ ! -x "$PYTHON_EXE" ]] && { echo "Python not found or not executable: $PYTHON_EXE (set PYTHON_EXE)" >&2; exit 1; }
+
+"$PYTHON_EXE" - "$DIR" "$@" <<'PY'
 import json, os, re, sys, subprocess
 DIR = sys.argv[1]
 args = sys.argv[2:]
-MAP = json.load(open(os.path.join(DIR, "mapping.json")))
+with open(os.path.join(DIR, "mapping.json"), "r", encoding="utf-8") as fh:
+    MAP = json.load(fh)
 REV = {}
 for o, r in MAP.items():
     REV.setdefault(r, []).append(o)
@@ -63,7 +67,7 @@ def by_pkg(p):
 def grep_annot(pattern, sources):
     res = subprocess.run(
         ["grep", "-rEn", "--include=*.java", pattern, sources],
-        capture_output=True, text=True)
+        capture_output=True, text=True, encoding="utf-8", errors="replace")
     for line in res.stdout.splitlines():
         try:
             path, lineno, content = line.split(":", 2)

@@ -5,7 +5,7 @@
 ## 工具目录
 
 ```
-skill/native-reverse/scripts/tools/shadow-hook/
+third_party/shadow-hook/             # install_skill_tools.py 复制后的工程副本
 ├── hide-soinfo-agent.js       # dl_iterate_phdr / /proc/maps 过滤
 ├── signal-chain-agent.js      # ART FaultManager 兼容信号链 + OAT NULL header fix
 ├── vma-hide-agent.js          # prctl VMA 匿名重命名
@@ -13,9 +13,9 @@ skill/native-reverse/scripts/tools/shadow-hook/
 ├── stealth-runner.py          # Python CLI 编排器
 └── README.md                  # 完整使用手册
 
-tools/hide-soinfo/             # C 原生 soinfo 摘除库 (需 NDK 编译)
-tools/stealth-hook-engine/     # ARM64 inline hook 引擎 (需 NDK 编译)
-tools/memfd-inject/            # memfd 隐身注入器 (需 NDK 编译)
+tools/hide-soinfo/             # 待建：C 原生 soinfo 摘除库，当前 Skill 未内置
+tools/stealth-hook-engine/     # 待建：ARM64 inline hook 引擎，当前 Skill 未内置
+tools/memfd-inject/            # 待建：memfd 隐身注入器，当前 Skill 未内置
 ```
 
 ## 触发场景
@@ -25,14 +25,14 @@ tools/memfd-inject/            # memfd 隐身注入器 (需 NDK 编译)
 | 目标 app 通过 dl_iterate_phdr / /proc/maps 检测 Frida | `hide-soinfo-agent.js` 或 `shadow-agent-gadget.js` | stealth / all |
 | Hook Java 方法后 ART 崩溃 (WalkStack / OAT header) | `signal-chain-agent.js` | signal |
 | app 扫描匿名 RWX 映射检测注入 | `vma-hide-agent.js` | vma |
-| 完整隐身（全栈保护） | `shadow-agent-gadget.js` 或 `stealth-runner.py --mode all` | all |
-| 需要从 linker soinfo 链表真正摘除 | `tools/hide-soinfo/` (C 原生, 需编译) | — |
-| 需要替代 Frida Interceptor 的 inline hook | `tools/stealth-hook-engine/` (C 原生, 需编译) | — |
+| 完整隐身（全栈保护） | `shadow-agent-gadget.js` 或 `third_party/shadow-hook/stealth-runner.py --mode all` | all |
+| 需要从 linker soinfo 链表真正摘除 | `tools/hide-soinfo/`（待建，当前 Skill 未内置） | — |
+| 需要替代 Frida Interceptor 的 inline hook | `tools/stealth-hook-engine/`（待建，当前 Skill 未内置） | — |
 
 ## 分层防御
 
 ```
-Layer 0: 注入器隐身    → memfd-inject (不走 linker dlopen)
+Layer 0: 注入器隐身    → memfd-inject (待建，当前 Skill 未内置)
 Layer 1: SO 枚举隐身    → hide-soinfo-agent.js (dl_iterate_phdr + maps 过滤)
 Layer 2: VMA 隐身       → vma-hide-agent.js (RWX 映射重命名)
 Layer 3: 崩溃保护       → signal-chain-agent.js (ART FaultManager chain)

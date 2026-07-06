@@ -221,6 +221,7 @@ def run_self_check() -> int:
         TOOLS_DIR / "MemDumper-master",
         TOOLS_DIR / "ecapture-v2.3.0-android-arm64",
         TOOLS_DIR / "xiaojianbang-stealth-hook-main",
+        TOOLS_DIR / "shadow-hook",
     ]
     required_files = [
         SCRIPT_DIR / "make_experiment_note.py",
@@ -233,6 +234,7 @@ def run_self_check() -> int:
         TOOLS_DIR / "stealth_hook_android.py",
         TOOLS_DIR / "ida_fix_function_range.py",
         TOOLS_DIR / "INP.py",
+        TOOLS_DIR / "shadow-hook" / "stealth-runner.py",
     ]
     for path in required_dirs:
         if not path.is_dir():
@@ -257,6 +259,7 @@ def run_self_check() -> int:
         SCRIPT_DIR / "collect_key_evidence.py",
         TOOLS_DIR / "memdump_so.py",
         TOOLS_DIR / "stealth_hook_android.py",
+        TOOLS_DIR / "shadow-hook" / "stealth-runner.py",
     ]
     help_env = os.environ.copy()
     help_env["PYTHONDONTWRITEBYTECODE"] = "1"
@@ -312,6 +315,7 @@ def main() -> int:
         (TOOLS_DIR / "MemDumper-master", third_party / "MemDumper-master"),
         (TOOLS_DIR / "ecapture-v2.3.0-android-arm64", third_party / "ecapture-v2.3.0-android-arm64"),
         (TOOLS_DIR / "xiaojianbang-stealth-hook-main", third_party / "xiaojianbang-stealth-hook-main"),
+        (TOOLS_DIR / "shadow-hook", third_party / "shadow-hook"),
     ]
     for src, dst in tool_dirs:
         status = copytree_clean(src, dst, force=args.force, backup=args.backup_existing, dry_run=args.dry_run)

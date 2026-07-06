@@ -72,7 +72,7 @@ Decompiler fails with opcode errors.
 
 **Shortcut (Hack.lu CTF 2013):** If the challenge bundles its own modified Python interpreter (e.g., a custom `./py` binary), install `uncompyle2`/`uncompyle6` into that interpreter's environment and decompile using the challenge's own runtime. The modified interpreter understands its own opcode mapping, so standard decompilation tools work without manual opcode recovery.
 
-**Tool selection by Python version:** `uncompyle6` supports Python 2.x–3.8. For Python 3.9+ bytecode, use [`pycdc`](https://github.com/zrax/pycdc) (compile from source: `git clone && cmake . && make`).
+**Tool selection by Python version:** `uncompyle6` supports Python 2.x-3.8. For Python 3.9+ bytecode, use [`pycdc`](https://github.com/zrax/pycdc) only after cloning/building it under `D:\reverse_ENV\tools\src\pycdc` and recording the source commit/hash.
 
 **Key insight:** Opcode remapping breaks all standard decompilers. The fastest fix is to find the modified `opcode.pyc` in the PyInstaller bundle, diff it against the stock Python opcodes, and patch the target `.pyc` back to standard opcodes before decompiling.
 
@@ -83,23 +83,29 @@ Decompiler fails with opcode errors.
 - Tool: `Lil-House/Pyarmor-Static-Unpack-1shot`
 - Use for Pyarmor 8.x/9.x armored scripts without executing sample code
 - Quick signature check: payload typically starts with `PY` + six digits (Pyarmor 7 and earlier `PYARMOR` format is not supported)
+- Tool path `D:\reverse_ENV\tools\pyarmor-1shot\` is a required local install location if this workflow is needed (待验证).
 
 Workflow:
 1. Ensure target directory contains armored scripts and matching `pyarmor_runtime` library.
 2. Run one-shot unpack to emit `.1shot.` outputs (disassembly + experimental decompile).
 3. Treat disassembly as ground truth; verify decompiled source with bytecode when inconsistent.
 
-```bash
-python /path/to/oneshot/shot.py /path/to/scripts
+```powershell
+& "D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\tools\pyarmor-1shot\shot.py" `
+  "D:\reverse_ENV\workspace\<项目名>\scripts"
 ```
 
 Optional flags:
-```bash
+```powershell
 # Specify runtime explicitly
-python /path/to/oneshot/shot.py /path/to/scripts -r /path/to/pyarmor_runtime.so
+& "D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\tools\pyarmor-1shot\shot.py" `
+  "D:\reverse_ENV\workspace\<项目名>\scripts" `
+  -r "D:\reverse_ENV\workspace\<项目名>\pyarmor_runtime.so"
 
 # Write outputs to another directory
-python /path/to/oneshot/shot.py /path/to/scripts -o /path/to/output
+& "D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\tools\pyarmor-1shot\shot.py" `
+  "D:\reverse_ENV\workspace\<项目名>\scripts" `
+  -o "D:\reverse_ENV\workspace\<项目名>\pyarmor_1shot_out"
 ```
 
 Notes:
@@ -139,24 +145,29 @@ Please note most of that the executable file for the PC platform is GameAssembly
 ## HarmonyOS HAP/ABC Reverse (abc-decompiler)
 
 - Target files: `.hap` package and embedded `.abc` bytecode
-- Tool: `https://github.com/ohos-decompiler/abc-decompiler`
-- Download `jadx-dev-all.jar` from releases
+- Tool reference: `https://github.com/ohos-decompiler/abc-decompiler`
+- If needed, place and verify `jadx-dev-all.jar` under `D:\reverse_ENV\tools\abc-decompiler\` first (待验证)
 
 Critical startup note:
 - `java -jar` may enter GUI mode
 - For CLI mode, always use:
 
-```bash
-java -cp "./jadx-dev-all.jar" jadx.cli.JadxCLI [options] <input>
+```powershell
+& "D:\reverse_ENV\tools\jdk\bin\java.exe" -cp "D:\reverse_ENV\tools\abc-decompiler\jadx-dev-all.jar" `
+  jadx.cli.JadxCLI [options] "D:\reverse_ENV\workspace\<项目名>\hap_extracted\modules.abc"
 ```
 
 Most common commands:
-```bash
+```powershell
 # Basic decompile to directory
-java -cp "./jadx-dev-all.jar" jadx.cli.JadxCLI -d "out" ".abc"
+& "D:\reverse_ENV\tools\jdk\bin\java.exe" -cp "D:\reverse_ENV\tools\abc-decompiler\jadx-dev-all.jar" `
+  jadx.cli.JadxCLI -d "D:\reverse_ENV\workspace\<项目名>\abc_out" `
+  "D:\reverse_ENV\workspace\<项目名>\hap_extracted\modules.abc"
 
 # Decompile .abc (recommended for this scenario)
-java -cp "./jadx-dev-all.jar" jadx.cli.JadxCLI -m simple -d "out_hap" "modules.abc"
+& "D:\reverse_ENV\tools\jdk\bin\java.exe" -cp "D:\reverse_ENV\tools\abc-decompiler\jadx-dev-all.jar" `
+  jadx.cli.JadxCLI -m simple -d "D:\reverse_ENV\workspace\<项目名>\out_hap" `
+  "D:\reverse_ENV\workspace\<项目名>\hap_extracted\modules.abc"
 ```
 
 Recommended parameters for this challenge:
@@ -164,8 +175,11 @@ Recommended parameters for this challenge:
 - `--log-level ERROR`: keep only critical errors
 - Full recommended command:
 
-```bash
-java -cp "./jadx-dev-all.jar" jadx.cli.JadxCLI -m simple --log-level ERROR -d "out_abc_simple" "modules.abc"
+```powershell
+& "D:\reverse_ENV\tools\jdk\bin\java.exe" -cp "D:\reverse_ENV\tools\abc-decompiler\jadx-dev-all.jar" `
+  jadx.cli.JadxCLI -m simple --log-level ERROR `
+  -d "D:\reverse_ENV\workspace\<项目名>\out_abc_simple" `
+  "D:\reverse_ENV\workspace\<项目名>\hap_extracted\modules.abc"
 ```
 
 Parameter quick reference:

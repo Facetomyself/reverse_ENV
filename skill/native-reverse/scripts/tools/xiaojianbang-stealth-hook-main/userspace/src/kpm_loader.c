@@ -5,6 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/syscall.h>
+#include <stdlib.h>
 
 #define __NR_supercall 45
 
@@ -29,52 +30,63 @@ static inline long ver_and_cmd(const char *key, long cmd)
     return ((long)version_code << 32) | (0x1158 << 16) | (cmd & 0xFFFF);
 }
 
-static const char *SUPERKEY = "xiaojianbang8888";
+static const char *g_superkey = NULL;
 
 static long sc_hello(void)
 {
-    return syscall(__NR_supercall, SUPERKEY, ver_and_cmd(SUPERKEY, SUPERCALL_HELLO));
+    return syscall(__NR_supercall, g_superkey, ver_and_cmd(g_superkey, SUPERCALL_HELLO));
 }
 
 static long sc_kpm_load(const char *path, const char *args)
 {
-    return syscall(__NR_supercall, SUPERKEY, ver_and_cmd(SUPERKEY, SUPERCALL_KPM_LOAD),
+    return syscall(__NR_supercall, g_superkey, ver_and_cmd(g_superkey, SUPERCALL_KPM_LOAD),
                    path, args, NULL);
 }
 
 static long sc_kpm_unload(const char *name)
 {
-    return syscall(__NR_supercall, SUPERKEY, ver_and_cmd(SUPERKEY, SUPERCALL_KPM_UNLOAD),
+    return syscall(__NR_supercall, g_superkey, ver_and_cmd(g_superkey, SUPERCALL_KPM_UNLOAD),
                    name, NULL);
 }
 
 static long sc_kpm_nums(void)
 {
-    return syscall(__NR_supercall, SUPERKEY, ver_and_cmd(SUPERKEY, SUPERCALL_KPM_NUMS));
+    return syscall(__NR_supercall, g_superkey, ver_and_cmd(g_superkey, SUPERCALL_KPM_NUMS));
 }
 
 static long sc_kpm_list(char *buf, int buf_len)
 {
-    return syscall(__NR_supercall, SUPERKEY, ver_and_cmd(SUPERKEY, SUPERCALL_KPM_LIST),
+    return syscall(__NR_supercall, g_superkey, ver_and_cmd(g_superkey, SUPERCALL_KPM_LIST),
                    buf, buf_len);
 }
 
 static long sc_kpm_info(const char *name, char *buf, int buf_len)
 {
-    return syscall(__NR_supercall, SUPERKEY, ver_and_cmd(SUPERKEY, SUPERCALL_KPM_INFO),
+    return syscall(__NR_supercall, g_superkey, ver_and_cmd(g_superkey, SUPERCALL_KPM_INFO),
                    name, buf, buf_len);
 }
 
 static long sc_kpm_control(const char *name, const char *args, char *out, long outlen)
 {
-    return syscall(__NR_supercall, SUPERKEY, ver_and_cmd(SUPERKEY, SUPERCALL_KPM_CONTROL),
+    return syscall(__NR_supercall, g_superkey, ver_and_cmd(g_superkey, SUPERCALL_KPM_CONTROL),
                    name, args, out, outlen);
+}
+
+static const char *env_superkey(void)
+{
+    const char *value = getenv("KP_SUPERKEY");
+    if (value && value[0]) return value;
+    value = getenv("XJB_KP_SUPERKEY");
+    if (value && value[0]) return value;
+    return NULL;
 }
 
 static void usage(void)
 {
     printf("kpm_loader — KPM dynamic load/unload via supercall\n\n");
     printf("Usage:\n");
+    printf("  kpm_loader --superkey <key> <command> [args]\n");
+    printf("  kpm_loader -k <key> <command> [args]\n");
     printf("  kpm_loader hello              Test supercall connection\n");
     printf("  kpm_loader list               List loaded KPMs\n");
     printf("  kpm_loader info <name>        Show KPM info\n");
@@ -82,13 +94,33 @@ static void usage(void)
     printf("  kpm_loader unload <name>      Unload KPM by name\n");
     printf("  kpm_loader reload <path>      Unload 'xiaojianbang-stealth-hook' then load from path\n");
     printf("  kpm_loader control <name> <args>  Send control command\n");
+    printf("\nSuperkey source order: --superkey/-k, KP_SUPERKEY, XJB_KP_SUPERKEY.\n");
 }
 
 int main(int argc, char *argv[])
 {
     if (argc < 2) { usage(); return 1; }
 
-    const char *action = argv[1];
+    int action_index = 1;
+    if ((strcmp(argv[action_index], "--superkey") == 0 || strcmp(argv[action_index], "-k") == 0)) {
+        if (argc <= action_index + 2) {
+            printf("[-] --superkey/-k requires a key and a command\n");
+            usage();
+            return 1;
+        }
+        g_superkey = argv[action_index + 1];
+        action_index += 2;
+    } else {
+        g_superkey = env_superkey();
+    }
+    if (!g_superkey || !g_superkey[0]) {
+        printf("[-] KernelPatch superkey is required; pass --superkey <key> or set KP_SUPERKEY / XJB_KP_SUPERKEY\n");
+        return 1;
+    }
+
+    const char *action = argv[action_index];
+    int command_argc = argc - action_index;
+    char **command_argv = &argv[action_index];
 
     /* hello */
     if (strcmp(action, "hello") == 0) {
@@ -125,10 +157,10 @@ int main(int argc, char *argv[])
 
     /* info */
     if (strcmp(action, "info") == 0) {
-        if (argc < 3) { printf("Usage: kpm_loader info <name>\n"); return 1; }
+        if (command_argc < 2) { printf("Usage: kpm_loader info <name>\n"); return 1; }
         char buf[1024] = {0};
-        long ret = sc_kpm_info(argv[2], buf, sizeof(buf));
-        printf("[*] sc_kpm_info('%s') ret=%ld\n", argv[2], ret);
+        long ret = sc_kpm_info(command_argv[1], buf, sizeof(buf));
+        printf("[*] sc_kpm_info('%s') ret=%ld\n", command_argv[1], ret);
         if (ret > 0) printf("%s\n", buf);
         else printf("[-] info failed (ret=%ld)\n", ret);
         return ret >= 0 ? 0 : 1;
@@ -136,9 +168,9 @@ int main(int argc, char *argv[])
 
     /* load */
     if (strcmp(action, "load") == 0) {
-        if (argc < 3) { printf("Usage: kpm_loader load <path> [args]\n"); return 1; }
-        const char *path = argv[2];
-        const char *args = argc >= 4 ? argv[3] : NULL;
+        if (command_argc < 2) { printf("Usage: kpm_loader load <path> [args]\n"); return 1; }
+        const char *path = command_argv[1];
+        const char *args = command_argc >= 3 ? command_argv[2] : NULL;
         printf("[*] Loading: %s (args: %s)\n", path, args ? args : "none");
         long ret = sc_kpm_load(path, args);
         printf("[*] Result: %ld\n", ret);
@@ -149,8 +181,8 @@ int main(int argc, char *argv[])
 
     /* unload */
     if (strcmp(action, "unload") == 0) {
-        if (argc < 3) { printf("Usage: kpm_loader unload <name>\n"); return 1; }
-        const char *name = argv[2];
+        if (command_argc < 2) { printf("Usage: kpm_loader unload <name>\n"); return 1; }
+        const char *name = command_argv[1];
         printf("[*] Unloading: %s\n", name);
         long ret = sc_kpm_unload(name);
         printf("[*] Result: %ld\n", ret);
@@ -161,8 +193,8 @@ int main(int argc, char *argv[])
 
     /* reload = unload xiaojianbang-stealth-hook + load new */
     if (strcmp(action, "reload") == 0) {
-        if (argc < 3) { printf("Usage: kpm_loader reload <path>\n"); return 1; }
-        const char *path = argv[2];
+        if (command_argc < 2) { printf("Usage: kpm_loader reload <path>\n"); return 1; }
+        const char *path = command_argv[1];
         printf("[*] Unloading xiaojianbang-stealth-hook...\n");
         long ret = sc_kpm_unload("xiaojianbang-stealth-hook");
         printf("[*] unload ret=%ld\n", ret);
@@ -177,9 +209,9 @@ int main(int argc, char *argv[])
 
     /* control */
     if (strcmp(action, "control") == 0) {
-        if (argc < 4) { printf("Usage: kpm_loader control <name> <args>\n"); return 1; }
+        if (command_argc < 3) { printf("Usage: kpm_loader control <name> <args>\n"); return 1; }
         char out[256] = {0};
-        long ret = sc_kpm_control(argv[2], argv[3], out, sizeof(out));
+        long ret = sc_kpm_control(command_argv[1], command_argv[2], out, sizeof(out));
         printf("[*] control ret=%ld\n", ret);
         if (out[0]) printf("[*] output: %s\n", out);
         return ret == 0 ? 0 : 1;

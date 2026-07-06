@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shadow Hook 隐身编排器 — 统一加载 Frida JS 隐身 agent。
+r"""Shadow Hook 隐身编排器 — 统一加载 Frida JS 隐身 agent。
 
 用法:
   # 完整隐身（信号链 + soinfo 隐藏 + VMA 重命名）
@@ -17,7 +17,7 @@
   # 列出可用模式
   python stealth-runner.py --list-modes
 
-依赖: Python frida 模块 (pip install frida-tools)
+依赖: Python frida 模块 (D:\reverse_ENV\.venv\Scripts\python.exe -m pip install frida-tools)
 参考: rust-frida-shadow-hook / agent/src/lib.rs (process_cmd 路由)
 """
 
@@ -33,7 +33,20 @@ import time
 from typing import Optional
 
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parents[3]  # skill/native-reverse/scripts/tools/ → 项目根
+
+
+def find_project_root(start: pathlib.Path) -> pathlib.Path:
+    for path in [start, *start.parents]:
+        if (path / "AGENTS.md").is_file():
+            return path
+        if (path / ".venv").exists():
+            return path
+        if (path / "tools" / "adb" / "adb.exe").exists() or (path / "tools" / "adb" / "adb").exists():
+            return path
+    return pathlib.Path.cwd().resolve()
+
+
+PROJECT_ROOT = find_project_root(SCRIPT_DIR)
 
 # Agent 脚本路径
 AGENTS = {

@@ -7,10 +7,10 @@
 
 | 项目 | 值 |
 |------|-----|
-| 内核路径 | `tools\ruyitrace\firefox\firefox.exe` |
+| 内核路径 | `"D:\reverse_ENV\tools\ruyitrace\firefox\firefox.exe"` |
 | 追踪机制 | `MOZ_DOM_TRACE=1` → C++ 层 Hook |
 | 输出格式 | NDJSON（每行一条 API 调用） |
-| 标记文件 | `tools\ruyitrace\firefox\RUYI_DOMTRACE.txt` (**禁止删除**) |
+| 标记文件 | `"D:\reverse_ENV\tools\ruyitrace\firefox\RUYI_DOMTRACE.txt"` (**禁止删除**) |
 
 ## T2 vs T3 对比
 
@@ -35,7 +35,7 @@ powershell -File "D:\reverse_ENV\tools\ruyitrace\ruyitrace.ps1" `
 | 参数 | 说明 | 默认值 |
 |------|------|--------|
 | `-Url` | 目标 URL (必填) | — |
-| `-Output` | NDJSON 输出路径 | `$PWD\trace_out.ndjson` |
+| `-Output` | NDJSON 输出路径，必须传 quoted absolute 路径 | `"D:\reverse_ENV\workspace\<project>\trace.ndjson"` |
 | `-Profile` | Firefox profile 目录 | 临时 |
 | `-Headless` | 无头模式 | 否 |
 
@@ -48,9 +48,9 @@ powershell -File "D:\reverse_ENV\tools\ruyitrace\ruyitrace.ps1" `
 ## 分析
 
 ```bash
-python tools\ruyitrace\trace_analyzer.py trace.ndjson           # 全维度
-python tools\ruyitrace\trace_analyzer.py trace.ndjson -c canvas  # 仅 Canvas
-python tools\ruyitrace\trace_analyzer.py trace.ndjson -c webgl   # 仅 WebGL
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\tools\ruyitrace\trace_analyzer.py" "D:\reverse_ENV\workspace\<project>\trace.ndjson"           # 全维度
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\tools\ruyitrace\trace_analyzer.py" "D:\reverse_ENV\workspace\<project>\trace.ndjson" -c canvas  # 仅 Canvas
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\tools\ruyitrace\trace_analyzer.py" "D:\reverse_ENV\workspace\<project>\trace.ndjson" -c webgl   # 仅 WebGL
 ```
 
 **覆盖维度：** canvas, webgl, audio, webrtc, navigator, screen, crypto, storage, font, time, webgpu
@@ -58,19 +58,19 @@ python tools\ruyitrace\trace_analyzer.py trace.ndjson -c webgl   # 仅 WebGL
 ## T3 工作流
 
 ```
-1. ruyi_export_session → workspace/<project>/trace-session.json
+1. ruyi_export_session { outputFile: "D:\reverse_ENV\workspace\<project>\trace-session.json" }
    (在 ruyipage 中过检并导出登录态)
 
 2. 启动 ruyitrace:
    powershell -File "D:\reverse_ENV\tools\ruyitrace\ruyitrace.ps1" `
-     -Url "https://target.com" -Output "workspace/<project>/trace.ndjson"
+     -Url "https://target.com" -Output "D:\reverse_ENV\workspace\<project>\trace.ndjson"
 
 3. 在 trace 浏览器中注入 session.json 的 cookies
    (通过浏览器控制台或 preload script)
 
 4. 刷新页面 → 执行目标操作 → 关闭浏览器
 
-5. python tools\ruyitrace\trace_analyzer.py workspace/<project>/trace.ndjson
+5. "D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\tools\ruyitrace\trace_analyzer.py" "D:\reverse_ENV\workspace\<project>\trace.ndjson"
 ```
 
 ## 升级触发信号
@@ -85,7 +85,7 @@ python tools\ruyitrace\trace_analyzer.py trace.ndjson -c webgl   # 仅 WebGL
 
 ## 禁止
 
-- **不删除** `tools\ruyitrace\firefox\RUYI_DOMTRACE.txt`
+- **不删除** `"D:\reverse_ENV\tools\ruyitrace\firefox\RUYI_DOMTRACE.txt"`
 - **不与 ruyipage 共享 profile** — 独立 Firefox 进程
 - **不在 T2 足够时用 T3** — C++ trace 开销更大
 - **trace 期间关闭其他 Firefox** — 避免 profile 冲突

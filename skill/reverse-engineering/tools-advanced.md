@@ -383,17 +383,18 @@ cutter binary           # Open in GUI with decompiler
 LLVM-based decompiler supporting many architectures. Free and open-source.
 
 ```bash
-# Install
-pip install retdec-decompiler
-# Or use web: https://retdec.com/decompilation/
+# Install only inside the project venv when local RetDec is required
+D:\reverse_ENV\.venv\Scripts\python.exe -m pip install retdec-decompiler
 
-# CLI
-retdec-decompiler binary
+# CLI, with input/output kept under workspace\<项目名>
+D:\reverse_ENV\.venv\Scripts\retdec-decompiler.exe D:\reverse_ENV\workspace\<项目名>\binary
 # Outputs: binary.c (decompiled C), binary.dsm (disassembly)
 
 # Specific function
-retdec-decompiler --select-ranges 0x401000-0x401100 binary
+D:\reverse_ENV\.venv\Scripts\retdec-decompiler.exe --select-ranges 0x401000-0x401100 D:\reverse_ENV\workspace\<项目名>\binary
 ```
+
+Public web decompilation services are not a default path. Use them only with explicit human authorization for the exact sample, after desensitization where possible, and record hash/time/service/reason in `workspace\<项目名>\triage.md`.
 
 **Strengths:** Multi-arch support (x86, ARM, MIPS, PowerPC, PIC32), free, produces compilable C. Good for architectures not well-supported by Ghidra.
 
@@ -535,7 +536,8 @@ rr replay
 ```bash
 # pwndbg (most popular for CTF)
 # https://github.com/pwndbg/pwndbg
-git clone https://github.com/pwndbg/pwndbg && cd pwndbg && ./setup.sh
+# External Linux reference only; do not run by default in D:\reverse_ENV.
+# If required, clone under D:\reverse_ENV\tools\src\pwndbg and record commit/hash.
 
 # Key pwndbg commands:
 pwndbg> context           # Show registers, stack, code, backtrace
@@ -767,7 +769,7 @@ __attribute__((constructor)) void dump() {
     fread(buf, 1, size, mem);
     fclose(mem);
 
-    FILE *out = fopen("/tmp/dumped_binary", "wb");
+    FILE *out = fopen("./dumped_binary", "wb");  // run from workspace/<项目名>
     fwrite(buf, 1, size, out);
     fclose(out);
 }

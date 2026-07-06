@@ -7,10 +7,10 @@
 
 | 项目 | 值 |
 |------|-----|
-| Python 包 | `ruyipage` 1.2.43（`.venv\Lib\site-packages\ruyipage\`） |
+| Python 包 | `ruyipage` 1.2.43（`D:\reverse_ENV\.venv\Lib\site-packages\ruyipage\`） |
 | 浏览器 | Firefox 151.0a1（`C:\Users\mengma\AppData\Local\ruyipage\browsers\`） |
 | 协议 | WebDriver BiDi |
-| 启动 | `.venv\Scripts\python.exe -m ruyipage` |
+| 启动 | `"D:\reverse_ENV\.venv\Scripts\python.exe" -m ruyipage` |
 
 ## 渐进式披露
 
@@ -159,6 +159,6 @@ page.delete_cookies()  # 全部
 ## 快速命令
 
 ```bash
-.venv\Scripts\python.exe -m ruyipage doctor   # 环境检查
-.venv\Scripts\python.exe -m ruyipage path     # 浏览器路径
+"D:\reverse_ENV\.venv\Scripts\python.exe" -m ruyipage doctor   # 环境检查
+"D:\reverse_ENV\.venv\Scripts\python.exe" -m ruyipage path     # 浏览器路径
 ```

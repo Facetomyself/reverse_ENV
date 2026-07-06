@@ -1,47 +1,47 @@
 ---
 name: reverse-engineering
-description: Provides reverse engineering techniques. Use when the main job is to understand how a compiled, obfuscated, packed, or virtualized target works before exploiting or solving it, including binaries, APKs, WASM, firmware, custom VMs, bytecode, game clients, malware-like loaders, and anti-debug or anti-analysis logic. Do not use it when the vulnerability is already understood and the remaining task is exploitation; use pwn instead. Do not use it for pure web workflows, log or disk forensics, or standalone crypto problems unless reversing the implementation is the real blocker.
+description: CTF/general reverse engineering reference only. In real D:\reverse_ENV projects, start with reverse-coordinator and route APK/native/Web JS/firmware tasks to the dedicated project skills; use this skill only as supporting background when those skills need generic CTF-style techniques. Do not use it as the primary project router, and do not use it for exploitation-only, pure web, forensics, or standalone crypto work unless reversing the implementation is the actual blocker.
 license: MIT
-compatibility: Requires filesystem-based agent (Claude Code or similar) with bash, Python 3, and internet access for tool installation.
-allowed-tools: Bash Read Write Edit Glob Grep Task WebFetch WebSearch
+compatibility: Requires filesystem-based agent with local D:\reverse_ENV tools. Do not install global packages or upload samples to public services by default.
+allowed-tools: Bash Read Write Edit Glob Grep Task
 metadata:
   user-invocable: "false"
 ---
 
-# Reverse Engineering
+# Reverse Engineering CTF Reference
 
-Quick reference for RE challenges. For detailed techniques, see supporting files.
+Quick reference for CTF-style RE challenges. For real project work inside `D:\reverse_ENV`, this skill is reference material only: create or use `workspace\<项目名>\`, start with `reverse-coordinator`, then route APK, native `.so`/PE/ELF, Web JS, proxy, radare2, or IDA work to the dedicated project skill.
+
+External information routing is fixed:
+
+- General external资料/search: use `search-layer`.
+- GitHub code, issues, PRs, examples, or release notes: use `github-solution-research`.
+- Login-required pages, browser state, or JS-rendered targets: use `ruyi` / `js-reverse-mcp`.
+- Do not use WebFetch, and do not upload binaries to public services unless the user explicitly authorizes that exact sample.
 
 ## Prerequisites
 
-**Python packages (all platforms):**
-```bash
-pip install frida-tools angr qiling uncompyle6 capstone lief z3-solver
-# For Python 3.9+ bytecode: build pycdc from source
-git clone https://github.com/zrax/pycdc && cd pycdc && cmake . && make
+These are reference notes, not default setup commands. In this repository, prefer already bundled tools under `D:\reverse_ENV\tools\` and the project venv at `D:\reverse_ENV\.venv\`.
+
+**Python packages, only when the task really needs them:**
+```powershell
+& "D:\reverse_ENV\.venv\Scripts\python.exe" -m pip install frida-tools angr qiling uncompyle6 capstone lief z3-solver
 ```
 
-**Linux (apt):**
-```bash
-apt install gdb radare2 binutils strace ltrace apktool upx
+**Local project tool examples:**
+
+```powershell
+& "D:\reverse_ENV\tools\radare2\bin\radare2.exe" -v
+& "D:\reverse_ENV\tools\apktool\apktool.bat" --version
+& "D:\reverse_ENV\tools\jadx\bin\jadx.bat" --version
+& "D:\reverse_ENV\.venv\Scripts\frida.exe" --version
 ```
 
-**macOS (Homebrew):**
-```bash
-brew install gdb radare2 binutils apktool upx ghidra
-```
-
-**radare2 plugins:**
-```bash
-r2pm -ci r2ghidra   # Native Ghidra decompiler for radare2
-```
-
-**Manual install:**
-- pwndbg — Linux: [GitHub](https://github.com/pwndbg/pwndbg), macOS: `brew install pwndbg/tap/pwndbg-gdb`
+System-level `pip`, `apt`, `brew`, `r2pm`, and ad hoc `git clone` setup commands are external references only and must not be executed by default in `D:\reverse_ENV`. If a source build is unavoidable, clone/build under `D:\reverse_ENV\tools\src\...`, record the source URL and commit/hash, and update the relevant project docs if it becomes a maintained tool.
 
 ## Additional Resources
 
-- [tools.md](tools.md) - Static analysis tools (GDB, Ghidra, radare2, IDA, Binary Ninja, dogbolt.org, RISC-V with Capstone, Unicorn emulation, Python bytecode, WASM, Android APK, .NET, packed binaries)
+- [tools.md](tools.md) - Static analysis tools (GDB, Ghidra, radare2, IDA, Binary Ninja, local decompiler comparison, RISC-V with Capstone, Unicorn emulation, Python bytecode, WASM, Android APK, .NET, packed binaries)
 - [tools-dynamic.md](tools-dynamic.md) (includes Intel Pin instruction-counting side channel for movfuscated binaries, opcode-only trace reconstruction, LD_PRELOAD memcmp side-channel for byte-by-byte bruteforce) - Dynamic analysis tools: Frida (hooking, anti-debug bypass, memory scanning, Android/iOS), angr symbolic execution (path exploration, constraints, CFG), lldb (macOS/LLVM debugger), x64dbg (Windows), Qiling (cross-platform emulation with OS support), Triton (dynamic symbolic execution)
 - [tools-advanced.md](tools-advanced.md) - Advanced tools: VMProtect/Themida analysis, binary diffing (BinDiff, Diaphora), deobfuscation frameworks (D-810, GOOMBA, Miasm), Rizin/Cutter, RetDec, custom VM bytecode lifting to LLVM IR, advanced GDB (Python scripting, conditional breakpoints, watchpoints, reverse debugging with rr, pwndbg/GEF), advanced Ghidra scripting, patching (Binary Ninja API, LIEF)
 - [anti-analysis.md](anti-analysis.md) - Comprehensive anti-analysis: Linux anti-debug (ptrace, /proc, timing, signals, direct syscalls), Windows anti-debug (PEB, NtQueryInformationProcess, heap flags, TLS callbacks, HW/SW breakpoint detection, exception-based, thread hiding), anti-VM/sandbox (CPUID, MAC, timing, artifacts, resources), anti-DBI (Frida detection/bypass), code integrity/self-hashing, anti-disassembly (opaque predicates, junk bytes), MBA identification/simplification, SIGFPE signal handler side-channel via strace counting, call-less function chaining via stack frame manipulation, bypass strategies
@@ -60,6 +60,7 @@ r2pm -ci r2ghidra   # Native Ghidra decompiler for radare2
 
 ## When to Pivot
 
+- In real `D:\reverse_ENV` projects, pivot first to `reverse-coordinator`; then use `apk-reverse`, `native-reverse`, `ida-reverse`, `radare2`, `ruyi-reverse`, `proxy-usage`, or other dedicated skills according to target type.
 - If you already understand the binary and now need heap, ROP, or kernel exploitation, switch to `/ctf-pwn`.
 - If the challenge is really about recovering deleted files, PCAP data, or disk artifacts, switch to `/ctf-forensics`.
 - If the target is a web app and you are only reversing a small client-side helper script, switch to `/ctf-web`.
@@ -70,14 +71,17 @@ r2pm -ci r2ghidra   # Native Ghidra decompiler for radare2
 
 ## Problem-Solving Workflow
 
-1. **Start with strings extraction** - many easy challenges have plaintext flags
-2. **Try ltrace/strace** - dynamic analysis often reveals flags without reversing
-3. **Try Frida hooking** - hook strcmp/memcmp to capture expected values without reversing
-4. **Try angr** - symbolic execution solves many flag-checkers automatically
-5. **Try Qiling** - emulate foreign-arch binaries or bypass heavy anti-debug without artifacts
-6. **Map control flow** before modifying execution
-7. **Automate manual processes** via scripting (r2pipe, Frida, angr, Python)
-8. **Validate assumptions** by comparing decompiler outputs (dogbolt.org for side-by-side)
+1. **Create/use `workspace\<项目名>\` first** - keep binaries, dumps, traces, keys, decrypted blobs, and generated files inside that project directory, not `workspace\` root and not `/tmp`.
+2. **Preserve evidence chain** - record input file path, SHA-256, tool/version, command, timestamp, and output path for each claim.
+3. **Start with strings extraction** - many easy challenges have plaintext flags.
+4. **Try ltrace/strace** - dynamic analysis often reveals flags without reversing.
+5. **Try Frida hooking** - hook strcmp/memcmp to capture expected values without reversing.
+6. **Try angr/Qiling only when static triage justifies it** - symbolic execution and emulation are powerful but heavier.
+7. **Map control flow** before modifying execution.
+8. **Automate manual processes** via scripting (r2pipe, Frida, angr, Python), with outputs written under `workspace\<项目名>\`.
+9. **Validate assumptions** by comparing local decompiler/disassembler outputs; public upload services require explicit authorization, sample desensitization, hash/time records, and confirmation that the sample is authorized for upload.
+10. **Deliver project-mode artifacts** - `report.md`, `findings.json`, and `triage.md`, with unsupported claims marked `待验证`.
+11. **Run desensitization review** - redact secrets, tokens, private URLs, real keys, customer data, and live infrastructure details before final output or knowledge-base reuse.
 
 ## Quick Wins (Try First!)
 
@@ -139,18 +143,20 @@ Two patterns: (1) `transform(flag) == stored_target` — reverse the transform. 
 
 ## Quick Tool Reference
 
-```bash
+```powershell
 # Radare2
-r2 -d ./binary     # Debug mode
+& "D:\reverse_ENV\tools\radare2\bin\radare2.exe" -d "D:\reverse_ENV\workspace\<项目名>\binary"
 aaa                # Analyze
 afl                # List functions
 pdf @ main         # Disassemble main
 
-# Ghidra (headless)
-analyzeHeadless project/ tmp -import binary -postScript script.py
+# IDA project tools
+# Use ida-multi-mcp tools with an instance_id: survey_binary, decompile, disasm,
+# analyze_function, trace_data_flow.
 
-# IDA
-ida64 binary       # Open in IDA64
+# Android local tools
+& "D:\reverse_ENV\tools\apktool\apktool.bat" d "D:\reverse_ENV\workspace\<项目名>\app.apk" -o "D:\reverse_ENV\workspace\<项目名>\decoded"
+& "D:\reverse_ENV\tools\jadx\bin\jadx.bat" -d "D:\reverse_ENV\workspace\<项目名>\jadx" "D:\reverse_ENV\workspace\<项目名>\app.apk"
 ```
 
 ## Deep-Dive Notes

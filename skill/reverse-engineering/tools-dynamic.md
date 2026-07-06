@@ -47,10 +47,10 @@ Frida injects JavaScript into running processes for real-time hooking, tracing, 
 
 ### Installation
 
-```bash
-pip install frida-tools frida
+```powershell
+& "D:\reverse_ENV\.venv\Scripts\python.exe" -m pip install frida-tools frida
 # Verify
-frida --version
+& "D:\reverse_ENV\.venv\Scripts\frida.exe" --version
 ```
 
 ### Basic Function Hooking
@@ -69,15 +69,17 @@ Interceptor.attach(Module.findExportByName(null, "strcmp"), {
 });
 ```
 
-```bash
+```powershell
 # Attach to running process
-frida -p $(pidof binary) -l hook.js
+$TargetPid = (Get-Process -Name "binary").Id
+& "D:\reverse_ENV\.venv\Scripts\frida.exe" -p $TargetPid -l "D:\reverse_ENV\workspace\<项目名>\hook.js"
 
 # Spawn and instrument from start
-frida -f ./binary -l hook.js --no-pause
+& "D:\reverse_ENV\.venv\Scripts\frida.exe" -f "D:\reverse_ENV\workspace\<项目名>\binary" `
+  -l "D:\reverse_ENV\workspace\<项目名>\hook.js" --no-pause
 
 # One-liner: hook strcmp and dump comparisons
-frida -f ./binary --no-pause -e '
+& "D:\reverse_ENV\.venv\Scripts\frida.exe" -f "D:\reverse_ENV\workspace\<项目名>\binary" --no-pause -e '
 Interceptor.attach(Module.findExportByName(null, "strcmp"), {
     onEnter(args) {
         console.log("strcmp:", Memory.readUtf8String(args[0]), Memory.readUtf8String(args[1]));
@@ -177,9 +179,9 @@ Stalker.follow(Process.getCurrentThreadId(), {
 
 ### r2frida (Radare2 + Frida Integration)
 
-```bash
+```powershell
 # Attach radare2 to process via Frida
-r2 frida://spawn/./binary
+& "D:\reverse_ENV\tools\radare2\bin\radare2.exe" "frida://spawn/D:\reverse_ENV\workspace\<项目名>\binary"
 
 # r2frida commands
 \ii                    # List imports
@@ -191,13 +193,14 @@ r2 frida://spawn/./binary
 
 ### Frida for Android/iOS
 
-```bash
+```powershell
 # Android (requires rooted device or Frida server)
-adb push frida-server /data/local/tmp/
-adb shell "chmod 755 /data/local/tmp/frida-server && /data/local/tmp/frida-server &"
+& "D:\reverse_ENV\tools\adb\adb.exe" push "D:\reverse_ENV\tools\frida-server" "/data/local/tmp/frida-server"
+& "D:\reverse_ENV\tools\adb\adb.exe" shell "chmod 755 /data/local/tmp/frida-server && /data/local/tmp/frida-server &"
 
 # Hook Android Java methods
-frida -U -f com.example.app -l hook_android.js --no-pause
+& "D:\reverse_ENV\.venv\Scripts\frida.exe" -U -f com.example.app `
+  -l "D:\reverse_ENV\workspace\<项目名>\hook_android.js" --no-pause
 ```
 
 ```javascript
@@ -243,9 +246,10 @@ Interceptor.attach(funcAddr, {
 });
 ```
 
-```bash
+```powershell
 # Usage
-frida -f ./binary -l memo_hook.js --no-pause
+& "D:\reverse_ENV\.venv\Scripts\frida.exe" -f "D:\reverse_ENV\workspace\<项目名>\binary" `
+  -l "D:\reverse_ENV\workspace\<项目名>\memo_hook.js" --no-pause
 ```
 
 For multi-argument functions, build a composite key:
@@ -276,8 +280,8 @@ angr automatically explores program paths to find inputs satisfying constraints.
 
 ### angr Installation
 
-```bash
-pip install angr
+```powershell
+& "D:\reverse_ENV\.venv\Scripts\python.exe" -m pip install angr
 ```
 
 ### Basic Path Exploration
@@ -552,10 +556,10 @@ Qiling emulates binaries with OS-level support (syscalls, filesystem, registry).
 
 ### Qiling Installation
 
-```bash
-pip install qiling
-# Download rootfs for target OS:
-git clone https://github.com/qilingframework/rootfs
+```powershell
+& "D:\reverse_ENV\.venv\Scripts\python.exe" -m pip install qiling
+# If rootfs is required, clone it under tools only after confirming the source and recording commit/hash:
+git -C "D:\reverse_ENV\tools" clone https://github.com/qilingframework/rootfs "qiling-rootfs"
 ```
 
 ### Basic Usage
@@ -698,13 +702,14 @@ import subprocess
 import random
 import string
 
-PIN_PATH = '/tmp/pin-3.5/pin'
-TOOL_PATH = 'source/tools/ManualExamples/obj-intel64/inscount0.so'
+PIN_PATH = r'D:\reverse_ENV\tools\pin\pin.exe'
+TOOL_PATH = r'D:\reverse_ENV\tools\pin\source\tools\ManualExamples\obj-intel64\inscount0.so'
+BINARY_PATH = r'D:\reverse_ENV\workspace\<项目名>\binary'
 
 def fitness(candidate):
     """Run binary under Pin and return instruction count as fitness."""
     proc = subprocess.Popen(
-        [PIN_PATH, '-t', TOOL_PATH, '--', './binary'],
+        [PIN_PATH, '-t', TOOL_PATH, '--', BINARY_PATH],
         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate(candidate.encode())
     # inscount0 writes count to stderr or inscount.out

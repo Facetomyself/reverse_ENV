@@ -31,7 +31,7 @@
 | ACTIVE | IDLE | `ruyi_browser_quit` 或会话超时 |
 | 任意 | IDLE | 异常终止 |
 
-## 状态文件: `workspace/<project>/ruyi-session.json`
+## 状态文件: `"D:\reverse_ENV\workspace\<project>\ruyi-session.json"`
 
 ```json
 {
@@ -59,6 +59,7 @@
 
   "trace": {
     "active": false,
+    "enabled_at_new_page": false,
     "started_at": null,
     "stopped_at": null,
     "output_path": null
@@ -93,6 +94,7 @@
 | `browser.active` | boolean | 是否有活跃浏览器 session |
 | `browser.pages` | array | 所有打开页面的状态 |
 | `trace.active` | boolean | BiDi trace 是否运行中 |
+| `trace.enabled_at_new_page` | boolean | 是否在 `ruyi_new_page { traceEnabled:true }` 时预启用；完整 L1 trace 必须为 true |
 | `trace.output_path` | string? | NDJSON 输出路径 (T3) |
 | `export.last_export_path` | string? | 最近一次 session 导出路径 |
 | `export.bridged_to` | string? | 桥接目标 MCP 服务名（如 "js-reverse-mcp"） |
@@ -109,7 +111,7 @@
   "from_tier": "T0",
   "to_tier": "T1",
   "reason": "多步骤工作流需求",
-  "signal": "用户连续调用 ruuyi_capture_start + ruuyi_capture_wait",
+  "signal": "用户连续调用 ruyi_capture_start + ruyi_capture_wait",
   "timestamp": "2026-07-02T10:35:00+08:00"
 }
 ```
@@ -152,7 +154,12 @@ ruyi_close_page { pageIdx: 1 }    → browser.pages 移除 [1]
 ## Trace 生命周期
 
 ```
-IDLE ──ruyi_trace_start──→ TRACING
+IDLE ──ruyi_new_page { traceEnabled:true }──→ TRACE_READY
+                                            │
+                              ruyi_trace_start
+                                            │
+                                            ▼
+                                         TRACING
                               │
                      (触发操作/等待)
                               │
@@ -167,6 +174,8 @@ IDLE ──ruyi_trace_start──→ TRACING
                            IDLE
 ```
 
+**Trace L1 规则：** 完整路径必须从 `ruyi_new_page { traceEnabled:true }` 开始；页面已经打开但未启用 trace 时，先 `ruyi_browser_quit`，再用同 URL、代理、fingerprint 重开。`ruyi_trace_start` 只能记录追加的 BiDi 协议事件，不能补齐旧页面生命周期里的完整 DOM/API 行为。
+
 **Trace 期间不可：** 关闭浏览器、切换代理、修改指纹设置。
 
 ## 跨 Session 状态迁移
@@ -174,16 +183,17 @@ IDLE ──ruyi_trace_start──→ TRACING
 ### ruyi → js-reverse (T4 桥接)
 
 ```
-1. ruyi_export_session → workspace/<project>/session.json
+1. ruyi_export_session { outputFile: "D:\reverse_ENV\workspace\<project>\session.json" }
 2. 记录: export.last_export_path, export.bridged_to = "js-reverse-mcp"
-3. 切到 mcp-js-reverse-playbook skill
-4. js-reverse_new_page → 注入 session.json
+3. Gate: 目标无强反检测、Cookie/Storage 可迁移、Chrome/CDP 行为差异不会影响结论
+4. 切到 js-reverse-mcp 相关 playbook
+5. js-reverse_new_page → 注入 `"D:\reverse_ENV\workspace\<project>\session.json"`
 ```
 
 ### ruyi → ruyitrace (T3 升级)
 
 ```
-1. ruyi_export_session → workspace/<project>/trace-session.json
+1. ruyi_export_session { outputFile: "D:\reverse_ENV\workspace\<project>\trace-session.json" }
 2. 记录: escalation_log 添加 T2→T3
 3. 启动独立 ruyitrace Firefox
 4. 在 trace 浏览器中通过 preload script 注入 session
@@ -203,6 +213,6 @@ IDLE ──ruyi_trace_start──→ TRACING
 
 - [ ] `ruyi_browser_quit` 确保浏览器进程终止
 - [ ] 删除临时 trace NDJSON（如已分析完毕）
-- [ ] `ruyi-session.json` 存档到 `workspace/<project>/`
+- [ ] `ruyi-session.json` 存档到 `"D:\reverse_ENV\workspace\<project>\"`
 - [ ] escalation_log 完整记录所有 tier 变更
 - [ ] `triage.md` 中标注当前 tier 和未完成原因

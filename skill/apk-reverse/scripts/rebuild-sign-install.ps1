@@ -9,7 +9,7 @@ param(
 
     [string]$BaseName,
 
-    [string]$KeystorePath = 'D:\reverse_ENV\skill\apk-reverse\debug.keystore',
+    [string]$KeystorePath,
 
     [string]$KeyAlias = 'androiddebugkey',
 
@@ -93,9 +93,64 @@ function Ensure-DebugKeystore {
     }
 }
 
+function Get-DefaultKeystorePath {
+    param(
+        [Parameter(Mandatory = $true)][string]$ResolvedProjectDir,
+        [Parameter(Mandatory = $true)][string]$ResolvedOutDir
+    )
+
+    $workspaceRoot = 'D:\reverse_ENV\workspace'
+    $workspaceFull = [System.IO.Path]::GetFullPath($workspaceRoot).TrimEnd('\')
+    $projectFull = [System.IO.Path]::GetFullPath($ResolvedProjectDir)
+
+    if ($projectFull.StartsWith($workspaceFull + '\', [System.StringComparison]::OrdinalIgnoreCase)) {
+        $relative = $projectFull.Substring($workspaceFull.Length + 1)
+        $projectName = $relative.Split([char]'\')[0]
+        if (-not [string]::IsNullOrWhiteSpace($projectName)) {
+            return (Join-Path (Join-Path $workspaceFull $projectName) 'debug.keystore')
+        }
+    }
+
+    return (Join-Path $ResolvedOutDir 'debug.keystore')
+}
+
+function Get-AdbInstallSerial {
+    param(
+        [Parameter(Mandatory = $true)][string]$AdbPath,
+        [string]$RequestedSerial
+    )
+
+    $lines = & $AdbPath devices 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "adb devices failed: $($lines -join "`n")"
+    }
+
+    $devices = @()
+    foreach ($line in $lines) {
+        if ($line -match '^\s*(\S+)\s+device\s*$') {
+            $devices += $Matches[1]
+        }
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($RequestedSerial)) {
+        if ($devices -notcontains $RequestedSerial) {
+            throw "ADB device '$RequestedSerial' is not connected. Connected serials: $($devices -join ', ')"
+        }
+        return $RequestedSerial
+    }
+
+    if ($devices.Count -ne 1) {
+        throw "Pass -DeviceSerial for install; connected device count is $($devices.Count). Connected serials: $($devices -join ', ')"
+    }
+
+    return $devices[0]
+}
+
 if (-not (Test-Path -LiteralPath $ProjectDir)) {
     throw "Project directory not found: $ProjectDir"
 }
+
+$ProjectDir = (Resolve-Path -LiteralPath $ProjectDir).Path
 
 if ([string]::IsNullOrWhiteSpace($OutDir)) {
     $projectParent = Split-Path -Path $ProjectDir -Parent
@@ -105,17 +160,22 @@ if ([string]::IsNullOrWhiteSpace($OutDir)) {
     $OutDir = $projectParent
 }
 
+if (-not (Test-Path -LiteralPath $OutDir)) {
+    New-Item -ItemType Directory -Path $OutDir -Force | Out-Null
+}
+$OutDir = (Resolve-Path -LiteralPath $OutDir).Path
+
 $apktool = Get-ToolPath -Name 'apktool'
 $zipalign = Get-ToolPath -Name 'zipalign'
 $apksigner = Get-ToolPath -Name 'apksigner'
 $keytool = Get-ToolPath -Name 'keytool'
 $adb = Get-ToolPath -Name 'adb'
 
-Ensure-DebugKeystore -Path $KeystorePath -Keytool $keytool -Alias $KeyAlias -StorePassword $StorePass -KeyPassword $KeyPass
-
-if (-not (Test-Path -LiteralPath $OutDir)) {
-    New-Item -ItemType Directory -Path $OutDir -Force | Out-Null
+if ([string]::IsNullOrWhiteSpace($KeystorePath)) {
+    $KeystorePath = Get-DefaultKeystorePath -ResolvedProjectDir $ProjectDir -ResolvedOutDir $OutDir
 }
+
+Ensure-DebugKeystore -Path $KeystorePath -Keytool $keytool -Alias $KeyAlias -StorePassword $StorePass -KeyPassword $KeyPass
 
 $name = if ($BaseName) { $BaseName } else { Split-Path -Path $ProjectDir -Leaf }
 $unsignedApk = Join-Path $OutDir ($name + '-unsigned.apk')
@@ -154,14 +214,11 @@ if ($LASTEXITCODE -ne 0) {
 "unsigned_apk=$unsignedApk"
 "aligned_apk=$alignedApk"
 "signed_apk=$signedApk"
-"keystore=$KeystorePath"
+"keystore=debug-only; path omitted"
 
 if ($Install) {
-    $installArgs = @()
-    if ($DeviceSerial) {
-        $installArgs += '-s'
-        $installArgs += $DeviceSerial
-    }
+    $resolvedDeviceSerial = Get-AdbInstallSerial -AdbPath $adb -RequestedSerial $DeviceSerial
+    $installArgs = @('-s', $resolvedDeviceSerial)
     $installArgs += 'install'
     if ($Reinstall) {
         $installArgs += '-r'
@@ -173,5 +230,5 @@ if ($Install) {
         throw 'adb install failed.'
     }
 
-    "install_device=$DeviceSerial"
+    "install_device=$resolvedDeviceSerial"
 }

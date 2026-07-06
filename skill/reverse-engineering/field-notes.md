@@ -108,10 +108,10 @@ wat2wasm main.wat -o patched.wasm # Text → binary
 **WASM game patching (Tac Tic Toe, Pragyan 2026):** If proof generation is independent of move quality, patch minimax (flip `i64.lt_s` → `i64.gt_s`, change bestScore sign) to make AI play badly while proofs remain valid. Invoke `/ctf-misc` for full game patching patterns (games-and-vms).
 
 ### Android APK
-`apktool d app.apk -o decoded/` for resources; `jadx app.apk` for Java decompilation. Check `decoded/res/values/strings.xml` for flags. See [tools.md](tools.md#android-apk).
+Use `D:\reverse_ENV\tools\apktool\apktool.bat` and `D:\reverse_ENV\tools\jadx\bin\jadx.bat`, with input/output under `D:\reverse_ENV\workspace\<项目名>\`. Check `decoded/res/values/strings.xml` for flags. See [tools.md](tools.md#android-apk).
 
 ### Flutter APK (Dart AOT)
-If `lib/arm64-v8a/libapp.so` + `libflutter.so` present, use [Blutter](https://github.com/worawit/blutter): `python3 blutter.py path/to/app/lib/arm64-v8a out_dir`. Outputs reconstructed Dart symbols + Frida script. See [tools.md](tools.md#flutter-apk-blutter).
+If `lib/arm64-v8a/libapp.so` + `libflutter.so` present, use Blutter only after installing/verifying it under `D:\reverse_ENV\tools\blutter\` (待验证), via `D:\reverse_ENV\.venv\Scripts\python.exe`, and write outputs under `workspace\<项目名>\`. See [tools.md](tools.md#flutter-apk-blutter).
 
 ### .NET
 - dnSpy - debugging + decompilation
@@ -268,7 +268,7 @@ N-layer binary where each layer decrypts the next using user-provided key bytes 
 **Pattern:** Kernel module registers binfmt handler for encrypted flat binaries. Reverse the `.ko` to find RC4 key (in `movabs` immediates), decrypt the flat binary, import at the fixed virtual address from the module's `vm_mmap` call. See [patterns-ctf.md](patterns-ctf.md#custom-binfmt-kernel-module-with-rc4-flat-binaries-bsidessf-2026).
 
 ### Hash-Resolved Imports / No-Import Ransomware
-**Pattern:** Binary with zero visible imports resolves APIs via symbol name hashing at runtime. Skip the hash reversing — hook OpenSSL functions via `LD_PRELOAD` in Docker to capture AES keys directly. See [patterns-ctf.md](patterns-ctf.md#hash-resolved-imports-no-import-ransomware-bsidessf-2026).
+**Pattern:** Binary with zero visible imports resolves APIs via symbol name hashing at runtime. For authorized CTF/lab samples, static triage first; if dynamic execution is explicitly approved, hook OpenSSL functions via `LD_PRELOAD` in an isolated no-network container/VM and write captured AES keys under `workspace\<项目名>`. See [patterns-ctf.md](patterns-ctf.md#hash-resolved-imports-no-import-ransomware-bsidessf-2026).
 
 ### ELF Section Header Corruption for Anti-Analysis
 **Pattern:** Corrupted section headers crash analysis tools but program headers are intact so binary runs normally. Patch `e_shoff` to zero or use `readelf -l` (program headers only). Flag hidden after corrupted sections with magic marker + XOR. See [patterns-ctf.md](patterns-ctf.md#elf-section-header-corruption-for-anti-analysis-bsidessf-2026).
@@ -298,7 +298,7 @@ D language binaries have unique symbol mangling (not C++ style). Template-heavy,
 Binary with `core::panicking` strings and `_ZN` mangled symbols? Use `rustfilt` for demangling. Panic messages contain source paths and line numbers — `strings binary | grep "panicked"` is the fastest approach. Option/Result enums use discriminant byte (0=None/Err, 1=Some/Ok). See [languages-compiled.md](languages-compiled.md#rust-binary-reversing).
 
 ### Frida Dynamic Instrumentation
-Hook runtime functions without modifying binary. `frida -f ./binary -l hook.js` to spawn with instrumentation. Hook `strcmp`/`memcmp` to capture expected values, bypass anti-debug by replacing `ptrace` return value, scan memory for flag patterns, replace validation functions. See [tools-dynamic.md](tools-dynamic.md#frida-dynamic-instrumentation).
+Hook runtime functions without modifying binary. Use `D:\reverse_ENV\.venv\Scripts\frida.exe -f D:\reverse_ENV\workspace\<项目名>\binary -l D:\reverse_ENV\workspace\<项目名>\hook.js` to spawn with instrumentation. Hook `strcmp`/`memcmp` to capture expected values, bypass anti-debug by replacing `ptrace` return value, scan memory for flag patterns, replace validation functions. See [tools-dynamic.md](tools-dynamic.md#frida-dynamic-instrumentation).
 
 ### Frida Firebase Cloud Functions Bypass
 **Pattern:** Android app validates via Firebase Cloud Functions. Post-login Frida hook constructs valid payload (UID + value + timestamp) and calls Cloud Function directly, bypassing QR/payment validation. See [languages-platforms.md](languages-platforms.md#frida-firebase-cloud-functions-bypass-bsidessf-2026).

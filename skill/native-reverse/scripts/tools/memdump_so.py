@@ -78,6 +78,10 @@ def shell_quote(value: str) -> str:
     return "'" + value.replace("'", "'\\''") + "'"
 
 
+def shell_join(argv: list[str]) -> str:
+    return " ".join(shell_quote(str(item)) for item in argv)
+
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     target = parser.add_mutually_exclusive_group(required=True)
@@ -121,15 +125,18 @@ def main(argv: list[str]) -> int:
     print(f"ADB={ADB}", flush=True)
 
     if args.no_clean_device_dir:
-        adb_su(f"mkdir -p {shell_quote(args.device_dir)}")
+        adb_su(shell_join(["mkdir", "-p", args.device_dir]))
     else:
-        adb_su(f"rm -rf {shell_quote(args.device_dir)}; mkdir -p {shell_quote(args.device_dir)}")
+        adb_su("; ".join([
+            shell_join(["rm", "-rf", args.device_dir]),
+            shell_join(["mkdir", "-p", args.device_dir]),
+        ]))
     push = adb("push", str(dumper), remote_bin, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if push.returncode != 0:
         print(push.stdout, end="")
         print(push.stderr, end="", file=sys.stderr)
         return push.returncode
-    adb_su(f"chmod 755 {shell_quote(remote_bin)}")
+    adb_su(shell_join(["chmod", "755", remote_bin]))
 
     cmd = [remote_bin]
     if args.pid:
@@ -146,7 +153,7 @@ def main(argv: list[str]) -> int:
         cmd.append("-f")
     cmd += ["-o", args.device_dir]
 
-    shell_cmd = " ".join(cmd)
+    shell_cmd = shell_join(cmd)
     dump = adb_su(shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     print(dump.stdout, end="")
     print(dump.stderr, end="", file=sys.stderr)
@@ -159,7 +166,7 @@ def main(argv: list[str]) -> int:
     print(pull.stderr, end="", file=sys.stderr)
 
     if not args.keep_device_files:
-        adb_su(f"rm -rf {shell_quote(args.device_dir)}", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        adb_su(shell_join(["rm", "-rf", args.device_dir]), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     out_file = local_out / remote_name
     if out_file.exists():

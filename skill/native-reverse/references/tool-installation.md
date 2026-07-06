@@ -11,14 +11,14 @@
 
 在目标工程根目录执行：
 
-```bash
-python D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py . --with-runner
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py" . --with-runner
 ```
 
 Windows PowerShell：
 
 ```powershell
-python D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py . --with-runner
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py" . --with-runner
 ```
 
 默认复制结果：
@@ -29,6 +29,7 @@ third_party/OLLVM_Deobfuscator/
 third_party/MemDumper-master/
 third_party/ecapture-v2.3.0-android-arm64/
 third_party/xiaojianbang-stealth-hook-main/
+third_party/shadow-hook/
 scripts/frida_scfilter_runner.py
 scripts/frida_memdump_so.py
 scripts/ida_fix_function_range.py
@@ -38,6 +39,12 @@ scripts/stealth_hook_android.py
 ```
 
 注意：`--with-runner` 不复制 `INP.py`。只有需要 IDA 导出数据时，才显式复制项目批处理副本或安装 IDA 插件。
+
+`shadow-hook/stealth-runner.py` 与 JS agents 必须作为整目录运行。安装脚本会复制到 `third_party/shadow-hook/`，使用时运行工程副本：
+
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\workspace\<项目名>\third_party\shadow-hook\stealth-runner.py" --package com.example --mode all
+```
 
 ## 默认行为
 
@@ -56,10 +63,10 @@ scripts/stealth_hook_android.py
 
 示例：
 
-```bash
-python3 D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py . --with-inp
-python3 D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py . --install-ida-plugin --ida-root /path/to/ida-pro
-python3 D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py . --ida-plugin-dir /path/to/ida-pro/plugins
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py" . --with-inp
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py" . --install-ida-plugin --ida-root /path/to/ida-pro
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py" . --ida-plugin-dir /path/to/ida-pro/plugins
 ```
 
 IDA 插件安装触发后，目录自动探测覆盖：
@@ -75,8 +82,8 @@ IDA 插件安装触发后，目录自动探测覆盖：
 
 分发或复制前建议运行：
 
-```bash
-python3 D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py --self-check
+```powershell
+"D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\skill\native-reverse\scripts\install_skill_tools.py" --self-check
 ```
 
 Skill 内不应包含历史采集日志、`.git`、`__pycache__`、`.pyc`、编译中间文件、测试 APK 和非必需样本 so。`--self-check` 会把缓存和样本 so 视为失败项。

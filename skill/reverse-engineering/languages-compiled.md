@@ -357,13 +357,13 @@ Kotlin compiles to JVM bytecode or native (via Kotlin/Native). Common in Android
 
 ### JVM Bytecode (Android/Server)
 
-```bash
+```powershell
 # Detect Kotlin
-strings classes.dex | grep "kotlin"
+& "D:\reverse_ENV\tools\radare2\bin\radare2.exe" -q -c "izz~kotlin" "D:\reverse_ENV\workspace\<项目名>\classes.dex"
 # Look for: kotlin.Metadata annotation, kotlin/jvm/internal/*
 
 # Decompile
-jadx classes.dex                     # Best for Kotlin bytecode
+& "D:\reverse_ENV\tools\jadx\bin\jadx.bat" -d "D:\reverse_ENV\workspace\<项目名>\jadx_classes" "D:\reverse_ENV\workspace\<项目名>\classes.dex"
 cfr classes.jar --kotlin             # CFR with Kotlin mode
 fernflower classes.jar output/       # IntelliJ's decompiler
 

@@ -53,6 +53,12 @@
 | JNI 调用 | | | |
 | WebView | | | |
 
+## 脱敏说明
+
+- `report.md` 默认只写脱敏后的证据摘要，不写入 token、Cookie、密钥、手机号、身份证号、设备唯一标识等原始敏感值。
+- `findings.json` 的每条 finding 必须填写 `redaction.redacted`、`redaction.redaction_method`、`redaction.raw_value_stored`。
+- 如确需保留原始值用于复验，必须把 `raw_value_stored` 标为 `true`，说明保存位置和访问限制；默认值应为 `false`。
+
 ## Triage 遗留项
 
 <!-- 引用 triage.md 的关键条目 -->

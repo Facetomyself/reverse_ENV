@@ -31,15 +31,18 @@
     "strings_of_interest": []
   },
   "artifacts": {
-    "report": "",
-    "findings": "",
-    "triage": ""
+    "report": "workspace/<项目名>/report.md",
+    "findings": "workspace/<项目名>/findings.json",
+    "triage": "workspace/<项目名>/triage.md",
+    "supporting": []
   },
   "review_gate": {
     "all_claims_have_evidence": false,
     "triage_items_documented": false,
+    "artifact_paths_recorded": false,
     "rebuild_scripts_tested": false,
     "sensitive_data_redacted": false,
+    "finding_redaction_metadata_complete": false,
     "ready_for_delivery": false
   }
 }
