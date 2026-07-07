@@ -110,6 +110,17 @@ git status --short --branch   # 若已初始化 git
 5. MCP 依赖是否已在 `.mcp.json` 中注册
 6. `AGENTS.md` / `CLAUDE.md` 是否已同步更新
 
+### 2.1 用户层全局协作 Skill
+
+`grill-with-docs` / `grilling` / `domain-modeling` 属于用户层全局协作 skill，不属于本仓库 `skill/` 项目技能体系。
+
+使用约束：
+- 不写入 `.mcp.json` / `.codex/config.toml`
+- 不在 `.agents/skills/` 下创建薄封装
+- 只用于重大计划、架构设计、术语边界和 ADR 决策拷问
+- 不替代 `reverse-coordinator`、`apk-reverse`、`native-reverse`、`ruyi-reverse` 等逆向任务路由
+- 在本仓库内不得自动创建根目录 `CONTEXT.md` 或 `docs/adr/`；确需新增决策文档时，先说明必要性，并同步 `AGENTS.md` / `CLAUDE.md` / 当前文件
+
 ---
 
 ## 3. 新增 MCP 服务规范

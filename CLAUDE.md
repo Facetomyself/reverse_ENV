@@ -139,6 +139,19 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" mailbo
 python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inventory
 ```
 
+## 全局设计拷问 skill 使用约束
+
+`grill-with-docs` / `grilling` / `domain-modeling` 是用户层全局协作 skill，不属于 `D:\reverse_ENV\skill\` 项目 skill，也不写入 `.mcp.json` / `.codex/config.toml`。Codex 与 Claude 均可全局触发。
+
+| 项 | 约束 |
+|----|------|
+| 定位 | 只用于重大设计、工作流变更、术语边界、ADR 决策拷问；不是逆向 triage 入口 |
+| 触发 | 用户明确要求 `grill` / `grill-with-docs` / “问透方案” / “拷问设计”，或任务涉及难逆转架构与跨模块工作流 |
+| 禁用 | 新样本分析、APK/native/Web JS 常规侦察、已明确执行的修复、简单配置改动 |
+| 提问 | 一次只问一个决策问题；事实能从仓库、代码、文档查到就先查，不反问用户 |
+| 执行边界 | 达成共同理解前不得实施方案；不得跳过知识库检索、搜索、最小侦察、三件套产出 |
+| 文档落点 | 不自动创建根目录 `CONTEXT.md` 或 `docs/adr/`；如需新增 ADR/术语文档，先说明必要性并同步 `AGENTS.md` / `CLAUDE.md` / `docs/AI开发规范.md` |
+
 ## 工作流速查
 
 ```
@@ -147,7 +160,7 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
   → 产出三件套 → 审查门 → 知识库回填(有跨项目价值的分析)
 ```
 
-> 多源搜索约束见全局 `~/.claude/CLAUDE.md` 与 `docs/搜索编排规范.md`。`search-layer` / `content-extract` 属 Claude 全局分级能力；Codex 侧已迁移 `search-layer` 本地 skill 副本到 `~/.codex/skills/search-layer`，并完成 `search.py --mode fast` smoke test。
+> 多源搜索约束见全局 `~/.claude/CLAUDE.md` 与 `docs/搜索编排规范.md`。`search-layer` / `content-extract` 属 Claude 全局分级能力；Codex 侧已迁移 `search-layer` 本地 skill 副本到 `~/.codex/skills/search-layer`，并完成 `search.py --mode deep --intent resource` 三源 smoke test（Exa + Tavily + Grok）。
 
 **不得跳阶段。L4 目标不声称完整还原。**
 

@@ -36,6 +36,8 @@ foreach ($check in $checks) {
 Write-Host ""
 Write-Host "=== reverse_ENV Codex preflight ===" -ForegroundColor Cyan
 Write-Host "Policy: WebFetch blocked; use search-layer / github-solution-research / browser MCP routing."
+Write-Host "Search discipline: new tasks/problems must run search-layer first, then github-solution-research for GitHub leads."
+Write-Host "Search smoke: Codex search-layer deep mode verified with Exa + Tavily + Grok."
 Write-Host "Layering: Claude and Codex both use global + project layers, but Codex project MCP belongs in .codex/config.toml, not .mcp.json."
 Write-Host "MCP: reverse_ENV cold-start MCP is project-scoped: ida-multi-mcp + ruyi-mcp. GUI/SSE/client-bound MCPs stay on-demand."
 Write-Host "Skills: search-layer is a Codex skill in the user skill layer, not a project .mcp.json server."

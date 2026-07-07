@@ -10,7 +10,7 @@
    - `~/.codex/config.toml`：Codex 用户级个人默认，不放 `D:\reverse_ENV` 专属 MCP
    - `~/.claude.json`：Claude 全局 MCP 配置
    - `search-layer` / `content-extract`：全局搜索/提取分级策略，不写入项目 `.mcp.json`
-   - Codex `search-layer`：本地 skill 副本位于 `~/.codex/skills/search-layer`，已通过 `search.py --mode fast` smoke test
+   - Codex `search-layer`：本地 skill 副本位于 `~/.codex/skills/search-layer`，已通过 `search.py --mode deep --intent resource` 三源 smoke test（Exa + Tavily + Grok）
 2. **默认冷启动只放稳定项**
    - 进入项目时必须能立即握手成功、无 GUI/浏览器/外部服务前置条件
    - 当前默认冷启动建议仅保留 `ida-multi-mcp`、`ruyi-mcp`
