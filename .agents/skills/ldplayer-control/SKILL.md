@@ -1,6 +1,6 @@
 ---
 name: ldplayer-control
-description: Use for LDPlayer RE instance management in D:\reverse_ENV, including re-init, proxy setup, listing, destroy/reset flows, emulator isolation, adb checks, Frida readiness, and non-official LDPlayer automation validation.
+description: Use for LDPlayer RE instance management in D:\reverse_ENV, including template-based multi-instance setup (re-base/re-xposed/re-stealth), project instance copy/launch, proxy setup, listing, backup/restore, destroy/reset flows, emulator isolation, adb checks, Frida readiness, and non-official LDPlayer automation validation.
 ---
 
 This is a Codex repo-scope entrypoint for the existing project skill.

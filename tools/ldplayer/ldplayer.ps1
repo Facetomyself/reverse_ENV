@@ -77,11 +77,16 @@ function Assert-ProjectName {
 function Invoke-Ld {
     param(
         [Parameter(Mandatory = $true)][string[]]$LdArgs,
-        [switch]$AllowNonZero
+        [switch]$AllowNonZero,
+        [switch]$TreatPositiveExitCodeAsSuccess
     )
     Assert-FileExists -Path $LdConsole -Label 'ldconsole'
     $out = & $LdConsole @LdArgs 2>&1
     $code = $LASTEXITCODE
+    if ($TreatPositiveExitCodeAsSuccess -and $code -gt 0) {
+        $out = @($out) + "OK:ldconsole_returned_new_index:$code"
+        $code = 0
+    }
     if ($code -ne 0 -and -not $AllowNonZero) {
         Write-Output "ERR:ldconsole_failed:$code"
         Write-Output "CMD:ldconsole $($LdArgs -join ' ')"
@@ -243,9 +248,20 @@ switch ($Action) {
     'copy' {
         if (-not $From) { Write-Output 'ERR:-From required'; exit 1 }
         if ($Name) { Assert-ProjectName -Value $Name }
-        $args = @('copy', '--from', $From)
+        $args = @('copy')
         if ($Name) { $args += @('--name', $Name) }
-        Invoke-Ld -LdArgs $args -AllowNonZero
+        $args += @('--from', $From)
+        Invoke-Ld -LdArgs $args -TreatPositiveExitCodeAsSuccess | Out-Null
+        if ($Name) {
+            $created = Get-Instances | Where-Object { $_.Name -eq $Name } | Select-Object -First 1
+            if (-not $created) {
+                Write-Output "ERR:copy_did_not_create_instance:$Name"
+                exit 1
+            }
+            Write-Output "OK:copied index=$($created.Index) name=$Name from=$From"
+        } else {
+            Write-Output 'OK:copy_requested'
+        }
     }
 
     'remove' {

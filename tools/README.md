@@ -18,6 +18,7 @@
 | MinGW-w64 | 14.2.0 | `mingw64\mingw64\bin\gcc.exe` | Windows C 编译 |
 | QuickJS | — | `quickjs\qjs_min.exe` | 轻量 JS 引擎 |
 | LDPlayer | 9 | `ldplayer\ldplayer.ps1` | 雷电模拟器管控 |
+| Android modules | — | `android-modules\` | LDPlayer 模板用 Kitsune/LSPosed/JustTrustMe/HMA/Shamiko 资产清单 |
 | Chromium | 152 | `chromium\chrome-win\chrome.exe` | 备用浏览器 |
 | Vineflower | 1.11.2 | `vineflower\vineflower-1.11.2.jar` | Java 反编译备选引擎 |
 | dex2jar | 2.4.31 | `dex2jar\dex-tools-2.4.31\` | DEX→JAR 转换 |

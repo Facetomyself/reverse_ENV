@@ -63,14 +63,14 @@ if ($Project) {
     $instances = @($instances | Where-Object { $_.Name -eq $Project })
     if ($instances.Count -eq 0) {
         Write-Output "No instance found for project '$Project'."
-        Write-Output "Create one: re-init.ps1 -Project $Project"
+        Write-Output "Create one: re-init.ps1 -Project $Project -Template re-xposed"
         exit 1
     }
 }
 
 if ($instances.Count -eq 0) {
     Write-Output 'No LDPlayer instances found.'
-    Write-Output 'Create your first RE instance: re-init.ps1 -Project <name>'
+    Write-Output 'Create your first RE project instance: re-init.ps1 -Project <name> -Template re-xposed'
     exit 0
 }
 
@@ -110,7 +110,9 @@ foreach ($i in $classified) {
 
 Write-Output ''
 Write-Output 'Commands:'
-Write-Output '  re-init.ps1    -Project <name>                 create and launch project instance'
-Write-Output '  re-proxy.ps1   -Project <name> -Action on/off  proxy for project'
-Write-Output '  re-destroy.ps1 -Project <name> [-Remove]       stop or delete project instance'
+Write-Output '  re-init.ps1    -Project <name> [-Template re-xposed]  create/copy and launch project instance'
+Write-Output '  re-proxy.ps1   -Project <name> -Action on/off          proxy for project'
+Write-Output '  re-backup.ps1  -Project <name> [-Tag verified]         back up instance'
+Write-Output '  re-restore.ps1 -Project <name> [-SourceProject name]   restore by index and rename'
+Write-Output '  re-destroy.ps1 -Project <name> [-Remove]               stop or delete project instance'
 Write-Output ''

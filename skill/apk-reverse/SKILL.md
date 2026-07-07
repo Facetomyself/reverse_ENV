@@ -136,18 +136,7 @@ powershell -File "D:\reverse_ENV\skill\apk-reverse\scripts\init-ldplayer-re.ps1"
 
 自动化步骤: ADB 连接检测 → 绑定唯一 `DeviceSerial` → Root 验证 → 系统可写确认 → 推送/启动 Frida server → 状态报告。多设备连接时必须显式传 `-DeviceSerial`；`-Instance` 不再用于猜测 ADB serial。
 
-### `scripts/backup-ldplayer-re.ps1` — 雷电 RE 实例备份/还原
-
-```powershell
-# 备份
-powershell -File "D:\reverse_ENV\skill\apk-reverse\scripts\backup-ldplayer-re.ps1" -Action backup
-# 还原
-powershell -File "D:\reverse_ENV\skill\apk-reverse\scripts\backup-ldplayer-re.ps1" -Action restore
-# 查看备份
-powershell -File "D:\reverse_ENV\skill\apk-reverse\scripts\backup-ldplayer-re.ps1" -Action list
-```
-
-全量备份 `D:\leidian\LDPlayer9\vms\leidian1\` 到 `storage\ldplayer-backups\`。
+LDPlayer 实例创建、模板复制、代理、备份和恢复由 `ldplayer-control` 负责；本脚本只处理指定 ADB 设备内部的 Root / Frida 就绪。
 
 ### `scripts/dex-dump.js` — Frida DEX 内存 Dump
 

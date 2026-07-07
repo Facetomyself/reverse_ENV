@@ -66,6 +66,7 @@
 |----------|--------|
 | **完整目录树** | 各目录 README: `skill/README.md`, `tools/README.md`, `mcp/README.md`, `docs/README.md`, `workspace/README.md`, `resource/README.md`, `storage/README.md` |
 | 工具版本与路径 | `tools/README.md` + `docs/工具与环境.md` |
+| App 逆向环境规划 | `docs/App逆向环境规划.md` |
 | MCP 服务配置详情 | `mcp/README.md` + `docs/MCP服务详情.md` |
 | Skill 清单 | `skill/README.md` |
 | Codex repo-scope skill 入口 | `.agents/skills/README.md` |
@@ -101,8 +102,9 @@
 | `proxy-usage` | 代理统一管理 | 快代理 + Cliproxy 双供应商 — 选型→提取→验证→注入 |
 | `radare2` | 通用二进制 | CLI 快速侦察/反汇编/patch |
 | `native-reverse` | Android Native .so 反检测/绕过 | syscall 定位→dump/fix→IDA→patch→验证 |
-| `ldplayer-control` | 雷电模拟器 RE 实例管理 | re-init/re-proxy/re-list/re-destroy — 项目实例隔离 |
+| `ldplayer-control` | 雷电模拟器 RE 实例管理 | re-init(-Template)/re-proxy/re-list/re-backup/re-restore/re-destroy — 模板实例 + 项目实例隔离 |
 | `protocol-recovery` | Web 协议恢复 | 签名→Python 采集器 |
+| `article-archiver` | 文章知识库归档 | `article/pending` PDF/HTML/Markdown → 清洗 Markdown → 分类归档 → 更新 `docs/article-index.md` |
 | `github-solution-research` | GitHub 方案搜索 | 问题→证据→方案 |
 | `project-agents-governance` | 项目规范治理 | 生成/维护 CLAUDE.md + AGENTS.md |
 | `prompt` | 提示词优化 | 诊断+优化 |
@@ -111,6 +113,35 @@
 
 **路由**: `.so`/native 反检测/绕过 → `native-reverse`；`.so` 纯静态分析 → `ida-reverse`/`radare2`；APK Java → `apk-reverse`。
 **Web JS 路由**: **默认 -> `ruyi-reverse`（统一编排器）** — 7 模块 x 两级深度，按任务主动组合。需 CDP 完整断点调试且无反检测需求 -> `js-reverse-mcp`。
+
+## 临时邮箱 skill/CLI 使用约束
+
+`cloudflare-tmail` 是用户层 Codex skill + CLI，不属于 `D:\reverse_ENV\skill\` 项目 skill，也不写入 `.mcp.json` / `.codex/config.toml`。Codex 触发 `cloudflare-tmail` skill；Claude 按同一 CLI 和约束直接调用。
+
+| 项 | 约束 |
+|----|------|
+| CLI 入口 | `python "%USERPROFILE%\.codex\skills\cloudflare-tmail\scripts\tmail.py" <group> <command>` |
+| 本地凭据 | `%USERPROFILE%\.cf-tmail\credentials.json`，只存本机，不纳入 Git，不复制到项目目录 |
+| JWT 缓存 | `%USERPROFILE%\.cf-tmail\mailboxes.json`，仅保存 CLI 创建/恢复的 Address JWT；临时测试结束必须删除测试邮箱并清空对应缓存 |
+| 命令分组 | 只使用 `health`、`smtp-test`、`config`、`mailbox`、`mail`、`cf`；旧顶层别名已移除，不再使用 `create/list/get/poll/cf-check` |
+| 邮箱管理 | 地址创建/查询/删除走 `mailbox create/list/show-jwt/delete/clear-inbox/clear-sent`；读信/轮询/删信走 `mail inbox/get/admin-list/delete/poll` |
+| API 边界 | Address JWT 用 `Authorization: Bearer <jwt>` 访问 `/api/*`；User JWT 用 `x-user-token`，不得混用 |
+| 私有站点 | 私有站点密码走 `x-custom-auth`；管理 API 走 `x-admin-auth`；不得把这些值写进回复、日志或仓库文件 |
+| 收信接口 | 当前部署 `/api/parsed_mails` 返回 404 时必须 fallback 到 `/api/mails`，不要误判为收信失败 |
+| Cloudflare 审计 | `cf check/zone/dns/email-rules/inventory` 可读 zone、DNS、Email Routing rules；Worker/D1/KV/Pages 当前 token 可能返回 `401/403 Authentication error`，按权限边界记录 |
+| 真实 SMTP | 只有用户明确要求端到端收信测试时才运行 `smtp-test`；严格 SPF/DMARC 发件域可能被 Cloudflare DATA 阶段拒收，需如实记录 |
+| 清理纪律 | 测试创建的邮箱必须 `mailbox delete --address <addr>`；复查 `mailboxes.json` 不保留测试 JWT；不得在 `workspace\` 留临时源码/解压目录 |
+
+常用命令：
+
+```powershell
+python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" health
+python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" config show
+python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" mailbox create --name codexdemo
+python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" mail poll --address codexdemo@zhangxuemin.work --timeout 120 --match "code|verify|验证码"
+python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" mailbox delete --address codexdemo@zhangxuemin.work
+python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inventory
+```
 
 ## 工作流速查
 
@@ -208,7 +239,7 @@
 4. **jadx-ai-mcp 需先开 GUI** → `tools\jadx-gui.cmd` 启动并加载 APK 后 MCP 才可用。
 5. **ruyi-mcp proxy 需在 launch 时设置** → 启动后无法切换代理。
 6. **NDK 交叉编译** → `tools\android-ndk\toolchains\llvm\prebuilt\windows-x86_64\bin\aarch64-linux-android33-clang.cmd`
-7. **LDPlayer RE 模拟器** → RE 实例（emulator-5556），Root + Frida 17.15.3 + Kitsune Mask v27.0
+7. **LDPlayer RE 模拟器** → 多实例模板：`re-base`(Root+Frida+CA)、`re-xposed`(+LSPosed+JustTrustMe)、`re-stealth`(+Hide My Applist+Shamiko v0.7.5)。项目实例从模板复制，模板 verified 备份在 `storage\ldplayer-backups\`。`ldconsole restore` 会恢复备份内部实例名，必须通过 `re-restore.ps1` 按 index 恢复并重命名。
 8. **Rust 交叉编译** → 需 `rustup target add aarch64-linux-android x86_64-linux-android`
 9. **PowerShell UTF-8 BOM** → SKILL.md 必须无 BOM，否则 frontmatter 识别失败
 
@@ -228,11 +259,11 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | APK | `find-api-calls.sh` | Phase 5 HTTP API 提取 (7库+URL分桶+HMAC) |
 | APK | `init-ldplayer-re.ps1` | LDPlayer RE 模拟器环境一键初始化 |
 | APK | `dex-dump.js` | Frida DEX 内存 Dump (三种策略抗加固壳) |
-| APK | `backup-ldplayer-re.ps1` | 雷电 RE 实例备份/还原 |
 | IDA | `start.ps1` / `open.ps1` | 环境验证 / idalib 路径预处理（不打开数据库） |
 | r2 | `recon.ps1` | 一站式侦察 |
-| LDPlayer | `re-init.ps1` / `re-proxy.ps1` / `re-list.ps1` / `re-destroy.ps1` | 实例管理 |
+| LDPlayer | `re-init.ps1` / `re-proxy.ps1` / `re-list.ps1` / `re-backup.ps1` / `re-restore.ps1` / `re-destroy.ps1` | 模板复制、代理、备份、按 index 恢复并重命名、实例清理 |
 | Proxy | `proxy_check.py` / `kuaidaili_extract.py` / `cliproxy_test.py` | 代理验证/提取 |
+| Article | `pdf_to_markdown.py` | pending PDF → Markdown 草稿（需人工清洗、分类、索引） |
 
 ## 工具速查
 
@@ -246,6 +277,7 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | adb 1.0.41 | `tools\adb\adb.exe` |
 | zipalign / apksigner | `tools\adb\` |
 | LDPlayer 9 | `tools\ldplayer\ldplayer.ps1` |
+| Android 模块资产 | `tools\android-modules\` |
 | Node.js | `tools\node\node.exe` |
 | JDK 21 | `tools\jdk\` |
 | MinGW-w64 14.2.0 | `tools\mingw64\mingw64\bin\gcc.exe` |

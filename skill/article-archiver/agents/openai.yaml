@@ -1,0 +1,4 @@
+interface:
+  display_name: "Article Archiver"
+  short_description: "Convert pending PDFs into indexed article Markdown"
+  default_prompt: "Use $article-archiver to convert pending PDFs into indexed article Markdown."

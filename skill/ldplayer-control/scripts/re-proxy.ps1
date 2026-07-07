@@ -74,7 +74,7 @@ if (-not (Test-Path -LiteralPath $LdplayerPs1)) {
 $target = Get-Instances | Where-Object { $_.Name -eq $Project } | Select-Object -First 1
 if (-not $target) {
     Write-Output "ERR:instance_not_found:$Project"
-    Write-Output "  Create one: re-init.ps1 -Project $Project"
+    Write-Output "  Create one: re-init.ps1 -Project $Project -Template re-xposed"
     exit 1
 }
 if ($target.Index -eq $MaaIndex) {

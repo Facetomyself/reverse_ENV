@@ -1,6 +1,6 @@
 # 逆向知识库文章索引
 
-> 自动生成于 2026-07-05 ｜ 来源: `article/`
+> 自动生成于 2026-07-07 ｜ 来源: `article/`
 >
 > 新项目启动时，按主题/技术标签检索相关文章，避免重复分析。
 
@@ -37,6 +37,13 @@
 |------|----------|--------|------|
 | [qidian-so-analysis.md](../article/native-analysis/qidian-so-analysis.md) | qidian (起点读书) | `libfock.so`, `libfockrt.so`, `ARM64`, `radare2`, `IDA Pro`, `JNI动态注册`, `RSA-1024`, `AES-256-CBC`, `QuickJS` | 起点读书 Native SO 深度分析：libfock.so/libfockrt.so/libnib.so 反编译、QDSign 结构还原、JNI 调用链追踪、QuickJS 引擎角色 |
 
+### 移动 App 逆向 (`article/mobile-app-reverse/`)
+
+| 文章 | 来源项目 | 关键词 | 摘要 |
+|------|----------|--------|------|
+| [app-reverse-global-map.md](../article/mobile-app-reverse/app-reverse-global-map.md) | — (PDF 归档) | `App逆向`, `Android请求生命周期`, `OkHttp`, `Interceptor`, `JNI`, `SO层`, `Frida`, `SSL Pinning`, `设备指纹`, `VMP` | App 逆向全局地图：从 UI/业务/网络/加密/JNI/SO/网络发送七层拆解请求生命周期，总结定位加密点、还原算法、模拟请求三步法和常见防御手段 |
+| [app-reverse-environment-setup.md](../article/mobile-app-reverse/app-reverse-environment-setup.md) | — (PDF 归档) | `App逆向环境`, `Android`, `LDPlayer`, `MuMu`, `Magisk`, `LSPosed`, `JustTrustMe`, `Charles`, `jadx-gui`, `APKTool`, `Frida`, `证书安装` | App 逆向环境搭建：模拟器与真机选型、Root/Magisk/LSPosed、证书安装与代理配置、抓包/反编译/动态调试工具链和常见问题排查 |
+
 ### Web 逆向 (`article/web-reverse/`)
 
 | 文章 | 来源项目 | 关键词 | 摘要 |
@@ -72,6 +79,8 @@
 - **Chromium 源码修改/指纹浏览器**: [chromium-fingerprint-compilation](../article/anti-detection/chromium-fingerprint-compilation.md)
 - **TLS/JA3/JA4 指纹**: [chromium-fingerprint-compilation](../article/anti-detection/chromium-fingerprint-compilation.md)
 - **Canvas/WebGL 指纹**: [chromium-fingerprint-compilation](../article/anti-detection/chromium-fingerprint-compilation.md)
+- **SSL Pinning**: [app-reverse-global-map](../article/mobile-app-reverse/app-reverse-global-map.md), [app-reverse-environment-setup](../article/mobile-app-reverse/app-reverse-environment-setup.md)
+- **Root/Magisk 隐藏**: [app-reverse-environment-setup](../article/mobile-app-reverse/app-reverse-environment-setup.md)
 
 ### 厂商/平台
 - **腾讯 (微信/应用宝)**: [mmtls](../article/protocols/mmtls-protocol-analysis.md)
@@ -80,6 +89,7 @@
 - **360 (Jiagu)**: [jiagu-bypass](../article/packing-bypass/jiagu-bypass-analysis.md)
 - **51job**: [51job-anti-detection](../article/anti-detection/51job-anti-detection-analysis.md), [51job-webpack](../article/web-reverse/51job-webpack-analysis.md)
 - **CSDN/w1101662433 (fivcan)**: [chromium-fingerprint-compilation](../article/anti-detection/chromium-fingerprint-compilation.md)
+- **Android/App 逆向**: [app-reverse-global-map](../article/mobile-app-reverse/app-reverse-global-map.md), [app-reverse-environment-setup](../article/mobile-app-reverse/app-reverse-environment-setup.md)
 
 ### 工具/方法
 - **Webpack 模块自吐**: [51job-webpack](../article/web-reverse/51job-webpack-analysis.md)
@@ -88,6 +98,10 @@
 - **radare2 快速侦察**: [qidian-so](../article/native-analysis/qidian-so-analysis.md)
 - **Frida spawn 注入**: [jiagu-bypass](../article/packing-bypass/jiagu-bypass-analysis.md)
 - **Chromium 源码编译与修改**: [chromium-fingerprint-compilation](../article/anti-detection/chromium-fingerprint-compilation.md)
+- **App 逆向三步法**: [app-reverse-global-map](../article/mobile-app-reverse/app-reverse-global-map.md)
+- **OkHttp/Interceptor 定位**: [app-reverse-global-map](../article/mobile-app-reverse/app-reverse-global-map.md)
+- **Android 逆向环境搭建**: [app-reverse-environment-setup](../article/mobile-app-reverse/app-reverse-environment-setup.md)
+- **Charles/jadx/Frida 工具链**: [app-reverse-environment-setup](../article/mobile-app-reverse/app-reverse-environment-setup.md)
 
 ---
 

@@ -120,8 +120,11 @@ Write-Host "`n=== Step 4: Frida server ==="
 Write-Host "Remounting system as rw..."
 Invoke-Adb shell "su -c 'mount -o rw,remount /'" 2>&1 | Out-Null
 
-# Stop existing frida-server
-Invoke-Adb shell "su -c 'killall frida-server'" 2>&1 | Out-Null
+# Stop existing frida-server. "No such process" is expected on a fresh boot.
+$previousErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+& $ADB -s $DeviceSerial shell "su -c 'killall frida-server'" 2>$null | Out-Null
+$ErrorActionPreference = $previousErrorActionPreference
 Start-Sleep -Seconds 1
 
 # Push frida-server if not already on device

@@ -8,6 +8,10 @@ Create, configure, and optionally launch a project-dedicated LDPlayer instance.
 The project name is also the LDPlayer instance name and workspace directory
 name. Only ASCII letters, digits, dot, underscore, and dash are allowed.
 Index 0 is reserved for MAA and is never touched by this script.
+
+Use -Template to clone from a verified RE template instance such as re-base,
+re-xposed, or re-stealth. Template cloning preserves the template device
+configuration unless -Resolution, -Cpu, or -Memory is passed explicitly.
 #>
 
 [CmdletBinding()]
@@ -19,6 +23,8 @@ param(
     [string]$Resolution = '1920,1080,320',
     [int]$Cpu = 4,
     [int]$Memory = 4096,
+    [ValidatePattern('^[A-Za-z0-9._-]+$')]
+    [string]$Template = '',
     [switch]$NoLaunch
 )
 
@@ -42,11 +48,16 @@ function Assert-FileExists {
 function Invoke-Ld {
     param(
         [Parameter(Mandatory = $true)][string[]]$LdArgs,
-        [switch]$AllowNonZero
+        [switch]$AllowNonZero,
+        [switch]$TreatPositiveExitCodeAsSuccess
     )
     Assert-FileExists -Path $LdConsole -Label 'ldconsole'
     $out = & $LdConsole @LdArgs 2>&1
     $code = $LASTEXITCODE
+    if ($TreatPositiveExitCodeAsSuccess -and $code -gt 0) {
+        $out = @($out) + "OK:ldconsole_returned_new_index:$code"
+        $code = 0
+    }
     if ($code -ne 0 -and -not $AllowNonZero) {
         Write-Output "ERR:ldconsole_failed:$code"
         Write-Output "CMD:ldconsole $($LdArgs -join ' ')"
@@ -135,8 +146,28 @@ if ($existing) {
     exit 0
 }
 
-Write-Output "Creating new instance '$Project'..."
-Invoke-Ld -LdArgs @('add', '--name', $Project) -AllowNonZero | Out-Null
+if ($Template) {
+    if ($Template -eq $Project) {
+        Write-Output "ERR:template_same_as_project:$Project"
+        exit 1
+    }
+    $templateInst = $instances | Where-Object { $_.Name -eq $Template } | Select-Object -First 1
+    if (-not $templateInst) {
+        Write-Output "ERR:template_instance_not_found:$Template"
+        Write-Output 'HINT: expected a verified template such as re-base, re-xposed, or re-stealth.'
+        exit 1
+    }
+    if ($templateInst.Index -eq $MaaIndex) {
+        Write-Output "ERR:refusing_to_clone_index_0_MAA:$Template"
+        exit 1
+    }
+
+    Write-Output "Creating new instance '$Project' from template '$Template'..."
+    Invoke-Ld -LdArgs @('copy', '--name', $Project, '--from', $Template) -TreatPositiveExitCodeAsSuccess | Out-Null
+} else {
+    Write-Output "Creating new instance '$Project'..."
+    Invoke-Ld -LdArgs @('add', '--name', $Project) -AllowNonZero | Out-Null
+}
 
 Start-Sleep -Seconds 3
 $newInst = Get-Instances | Where-Object { $_.Name -eq $Project } | Select-Object -First 1
@@ -151,18 +182,34 @@ if ($newInst.Index -eq $MaaIndex) {
 
 Write-Output "  Created: index=$($newInst.Index) name=$Project"
 
-Write-Output 'Configuring instance...'
-Invoke-Ld -LdArgs @(
-    'modify',
-    '--index', [string]$newInst.Index,
-    '--resolution', $Resolution,
-    '--cpu', [string]$Cpu,
-    '--memory', [string]$Memory,
-    '--root', '1'
-) | Out-Null
-Write-Output '  Root:      ON'
-Write-Output "  Resolution: $Resolution"
-Write-Output "  CPU/Memory: $Cpu cores / ${Memory}MB"
+$shouldModify = -not $Template -or
+    $PSBoundParameters.ContainsKey('Resolution') -or
+    $PSBoundParameters.ContainsKey('Cpu') -or
+    $PSBoundParameters.ContainsKey('Memory')
+
+if ($shouldModify) {
+    Write-Output 'Configuring instance...'
+    $modifyArgs = @('modify', '--index', [string]$newInst.Index, '--root', '1')
+    if (-not $Template -or $PSBoundParameters.ContainsKey('Resolution')) {
+        $modifyArgs += @('--resolution', $Resolution)
+    }
+    if (-not $Template -or $PSBoundParameters.ContainsKey('Cpu')) {
+        $modifyArgs += @('--cpu', [string]$Cpu)
+    }
+    if (-not $Template -or $PSBoundParameters.ContainsKey('Memory')) {
+        $modifyArgs += @('--memory', [string]$Memory)
+    }
+    Invoke-Ld -LdArgs $modifyArgs | Out-Null
+    Write-Output '  Root:      ON'
+    if (-not $Template -or $PSBoundParameters.ContainsKey('Resolution')) {
+        Write-Output "  Resolution: $Resolution"
+    }
+    if (-not $Template -or $PSBoundParameters.ContainsKey('Cpu') -or $PSBoundParameters.ContainsKey('Memory')) {
+        Write-Output "  CPU/Memory: $Cpu cores / ${Memory}MB"
+    }
+} else {
+    Write-Output '  Configuration: preserved from template'
+}
 
 if ($NoLaunch) {
     Write-Output ''

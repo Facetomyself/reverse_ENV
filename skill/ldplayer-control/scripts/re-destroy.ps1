@@ -123,4 +123,5 @@ if ($Remove) {
     Write-Output "OK:stopped:$Project"
     Write-Output "  To also delete: re-destroy.ps1 -Project $Project -Remove"
     Write-Output "  To restart:     re-init.ps1 -Project $Project"
+    Write-Output "  To rebuild:     re-init.ps1 -Project $Project -Template re-xposed"
 }

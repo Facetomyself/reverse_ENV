@@ -64,6 +64,7 @@
 |----------|--------|
 | **完整目录树** | 各目录 README: `skill/README.md`, `tools/README.md`, `mcp/README.md`, `docs/README.md`, `workspace/README.md`, `resource/README.md`, `storage/README.md` |
 | 工具版本与路径 | `tools/README.md` + `docs/工具与环境.md` |
+| App 逆向环境规划 | `docs/App逆向环境规划.md` |
 | MCP 服务配置详情 | `mcp/README.md` + `docs/MCP服务详情.md` |
 | Skill 清单 | `skill/README.md` |
 | Codex repo-scope skill 入口 | `.agents/skills/README.md` |
@@ -102,11 +103,41 @@
 | `radare2` | 通用二进制 | CLI 快速侦察/反汇编/patch |
 | `reverse-engineering` | 知识库 | CTF 模式参考（自动加载，不直接调用） |
 | `native-reverse` | Android Native .so 反检测/绕过 | syscall 定位→dump/fix→IDA→patch→验证 |
-| `ldplayer-control` | 雷电模拟器 RE 实例管理 | re-init(创建→配置→启动) / re-proxy(HTTPS代理) / re-list / re-destroy — 项目实例隔离 |
+| `ldplayer-control` | 雷电模拟器 RE 实例管理 | re-init(-Template 创建/复制) / re-proxy / re-list / re-backup / re-restore / re-destroy — 模板实例 + 项目实例隔离 |
 | `protocol-recovery` | Web 协议恢复 | 签名→Python 采集器（接在 mcp-js-reverse-playbook 或 ruyi-reverse 之后） |
+| `article-archiver` | 文章知识库归档 | `article/pending` PDF/HTML/Markdown → 清洗 Markdown → 分类归档 → 更新 `docs/article-index.md` |
 
 **路由**: `.so`/native 反检测/绕过 → `native-reverse`；`.so` 纯静态分析 → `ida-reverse`/`radare2`；APK Java → `apk-reverse`。
 **Web JS 路由**: **默认 -> `ruyi-reverse`（统一编排器）** — 7 模块 x 两级深度，按任务主动组合 (Anti-Detect/Observe/Capture/Trace/Human-Sim/Debug/Export)。需 CDP 完整断点调试且无反检测需求 -> `mcp-js-reverse-playbook`。两者**可互补**，通过 Export 桥接。
+
+## 临时邮箱 skill/CLI 使用约束
+
+`cloudflare-tmail` 是用户层 Codex skill + CLI，不属于 `D:\reverse_ENV\skill\` 项目 skill，也不写入 `.mcp.json` / `.codex/config.toml`。Codex 触发 `cloudflare-tmail` skill；Claude 按同一 CLI 和约束直接调用。
+
+| 项 | 约束 |
+|----|------|
+| CLI 入口 | `python "%USERPROFILE%\.codex\skills\cloudflare-tmail\scripts\tmail.py" <group> <command>` |
+| 本地凭据 | `%USERPROFILE%\.cf-tmail\credentials.json`，只存本机，不纳入 Git，不复制到项目目录 |
+| JWT 缓存 | `%USERPROFILE%\.cf-tmail\mailboxes.json`，仅保存 CLI 创建/恢复的 Address JWT；临时测试结束必须删除测试邮箱并清空对应缓存 |
+| 命令分组 | 只使用 `health`、`smtp-test`、`config`、`mailbox`、`mail`、`cf`；旧顶层别名已移除，不再使用 `create/list/get/poll/cf-check` |
+| 邮箱管理 | 地址创建/查询/删除走 `mailbox create/list/show-jwt/delete/clear-inbox/clear-sent`；读信/轮询/删信走 `mail inbox/get/admin-list/delete/poll` |
+| API 边界 | Address JWT 用 `Authorization: Bearer <jwt>` 访问 `/api/*`；User JWT 用 `x-user-token`，不得混用 |
+| 私有站点 | 私有站点密码走 `x-custom-auth`；管理 API 走 `x-admin-auth`；不得把这些值写进回复、日志或仓库文件 |
+| 收信接口 | 当前部署 `/api/parsed_mails` 返回 404 时必须 fallback 到 `/api/mails`，不要误判为收信失败 |
+| Cloudflare 审计 | `cf check/zone/dns/email-rules/inventory` 可读 zone、DNS、Email Routing rules；Worker/D1/KV/Pages 当前 token 可能返回 `401/403 Authentication error`，按权限边界记录 |
+| 真实 SMTP | 只有用户明确要求端到端收信测试时才运行 `smtp-test`；严格 SPF/DMARC 发件域可能被 Cloudflare DATA 阶段拒收，需如实记录 |
+| 清理纪律 | 测试创建的邮箱必须 `mailbox delete --address <addr>`；复查 `mailboxes.json` 不保留测试 JWT；不得在 `workspace\` 留临时源码/解压目录 |
+
+常用命令：
+
+```powershell
+python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" health
+python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" config show
+python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" mailbox create --name codexdemo
+python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" mail poll --address codexdemo@zhangxuemin.work --timeout 120 --match "code|verify|验证码"
+python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" mailbox delete --address codexdemo@zhangxuemin.work
+python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inventory
+```
 
 ## 工作流速查
 
@@ -272,7 +303,7 @@
 8. **ruyi-mcp proxy 需在 launch 时设置** → `ruyi_new_page` 的 `proxy` 参数在启动浏览器时生效，启动后无法切换代理。多代理用多标签 container tab（后续版本支持）。
 9. **First 微信小程序调试 — WMPF 版本偏移量** → 开源版仅覆盖至 19823，新版 WMPF 需从编译版 v1.1.3（存档于 `storage\First-release\`）提取配置。方法：`pyinstxtractor-ng First.exe` → `find . -name "addresses.*.json"` → 复制到 `tools\First\frida\config\win\`。
 10. **NDK 交叉编译** → NDK r29 安装在 `tools\android-ndk\`，未纳入 Git。编译前确认 `tools\android-ndk\toolchains\llvm\prebuilt\windows-x86_64\bin\aarch64-linux-android33-clang.cmd` 存在。
-11. **LDPlayer RE 模拟器** → RE 实例（emulator-5556），Root + Frida 17.15.3 + Kitsune Mask v27.0 (Magisk daemon 持久化)。`/system` 需 `mount -o rw,remount /` 后才可写。备份: `backup-ldplayer-re.ps1`。初始化: `init-ldplayer-re.ps1`。
+11. **LDPlayer RE 模拟器** → 多实例模板：`re-base`(Root+Frida+CA)、`re-xposed`(+LSPosed+JustTrustMe)、`re-stealth`(+Hide My Applist+Shamiko v0.7.5)。项目实例从模板复制；模板 verified 备份在 `storage\ldplayer-backups\`。`ldconsole restore` 会恢复备份内部实例名，必须通过 `re-restore.ps1` 按 index 恢复并重命名。`Shamiko v1.2.5` 需 Magisk Canary > 27005，当前 Kitsune/Magisk 27001 使用已验证的 v0.7.5。
 12. **Rust 交叉编译** → 需 `rustup target add aarch64-linux-android x86_64-linux-android`。`.cargo/config.toml` 的 NDK 路径已通过 `tools\android-ndk\` 重定位。
 13. **Shadow Hook Frida JS agent 能力边界** → 仅做公开 API 过滤（dl_iterate_phdr / maps read），无法从 linker 内部 solist 摘除 soinfo。如需完整摘除，编译 `tools\hide-soinfo\`。
 
@@ -297,13 +328,15 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | APK | `find-api-calls.sh` | Phase 5 HTTP API 提取 (7库+URL分桶+HMAC) |
 | APK | `init-ldplayer-re.ps1` | LDPlayer RE 模拟器环境一键初始化 (Frida+root+system) |
 | APK | `dex-dump.js` | Frida DEX 内存 Dump (三种策略抗加固壳) |
-| APK | `backup-ldplayer-re.ps1` | 雷电 RE 实例备份/还原 (backup/restore/list) |
 | IDA | `start.ps1` | 环境验证 |
 | IDA | `open.ps1` | idalib 路径预处理（不打开数据库） |
 | r2 | `recon.ps1` | 一站式侦察 |
-| LDPlayer | `re-init.ps1` | RE 实例初始化（创建→配置→启动） |
+| LDPlayer | `re-init.ps1` | RE 实例初始化（创建/从模板复制→启动） |
+| Article | `pdf_to_markdown.py` | pending PDF → Markdown 草稿（需人工清洗、分类、索引） |
 | LDPlayer | `re-proxy.ps1` | HTTPS 代理 on/off |
 | LDPlayer | `re-list.ps1` | 实例状态一览 |
+| LDPlayer | `re-backup.ps1` | 模板/项目实例备份到 `storage\ldplayer-backups\` |
+| LDPlayer | `re-restore.ps1` | 从 `.ldbk` 按 index 恢复到已有实例，恢复后重命名回 `-Project`，支持 `-SourceProject` |
 | LDPlayer | `re-destroy.ps1` | 停止/删除实例 |
 | Proxy | `proxy_check.py` | 代理可用性验证 (HTTP/SOCKS5) |
 | Proxy | `kuaidaili_extract.py` | 快代理 API 提取 + 验证 |
@@ -321,6 +354,7 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | Vineflower 1.11.2 (备选) | `tools\vineflower\vineflower-1.11.2.jar` — Fernflower 社区分支，复杂 Java/lambda/泛型输出质量优于 jadx。用法: `java -jar ...vineflower.jar -dgs=1 -mpm=60 input.jar output/` |
 | dex2jar 2.4.31 (备选) | `tools\dex2jar\dex-tools-2.4.31\` — DEX→JAR 转换，Vineflower 反编译 APK 的前置依赖。用法: `d2j-dex2jar.sh -f -o app.jar app.apk` |
 | Kitsune Mask v27.0 | `tools\Kitsune-Mask-27.0.apk` — Magisk Delta 模拟器版 (支持「直接安装到系统分区」)，LDPlayer RE 实例 Magisk 安装用 |
+| Android 模块资产 | `tools\android-modules\` — Kitsune/LSPosed/JustTrustMe/Hide My Applist/Shamiko 本地资产清单，APK/ZIP 本体不进 Git |
 | jadx-mcp-server | `mcp\jadx-mcp-server\jadx_mcp_server.py`（jadx-ai-mcp MCP 服务端） |
 | radare2 6.1.8 | `tools\radare2\bin\radare2.exe` |
 | frida 17.15.3 | `.venv\Scripts\frida.exe` |
