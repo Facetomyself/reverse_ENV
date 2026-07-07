@@ -91,8 +91,6 @@ mcp/reqable-mcp/
 tools/rustup-init.exe
 tools/serena/
 tools/stealth-hook-engine/
-# Claude session data (project-level)
-.claude/
 
 # 代理凭证 (敏感信息)
 **/proxy-usage/.env

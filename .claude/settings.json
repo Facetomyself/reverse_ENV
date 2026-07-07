@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "enableAllProjectMcpServers": true,
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v powershell >/dev/null 2>&1; then powershell -NoProfile -ExecutionPolicy Bypass -File \"D:\\reverse_ENV\\.claude\\hooks\\tool-check.ps1\"; fi",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}
