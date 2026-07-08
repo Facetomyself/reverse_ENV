@@ -10,6 +10,40 @@
 
 ---
 
+## 0.1 Web 补环境工程层
+
+当前 Web 逆向链路新增 `web-env-patcher` 作为浏览器取证与协议恢复之间的工程化补环境层：
+
+```text
+ruyi-reverse / js-reverse-mcp
+  -> web-env-patcher
+  -> protocol-recovery
+```
+
+职责边界：
+
+- `ruyi-reverse` / `ruyi-mcp` 继续作为默认 Web JS 入口，负责反检测、RuyiTrace、网络/脚本/运行时取证。
+- `mcp-js-reverse-playbook` 只在无强反检测且需要 CDP 断点/单步时使用。
+- `web-env-patcher` 接收已确认的浏览器证据，负责 cURL/HAR 检查、动态资源保鲜、Trace API inventory、Node 泄露阻断、fixtures 对比、最终请求 TLS 门禁。
+- `protocol-recovery` 只在 signer / decoder / session chain 已经验证后，负责采集器和协议交付。
+
+
+补环境判断矩阵：
+
+| 现象 / 阻塞点 | 路由 |
+|---------------|------|
+| 页面打不开、需要过风控 / 验证码 / 指纹 / 行为 / RuyiTrace | `ruyi-reverse` |
+| 需要 CDP 断点、单步、作用域，且目标无强反检测 | `mcp-js-reverse-playbook` / `js-reverse-mcp` |
+| 已有浏览器取证，但目标 JS 脱离浏览器在 Node 中跑不起来 | `web-env-patcher` |
+| sign / token / x-s / a_bogus / h5st 依赖浏览器 WebAPI 或指纹终端 API | `web-env-patcher` |
+| 需要 Trace API inventory、env coverage matrix、Node 泄露阻断、fixtures 对齐 | `web-env-patcher` |
+| 纯算法签名，无浏览器环境依赖，样本字段已确认 | 直接 `protocol-recovery` |
+| Node 输出已与浏览器 fixtures 对齐，需要 Python collector / final request | `protocol-recovery` |
+| WASM / JSVMP / VM opcode 是核心阻塞 | 标 `triage-only`，必要时转 `ast-deobfuscation` / `web-reverse-algorithm` |
+
+隔离约束：补环境可能依赖 Node ABI 敏感的 `.node` addon、魔改 isolated-vm 或 TLS 指纹客户端。`tools\node\node.exe` 是项目主 Node 和 MCP 运行时，不得替换或切换。Node 25/26、addon、xbs isolated-vm、CycleTLS、impers、curl_cffi 等只能进入 `tools\web-env\runtimes\` 或 `workspace\<项目名>\.runtime\`，并且必须先通过 `tools\web-env\check-isolation.ps1`。
+
+
 ## 1. js-reverse-mcp 完整工具集（基线参考）
 
 js-reverse-mcp 共 **22 个工具**，按工作流阶段分 7 类：

@@ -28,12 +28,14 @@
 | hide-soinfo | — | `hide-soinfo\` | 内存隐藏 C 库 |
 | stealth-hook-engine | — | `stealth-hook-engine\` | 隐身 Hook 引擎 |
 | protocol-recovery | — | `protocol-recovery\` | 协议恢复 CLI 工具 |
+| web-env | — | `web-env\` | Web JS Node 补环境隔离检查与 xbs 纯 JS 检查器封装 |
 | gh | — | `gh\` | GitHub CLI |
 | go | — | `go\` | Go 工具链 |
 
 ## 约束
 
 - **所有工具不依赖系统 PATH**，通过绝对路径调用
+- **补环境 runtime 隔离**：`tools\node\node.exe` 是项目主 Node，不得为 addon / isolated-vm 切换或覆盖；Node 25/26、xbs addon、TLS 指纹客户端只能放 `tools\web-env\runtimes\` 或 `workspace\<项目名>\.runtime\`
 - 大文件不纳入 Git（`jadx/`, `jdk/`, `node/`, `android-ndk/`, `mingw64/`, `chromium/` 等已在 `.gitignore`）
 - 新增工具后同步更新本 README + `CLAUDE.md` 工具速查表 + `docs/工具与环境.md`
 - MCP 服务源码不放在此目录，统一在 `mcp/` 下

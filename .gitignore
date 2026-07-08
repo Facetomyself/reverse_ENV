@@ -90,6 +90,7 @@ tools/reqable-mcp/
 mcp/reqable-mcp/
 tools/rustup-init.exe
 tools/serena/
+tools/web-env/runtimes/
 tools/stealth-hook-engine/
 
 # 代理凭证 (敏感信息)

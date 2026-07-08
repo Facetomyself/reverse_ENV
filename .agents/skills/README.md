@@ -9,3 +9,5 @@ follow that file, including its referenced scripts, references, and templates.
 
 Do not duplicate implementation details in this directory. Keep descriptions
 short and update them only when routing semantics change.
+
+Current project-specific additions include `web-env-patcher`, which must read `D:\reverse_ENV\skill\web-env-patcher\SKILL.md` and must not install or switch Node runtimes outside the project isolation rules.

@@ -99,6 +99,7 @@
 | `apk-reverse` | Android APK | jadx/apktool/frida/adb + 指纹/脱壳/Kotlin类名恢复/API提取 |
 | `ida-reverse` | PE/ELF/DLL/SO | IDA Pro 深度分析 + IDAPython速查/符号恢复/结构体恢复 |
 | `ruyi-reverse` | Web JS — 统一编排器 | 7 能力模块 x 深浅两级，按任务主动组合。**唯一入口** |
+| `web-env-patcher` | Web JS Node 补环境 | 接在 ruyi/js-reverse 取证后：隔离 runtime、cURL/HAR 检查、Trace API 覆盖矩阵、fixtures、TLS 门禁 |
 | `proxy-usage` | 代理统一管理 | 快代理 + Cliproxy 双供应商 — 选型→提取→验证→注入 |
 | `radare2` | 通用二进制 | CLI 快速侦察/反汇编/patch |
 | `native-reverse` | Android Native .so 反检测/绕过 | syscall 定位→dump/fix→IDA→patch→验证 |
@@ -113,6 +114,21 @@
 
 **路由**: `.so`/native 反检测/绕过 → `native-reverse`；`.so` 纯静态分析 → `ida-reverse`/`radare2`；APK Java → `apk-reverse`。
 **Web JS 路由**: **默认 -> `ruyi-reverse`（统一编排器）** — 7 模块 x 两级深度，按任务主动组合。需 CDP 完整断点调试且无反检测需求 -> `js-reverse-mcp`。
+**Web 补环境路由**: 浏览器取证完成后，需要把原始网页 JS 放到 Node.js 中运行、补 `window/document/navigator/storage/crypto`、生成 sign/token 或对齐 fixtures 时，切到 `web-env-patcher`；协议采集器交付再切 `protocol-recovery`。
+
+**Web 补环境判断矩阵**:
+
+| 现象 / 阻塞点 | 路由 |
+|---------------|------|
+| 页面打不开、需要过风控 / 验证码 / 指纹 / 行为 / RuyiTrace | `ruyi-reverse` |
+| 需要 CDP 断点、单步、作用域，且目标无强反检测 | `mcp-js-reverse-playbook` / `js-reverse-mcp` |
+| 已有浏览器取证，但目标 JS 脱离浏览器在 Node 中跑不起来 | `web-env-patcher` |
+| sign / token / x-s / a_bogus / h5st 依赖 `window/document/navigator/storage/crypto/performance/canvas/webgl` | `web-env-patcher` |
+| 需要 Trace API inventory、env coverage matrix、Node 泄露阻断、fixtures 对齐 | `web-env-patcher` |
+| 纯算法签名，无浏览器环境依赖，样本字段已确认 | 直接 `protocol-recovery` |
+| Node 输出已与浏览器 fixtures 对齐，需要 Python collector / final request | `protocol-recovery` |
+| WASM / JSVMP / VM opcode 是核心阻塞，补环境只能继续执行但不能解释算法 | 标 `triage-only`，必要时转 `ast-deobfuscation` / `web-reverse-algorithm` |
+
 
 ## 临时邮箱 skill/CLI 使用约束
 
@@ -208,6 +224,19 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 2. 需要指纹分析、DOM trace、过 Cloudflare/hCaptcha、反检测浏览 → 用 ruyi（**无论目标站点反检测强度如何**）
 3. 两者可互补：`ruyi_export_session` → 导出 Cookie/Storage → `js-reverse-mcp` 继续 CDP 调试
 
+### Web 补环境隔离约束
+
+`web-env-patcher` 吸收 `storage\xbsReverseSkill` 的补环境流程，但不得直接启用外部 skill 或替换项目主运行时。
+
+| 项 | 约束 |
+|----|------|
+| 主 Node | `tools\node\node.exe` 是 MCP / 项目默认 Node，不得为 addon / isolated-vm 切换或覆盖 |
+| 独立 runtime | Node 25/26、xbs addon、魔改 isolated-vm、TLS 指纹客户端只允许放 `tools\web-env\runtimes\` 或 `workspace\<项目名>\.runtime\` |
+| 外部仓库 | `storage\xbsReverseSkill` 只作为参考和可选脚本来源；项目入口是 `skill\web-env-patcher` + `tools\web-env` wrapper |
+| 自动安装 | 未经用户确认不得 `npm install` / `pip install` / `nvm use` / `nvm install`；不得写系统 PATH 或用户级环境变量 |
+| ABI 检查 | `.node` addon / xbs isolated-vm 使用前必须跑 `tools\web-env\check-isolation.ps1`；不匹配只能记录 native gap 或走纯 JS fallback |
+| 产物落点 | captures、fixtures、trace、runtime profile、TLS 采样全部落 `workspace\<项目名>\`，不得污染 `tools\` 或 `workspace\` 根目录 |
+
 ### 反检测能力边界（指纹伪装）
 
 | 伪装维度 | ruyipage (Firefox/fpfile) | CloakBrowser (Chromium/C++) | 说明 |
@@ -276,6 +305,7 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | r2 | `recon.ps1` | 一站式侦察 |
 | LDPlayer | `re-init.ps1` / `re-proxy.ps1` / `re-list.ps1` / `re-backup.ps1` / `re-restore.ps1` / `re-destroy.ps1` | 模板复制、代理、备份、按 index 恢复并重命名、实例清理 |
 | Proxy | `proxy_check.py` / `kuaidaili_extract.py` / `cliproxy_test.py` | 代理验证/提取 |
+| Web Env | `check-isolation.ps1` / `invoke-xbs-script.ps1` | Web 补环境隔离检查与 xbs 纯 JS 检查器封装 |
 | Article | `pdf_to_markdown.py` | pending PDF → Markdown 草稿（需人工清洗、分类、索引） |
 
 ## 工具速查
@@ -292,6 +322,7 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | LDPlayer 9 | `tools\ldplayer\ldplayer.ps1` |
 | Android 模块资产 | `tools\android-modules\` |
 | Node.js | `tools\node\node.exe` |
+| Web Env | `tools\web-env\` |
 | JDK 21 | `tools\jdk\` |
 | MinGW-w64 14.2.0 | `tools\mingw64\mingw64\bin\gcc.exe` |
 | NDK r29 | `tools\android-ndk\` |
