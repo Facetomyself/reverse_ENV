@@ -17,6 +17,14 @@ import traceback
 import os
 from typing import Any, Optional
 
+# Force UTF-8 JSON-RPC stdio on Windows. Qidian and other Chinese sites may
+# return non-ASCII / non-BMP text; relying on the console code page makes Node
+# decode mojibake or lets Python die with UnicodeEncodeError.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace", newline="\n")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace", newline="\n")
+
 # ---------------------------------------------------------------------------
 # ruyipage imports — all optional to allow graceful error if not installed
 # ---------------------------------------------------------------------------

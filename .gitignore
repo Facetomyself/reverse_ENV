@@ -4,9 +4,19 @@ __pycache__/
 *.pyc
 *.egg-info/
 
-# Node (MCP)
-mcp/js-reverse-mcp/node_modules/
-mcp/ruyi-mcp/node_modules/
+# MCP dependencies / local caches
+mcp/**/node_modules/
+mcp/**/.venv/
+mcp/**/venv/
+mcp/**/__pycache__/
+mcp/**/.pytest_cache/
+mcp/**/.mypy_cache/
+mcp/**/.ruff_cache/
+mcp/**/.cache/
+mcp/**/coverage/
+mcp/**/.nyc_output/
+mcp/**/*.pyc
+mcp/**/*.tsbuildinfo
 
 # IDE
 .vscode/

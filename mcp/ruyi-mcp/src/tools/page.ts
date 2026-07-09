@@ -48,6 +48,16 @@ export function registerPageTools(register: ToolRegistrar, ctx: RuyiContext): vo
     handler: (async (args) => {
       const url = args.url as string;
 
+      // The Python bridge can be restarted after a timeout/crash while the
+      // TypeScript MCP context still has stale browserLaunched=true. Refresh
+      // before navigating and force a relaunch when the bridge has no pages.
+      if (ctx.state.browserLaunched) {
+        const pages = await ctx.refreshPages();
+        if (pages.length === 0) {
+          ctx.reset();
+        }
+      }
+
       // If browser not launched, launch with given params
       if (!ctx.state.browserLaunched) {
         await ctx.launch(args as Record<string, unknown>);

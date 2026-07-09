@@ -16,6 +16,9 @@ export declare class PythonBridge {
     private stderrLog;
     constructor();
     private resetReadyPromise;
+    private rejectAllPending;
+    private closeReadline;
+    private killProcessTree;
     start(): Promise<void>;
     stop(): Promise<void>;
     call(method: string, params?: Record<string, unknown>, timeoutMs?: number): Promise<unknown>;

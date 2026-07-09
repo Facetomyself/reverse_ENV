@@ -72,6 +72,54 @@ export class PythonBridge {
     });
   }
 
+  private rejectAllPending(message: string, exceptId?: number): void {
+    for (const [id, p] of this.pending) {
+      if (id === exceptId) continue;
+      clearTimeout(p.timer);
+      p.reject(new Error(message));
+      this.pending.delete(id);
+    }
+  }
+
+  private closeReadline(): void {
+    if (this.rl) {
+      this.rl.close();
+      this.rl = null;
+    }
+  }
+
+  private killProcessTree(reason: string): void {
+    const proc = this.proc;
+    if (!proc) return;
+
+    console.error(`[ruyi-mcp] Terminating Python bridge: ${reason}`);
+    const pid = proc.pid;
+
+    this.closeReadline();
+    this.proc = null;
+    this.ready = false;
+
+    if (pid && process.platform === 'win32') {
+      const killer = spawn('taskkill.exe', ['/PID', String(pid), '/T', '/F'], {
+        stdio: 'ignore',
+        windowsHide: true,
+      });
+      killer.on('error', () => {
+        try {
+          proc.kill('SIGKILL');
+        } catch {
+          // Ignore kill errors.
+        }
+      });
+    } else {
+      try {
+        proc.kill('SIGKILL');
+      } catch {
+        // Ignore kill errors.
+      }
+    }
+  }
+
   // ------------------------------------------------------------------
   // Lifecycle
   // ------------------------------------------------------------------
@@ -82,13 +130,14 @@ export class PythonBridge {
 
     console.error('[ruyi-mcp] Starting Python bridge...');
 
-    this.proc = spawn(PYTHON_EXE, [BRIDGE_SCRIPT], {
+    const child = spawn(PYTHON_EXE, [BRIDGE_SCRIPT], {
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, PYTHONUNBUFFERED: '1' },
+      env: { ...process.env, PYTHONUNBUFFERED: '1', PYTHONIOENCODING: 'utf-8' },
     });
+    this.proc = child;
 
     // Readline on stdout for JSON-RPC responses
-    this.rl = createInterface({ input: this.proc.stdout! });
+    this.rl = createInterface({ input: child.stdout! });
     this.rl.on('line', (line: string) => {
       const trimmed = line.trim();
       if (!trimmed) return;
@@ -119,7 +168,7 @@ export class PythonBridge {
     });
 
     // Stderr for logs
-    this.proc.stderr!.on('data', (data: Buffer) => {
+    child.stderr!.on('data', (data: Buffer) => {
       const msg = data.toString().trim();
       if (msg.includes('[ruyi_bridge] Ready')) {
         this.ready = true;
@@ -132,7 +181,7 @@ export class PythonBridge {
     });
 
     // Process exit
-    this.proc.on('exit', (code) => {
+    child.on('exit', (code) => {
       console.error(`[ruyi-mcp] Python bridge exited with code ${code}`);
       if (!this.ready) {
         const details = this.stderrLog.length
@@ -140,21 +189,25 @@ export class PythonBridge {
           : '';
         this.readyReject(new Error(`Python bridge exited before ready (code ${code}).${details}`));
       }
-      this.ready = false;
-      // Reject all pending
-      for (const [id, p] of this.pending) {
-        clearTimeout(p.timer);
-        p.reject(new Error(`Python bridge exited (code ${code})`));
-        this.pending.delete(id);
+      if (this.proc === child) {
+        this.proc = null;
+        this.ready = false;
+        this.closeReadline();
       }
+      this.rejectAllPending(`Python bridge exited (code ${code})`);
     });
 
-    this.proc.on('error', (err) => {
+    child.on('error', (err) => {
       console.error(`[ruyi-mcp] Python bridge spawn error: ${err.message}`);
       if (!this.ready) {
         this.readyReject(new Error(`Python bridge spawn error: ${err.message}`));
       }
-      this.ready = false;
+      if (this.proc === child) {
+        this.proc = null;
+        this.ready = false;
+        this.closeReadline();
+      }
+      this.rejectAllPending(`Python bridge spawn error: ${err.message}`);
     });
 
     // Wait for ready signal
@@ -171,23 +224,7 @@ export class PythonBridge {
       // Force kill
     }
 
-    if (this.rl) {
-      this.rl.close();
-      this.rl = null;
-    }
-
-    if (this.proc) {
-      this.proc.kill('SIGTERM');
-      // On Windows, SIGTERM is not supported, use taskkill as fallback
-      setTimeout(() => {
-        if (this.proc && !this.proc.killed) {
-          this.proc.kill('SIGKILL');
-        }
-      }, 3000);
-    }
-
-    this.proc = null;
-    this.ready = false;
+    this.killProcessTree('stop requested');
   }
 
   // ------------------------------------------------------------------
@@ -210,6 +247,11 @@ export class PythonBridge {
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error(`Python bridge call timeout: ${method} (${timeoutMs}ms)`));
+        this.rejectAllPending(
+          `Python bridge reset after timeout in ${method} (${timeoutMs}ms)`,
+          id
+        );
+        this.killProcessTree(`call timeout in ${method} (${timeoutMs}ms)`);
       }, timeoutMs);
 
       this.pending.set(id, { resolve, reject, timer });
