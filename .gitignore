@@ -39,8 +39,7 @@ storage/*
 # Large binaries (track separately)
 resource/portable_win/
 tools/ruyitrace/firefox/
-resource/kg_patch/win/
-resource/kg_patch/linux/
+resource/kg_patch/
 resource/misc/
 resource/ida93.torrent
 tools/jdk/
@@ -100,3 +99,7 @@ tools/stealth-hook-engine/
 !.env.example
 .secret
 *.apk
+*.keystore
+
+# 待审核的外部文章 (版权不确定)
+article/pending/
