@@ -2,6 +2,7 @@
  * Fingerprint trace tools: trace_start, trace_stop, trace_get_results.
  * ruyi unique — ruyitrace DOM API tracing integration.
  */
+import { getPageIdx } from './types.js';
 function jsonResult(data) {
     return JSON.stringify(data, null, 2);
 }
@@ -26,12 +27,12 @@ export function registerTraceTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('trace.start', {
                 pageIdx,
                 outputFile: args.outputFile,
             });
-            ctx.setTraceEnabled(true);
+            ctx.setTraceEnabled(result.tracing === true);
             return {
                 content: [{ type: 'text', text: jsonResult(result) }],
             };
@@ -53,7 +54,7 @@ export function registerTraceTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('trace.stop', { pageIdx });
             ctx.setTraceEnabled(false);
             return {
@@ -78,10 +79,10 @@ export function registerTraceTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('trace.results', {
                 pageIdx,
-                limit: args.limit || 50,
+                limit: args.limit ?? 50,
             });
             return {
                 content: [{ type: 'text', text: jsonResult(result) }],

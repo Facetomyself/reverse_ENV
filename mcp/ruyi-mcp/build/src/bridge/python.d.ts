@@ -21,6 +21,7 @@ export declare class PythonBridge {
     private killProcessTree;
     start(): Promise<void>;
     stop(): Promise<void>;
+    private waitForExit;
     call(method: string, params?: Record<string, unknown>, timeoutMs?: number): Promise<unknown>;
     notify(method: string, params?: Record<string, unknown>): Promise<void>;
     isRunning(): boolean;

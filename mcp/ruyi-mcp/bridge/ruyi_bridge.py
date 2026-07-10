@@ -101,6 +101,7 @@ class RuyiBridge:
         self._next_page_idx: int = 0
         self._breakpoints: list[dict] = []        # soft breakpoint registry
         self._trace_output: Optional[str] = None
+        self._trace_enabled_at_launch: bool = False
         self._preload_scripts: dict[str, str] = {}  # scriptId → script text
         self._fingerprint_ctx: Any = None
 
@@ -257,6 +258,7 @@ class RuyiBridge:
             self._fingerprint_ctx = opts.smart_fingerprint(**fp_kwargs)
 
         # Trace
+        self._trace_enabled_at_launch = bool(params.get("traceEnabled"))
         if params.get("traceEnabled"):
             opts.enable_trace(True)
 
@@ -298,6 +300,7 @@ class RuyiBridge:
         self.opts = None
         self.pages = {}
         self._breakpoints = []
+        self._trace_enabled_at_launch = False
         self._preload_scripts = {}
         return {}
 
@@ -335,6 +338,7 @@ class RuyiBridge:
 
         url = params.get("url", "")
         container = params.get("container", False)
+        tab = None
 
         try:
             if container:
@@ -342,8 +346,13 @@ class RuyiBridge:
             else:
                 tab = self.page.new_tab(url=url if url else None)
         except Exception:
-            # Fallback: create via JS
-            self.page.run_js(f"window.open('{url or ''}', '_blank')")
+            # Fallback: create via JS and then resync the latest tab.
+            self.page.run_js(f"(() => window.open({json.dumps(url or '')}, '_blank'))()")
+            try:
+                tabs = self.page.get_tabs() or []
+                tab = tabs[-1] if tabs else self.page
+            except Exception:
+                tab = self.page
 
         idx = self._next_page_idx
         self.pages[idx] = tab
@@ -890,6 +899,9 @@ class RuyiBridge:
 
         # Write to file if path provided
         if output_file:
+            output_dir = os.path.dirname(os.path.abspath(output_file))
+            if output_dir:
+                os.makedirs(output_dir, exist_ok=True)
             with open(output_file, "w", encoding="utf-8") as f:
                 json.dump(session, f, ensure_ascii=False, indent=2)
 
@@ -904,37 +916,42 @@ class RuyiBridge:
     def _set_breakpoint(self, params: dict) -> dict:
         """Set a soft breakpoint by injecting a Proxy/wrapper around target code."""
         page = self._get_page(params.get("pageIdx", 0))
+        mode = params.get("mode", "text")
         text = params.get("text", "")
+        pattern = params.get("pattern", text)
         url_filter = params.get("urlFilter", "")
         condition = params.get("condition", "")
 
-        # For soft breakpoints, we inject a preload script that wraps
-        # XMLHttpRequest/Fetch or specific function patterns
-        if "xhr" in text.lower() or "fetch" in text.lower():
+        # For XHR/fetch breakpoints, inject a preload wrapper explicitly.
+        # Do not infer this mode from the text contents: URL patterns like
+        # "/api/login" must still install the network wrappers.
+        if mode == "xhr":
+            pattern_js = json.dumps(pattern)
             script = """() => {
                 const _origFetch = window.fetch;
                 window.fetch = function(...args) {
                     const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
-                    if (url.includes('""" + text.replace("'", "\\'") + """')) {
+                    if (url.includes(__RUYI_PATTERN__)) {
                         debugger;
                     }
                     return _origFetch.apply(this, args);
                 };
                 const _origXHR = window.XMLHttpRequest.prototype.open;
                 window.XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+                    this.__ruyi_method = method;
                     this._ruyi_url = url;
-                    if (url.includes('""" + text.replace("'", "\\'") + """')) {
+                    if (String(url).includes(__RUYI_PATTERN__)) {
                         debugger;
                     }
                     return _origXHR.call(this, method, url, ...rest);
                 };
-            }"""
+            }""".replace("__RUYI_PATTERN__", pattern_js)
         else:
             # Generic text search — inject a MutationObserver-like scanner
+            marker = json.dumps(text[:200])
             script = """() => {
-                // Soft breakpoint marker for: """ + text[:80].replace("'", "\\'") + """
-                window.__ruyi_bp_target = '""" + text[:200].replace("'", "\\'") + """';
-            }"""
+                window.__ruyi_bp_target = __RUYI_MARKER__;
+            }""".replace("__RUYI_MARKER__", marker)
 
         bp_id = page.add_preload_script(script)
         bp_id_str = str(getattr(bp_id, 'id', len(self._breakpoints)))
@@ -942,6 +959,8 @@ class RuyiBridge:
         bp_info = {
             "breakpointId": bp_id_str,
             "text": text,
+            "mode": mode,
+            "pattern": pattern,
             "urlFilter": url_filter,
             "condition": condition,
             "type": "soft",
@@ -972,17 +991,36 @@ class RuyiBridge:
         """Enable BiDi trace via ruyipage's built-in tracer."""
         page = self._get_page(params.get("pageIdx", 0))
 
-        # Ensure trace is enabled
-        if self.opts and hasattr(self.opts, 'enable_trace'):
+        runtime_enable_attempted = False
+        runtime_enable_error = None
+
+        # Full trace must be enabled before browser launch. Calling
+        # enable_trace() here is best-effort and should be treated as partial.
+        if not self._trace_enabled_at_launch and self.opts and hasattr(self.opts, 'enable_trace'):
+            runtime_enable_attempted = True
             try:
                 self.opts.enable_trace(True)
-            except Exception:
-                pass
+            except Exception as e:
+                runtime_enable_error = str(e)
 
         output_file = params.get("outputFile")
         self._trace_output = output_file
 
-        return {"tracing": True, "outputFile": output_file}
+        result = {
+            "tracing": True,
+            "fullTrace": self._trace_enabled_at_launch,
+            "partialTrace": not self._trace_enabled_at_launch,
+            "runtimeEnableAttempted": runtime_enable_attempted,
+            "outputFile": output_file,
+        }
+        if not self._trace_enabled_at_launch:
+            result["warning"] = (
+                "Trace was not enabled at browser launch. Runtime trace is partial; "
+                "call ruyi_browser_quit, then ruyi_new_page with traceEnabled:true for full trace."
+            )
+        if runtime_enable_error:
+            result["runtimeEnableError"] = runtime_enable_error
+        return result
 
     def _trace_stop(self, params: dict) -> dict:
         page = self._get_page(params.get("pageIdx", 0))
@@ -998,6 +1036,9 @@ class RuyiBridge:
         try:
             json_data = page.trace.dump_json() if hasattr(page.trace, 'dump_json') else "{}"
             if self._trace_output:
+                output_dir = os.path.dirname(os.path.abspath(self._trace_output))
+                if output_dir:
+                    os.makedirs(output_dir, exist_ok=True)
                 with open(self._trace_output, "w", encoding="utf-8") as f:
                     f.write(str(json_data))
                 result["savedTo"] = self._trace_output
@@ -1121,34 +1162,43 @@ class RuyiBridge:
     def _ws_inject(self, params: dict) -> dict:
         """Inject WebSocket Proxy to capture messages into window.__ruyi_ws_messages."""
         page = self._get_page(params.get("pageIdx", 0))
-        script = (
-            "() => {"
-            "  if (window.__ruyi_ws_injected) return 'already_injected';"
-            "  window.__ruyi_ws_messages = [];"
-            "  window.__ruyi_ws_injected = true;"
-            "  const OrigWS = window.WebSocket;"
-            "  window.WebSocket = function(url, protocols) {"
-            "    const ws = new OrigWS(url, protocols);"
-            "    const entry = { url, startTime: Date.now(), sent: [], received: [] };"
-            "    window.__ruyi_ws_messages.push(entry);"
-            "    const origSend = ws.send;"
-            "    ws.send = function(data) {"
-            "      entry.sent.push({ time: Date.now(), data: typeof data === 'string' ? data : '[binary]' });"
-            "      return origSend.call(this, data);"
-            "    };"
-            "    ws.addEventListener('message', function(e) {"
-            "      entry.received.push({ time: Date.now(), data: typeof e.data === 'string' ? e.data : '[binary]' });"
-            "    });"
-            "    return ws;"
-            "  };"
-            "  window.WebSocket.prototype = OrigWS.prototype;"
-            "  window.WebSocket.CONNECTING = OrigWS.CONNECTING;"
-            "  window.WebSocket.OPEN = OrigWS.OPEN;"
-            "  window.WebSocket.CLOSING = OrigWS.CLOSING;"
-            "  window.WebSocket.CLOSED = OrigWS.CLOSED;"
-            "  return 'injected';"
-            "}"
-        )
+        script = """() => {
+            if (window.__ruyi_ws_injected) {
+                return { injected: false, status: 'already_injected', buffered: (window.__ruyi_ws_messages || []).length };
+            }
+            window.__ruyi_ws_messages = window.__ruyi_ws_messages || [];
+            window.__ruyi_ws_injected = true;
+            const OrigWS = window.WebSocket;
+            const RuyiWebSocket = function(url, protocols) {
+                const ws = protocols === undefined ? new OrigWS(url) : new OrigWS(url, protocols);
+                const entry = { url: String(url), startTime: Date.now(), sent: [], received: [] };
+                window.__ruyi_ws_messages.push(entry);
+                const origSend = ws.send;
+                ws.send = function(data) {
+                    entry.sent.push({
+                        time: Date.now(),
+                        data: typeof data === 'string' ? data : '[binary]',
+                    });
+                    return origSend.call(this, data);
+                };
+                ws.addEventListener('message', function(e) {
+                    entry.received.push({
+                        time: Date.now(),
+                        data: typeof e.data === 'string' ? e.data : '[binary]',
+                    });
+                });
+                return ws;
+            };
+            RuyiWebSocket.prototype = OrigWS.prototype;
+            Object.defineProperty(RuyiWebSocket.prototype, 'constructor', { value: OrigWS, configurable: true });
+            for (const key of ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED']) {
+                Object.defineProperty(RuyiWebSocket, key, { value: OrigWS[key], configurable: true });
+            }
+            Object.defineProperty(RuyiWebSocket, 'name', { value: 'WebSocket', configurable: true });
+            Object.defineProperty(RuyiWebSocket, 'length', { value: OrigWS.length, configurable: true });
+            window.WebSocket = RuyiWebSocket;
+            return { injected: true };
+        }"""
         try:
             result = page.run_js(f"({script})()", timeout=5)
             return {"injected": True, "status": str(result)}
@@ -1220,6 +1270,10 @@ class RuyiBridge:
 
             # Special: shutdown signal
             if request.get("method") == "__shutdown__":
+                if request.get("id") is not None:
+                    response = self._ok(request.get("id"), {"shutdown": True})
+                    sys.stdout.write(json.dumps(response, ensure_ascii=False) + "\n")
+                    sys.stdout.flush()
                 self._quit({})
                 break
 

@@ -4,7 +4,7 @@
  */
 
 import { RuyiContext } from '../ruyi-context.js';
-import { ToolDef, ToolHandler, ToolRegistrar } from './types.js';
+import { ToolDef, ToolHandler, ToolRegistrar, getPageIdx } from './types.js';
 
 function jsonResult(data: unknown): string {
   return JSON.stringify(data, null, 2);
@@ -33,13 +33,13 @@ export function registerTraceTools(register: ToolRegistrar, ctx: RuyiContext): v
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const result = await ctx.bridgeInstance.call('trace.start', {
         pageIdx,
         outputFile: args.outputFile,
       }) as Record<string, unknown>;
 
-      ctx.setTraceEnabled(true);
+      ctx.setTraceEnabled(result.tracing === true);
 
       return {
         content: [{ type: 'text', text: jsonResult(result) }],
@@ -63,7 +63,7 @@ export function registerTraceTools(register: ToolRegistrar, ctx: RuyiContext): v
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const result = await ctx.bridgeInstance.call('trace.stop', { pageIdx }) as Record<string, unknown>;
 
       ctx.setTraceEnabled(false);
@@ -91,10 +91,10 @@ export function registerTraceTools(register: ToolRegistrar, ctx: RuyiContext): v
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const result = await ctx.bridgeInstance.call('trace.results', {
         pageIdx,
-        limit: args.limit || 50,
+        limit: args.limit ?? 50,
       }) as Record<string, unknown>;
 
       return {

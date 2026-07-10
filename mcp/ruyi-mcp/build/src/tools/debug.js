@@ -6,6 +6,7 @@
  * preload scripts that inject debugger; statements or Proxy wrappers around
  * XMLHttpRequest/Fetch.
  */
+import { getPageIdx } from './types.js';
 function jsonResult(data) {
     return JSON.stringify(data, null, 2);
 }
@@ -22,10 +23,7 @@ export function registerDebugTools(register, ctx) {
             inputSchema: {
                 type: 'object',
                 properties: {
-                    text: {
-                        type: 'string',
-                        description: '要匹配的代码文本、URL 片段或函数名。含 "xhr" 或 "fetch" 时自动包装网络请求。',
-                    },
+                    text: { type: 'string', description: '要匹配的代码文本、URL 片段或函数名。' },
                     urlFilter: { type: 'string', description: '仅在 URL 匹配的脚本中注入' },
                     pageIdx: { type: 'number', default: 0 },
                     condition: { type: 'string', description: '断点条件（暂不支持，保留参数兼容性）' },
@@ -34,17 +32,19 @@ export function registerDebugTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const text = args.text;
             const urlFilter = args.urlFilter || '';
             const result = await ctx.bridgeInstance.call('debug.set_breakpoint', {
                 pageIdx,
+                mode: 'text',
                 text,
                 urlFilter,
             });
             ctx.addBreakpoint({
                 breakpointId: result.breakpointId,
                 text,
+                mode: 'text',
                 urlFilter,
                 type: 'soft',
             });
@@ -71,16 +71,20 @@ export function registerDebugTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const url = args.url;
             const result = await ctx.bridgeInstance.call('debug.set_breakpoint', {
                 pageIdx,
-                text: url,
+                mode: 'xhr',
+                pattern: url,
+                text: `xhr:${url}`,
                 urlFilter: '',
             });
             ctx.addBreakpoint({
                 breakpointId: result.breakpointId,
                 text: `xhr:${url}`,
+                mode: 'xhr',
+                pattern: url,
                 type: 'soft',
             });
             return {
@@ -124,7 +128,7 @@ export function registerDebugTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const bpId = args.breakpointId;
             await ctx.bridgeInstance.call('debug.remove_breakpoint', {
                 pageIdx,
@@ -152,7 +156,7 @@ export function registerDebugTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('script.list_preloads', { pageIdx });
             return {
                 content: [{ type: 'text', text: jsonResult(result) }],

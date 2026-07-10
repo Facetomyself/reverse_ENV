@@ -3,7 +3,7 @@
  */
 
 import { RuyiContext } from '../ruyi-context.js';
-import { ToolDef, ToolHandler, ToolRegistrar } from './types.js';
+import { ToolDef, ToolHandler, ToolRegistrar, getPageIdx } from './types.js';
 
 function jsonResult(data: unknown): string {
   return JSON.stringify(data, null, 2);
@@ -39,8 +39,8 @@ export function registerRuntimeTools(register: ToolRegistrar, ctx: RuyiContext):
     },
     handler: (async (args) => {
       const fn = args.function as string;
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
-      const timeout = (args.timeout as number) || 10;
+      const pageIdx = getPageIdx(args, ctx);
+      const timeout = (args.timeout as number | undefined) ?? 10;
 
       // Clean up arrow function wrapper if user passed raw code
       let script = fn.trim();
@@ -84,11 +84,11 @@ export function registerRuntimeTools(register: ToolRegistrar, ctx: RuyiContext):
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const result = await ctx.bridgeInstance.call('console.get', {
         pageIdx,
         types: args.types,
-        limit: args.limit || 50,
+        limit: args.limit ?? 50,
       }) as Record<string, unknown>;
 
       return {

@@ -5,6 +5,7 @@
  *
  * Note: proxy must be set at browser.launch time (ruyi_new_page params).
  */
+import { getPageIdx } from './types.js';
 function jsonResult(data) {
     return JSON.stringify(data, null, 2);
 }
@@ -54,7 +55,7 @@ export function registerAntiDetectTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('fingerprint.set', {
                 pageIdx,
                 geolocation: args.geolocation,
@@ -90,7 +91,7 @@ export function registerAntiDetectTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('emulation.geo', {
                 pageIdx,
                 latitude: args.latitude,
@@ -119,7 +120,7 @@ export function registerAntiDetectTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('emulation.timezone', {
                 pageIdx,
                 timezoneId: args.timezoneId,
@@ -146,7 +147,7 @@ export function registerAntiDetectTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('emulation.locale', {
                 pageIdx,
                 locale: args.locale,
@@ -175,11 +176,11 @@ export function registerAntiDetectTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('cf.handle', {
                 pageIdx,
-                timeout: args.timeout || 30,
-                checkInterval: args.checkInterval || 2,
+                timeout: args.timeout ?? 30,
+                checkInterval: args.checkInterval ?? 2,
             });
             return {
                 content: [{ type: 'text', text: jsonResult(result) }],
@@ -206,7 +207,7 @@ export function registerAntiDetectTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('emulation.useragent', {
                 pageIdx,
                 userAgent: args.userAgent,

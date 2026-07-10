@@ -1,6 +1,7 @@
 /**
  * Session export tool: export_session.
  */
+import { getPageIdx } from './types.js';
 function jsonResult(data) {
     return JSON.stringify(data, null, 2);
 }
@@ -33,11 +34,11 @@ export function registerSessionTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('session.export', {
                 pageIdx,
                 outputFile: args.outputFile,
-                include: args.include || ['cookies', 'localStorage', 'sessionStorage'],
+                include: args.include ?? ['cookies', 'localStorage', 'sessionStorage'],
             });
             return {
                 content: [{ type: 'text', text: jsonResult(result) }],

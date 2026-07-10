@@ -1,7 +1,9 @@
 /**
  * Script analysis tools: list_scripts, get_script_source, save_script_source, search_in_sources.
  */
-import { writeFileSync } from 'node:fs';
+import { getPageIdx } from './types.js';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 function jsonResult(data) {
     return JSON.stringify(data, null, 2);
 }
@@ -23,7 +25,7 @@ export function registerScriptTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const filter = args.filter;
             let script = `() => {
         const scripts = Array.from(document.querySelectorAll('script[src]'));
@@ -75,16 +77,45 @@ export function registerScriptTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const url = args.url;
-            // Fetch script content via fetch() + eval trick
+            const startLine = args.startLine;
+            const endLine = args.endLine;
+            const offset = args.offset;
+            const length = args.length ?? 1000;
             const script = `async () => {
+        const requested = ${JSON.stringify(url)};
+        const scripts = Array.from(document.querySelectorAll('script[src]')).map(s => s.src);
+        const resolved = scripts.find(s => s === requested)
+          || scripts.find(s => s.includes(requested))
+          || requested;
+
+        const sliceSource = (text) => {
+          const offset = ${offset === undefined ? 'null' : JSON.stringify(offset)};
+          const length = ${JSON.stringify(length)};
+          const startLine = ${startLine === undefined ? 'null' : JSON.stringify(startLine)};
+          const endLine = ${endLine === undefined ? 'null' : JSON.stringify(endLine)};
+          if (offset !== null) {
+            return text.slice(offset, offset + length);
+          }
+          if (startLine !== null || endLine !== null) {
+            const lines = text.split('\\n');
+            const start = Math.max((startLine || 1) - 1, 0);
+            const end = endLine ? Math.min(endLine, lines.length) : Math.min(start + 200, lines.length);
+            return lines.slice(start, end).join('\\n');
+          }
+          return text.slice(0, 50000);
+        };
+
         try {
-          const resp = await fetch(${JSON.stringify(url)});
+          const resp = await fetch(resolved, { credentials: 'include', cache: 'force-cache' });
+          if (!resp.ok) {
+            return { ok: false, url: resolved, status: resp.status, error: 'HTTP ' + resp.status };
+          }
           const text = await resp.text();
-          return text.substring(0, 50000);
-        } catch(e) {
-          return 'Error: ' + e.message;
+          return { ok: true, url: resolved, totalLength: text.length, source: sliceSource(text) };
+        } catch (e) {
+          return { ok: false, url: resolved, error: e && e.message ? e.message : String(e) };
         }
       }`;
             const result = await ctx.bridgeInstance.call('script.evaluate', {
@@ -92,8 +123,10 @@ export function registerScriptTools(register, ctx) {
                 script,
                 timeout: 15,
             });
+            const payload = result.result;
             return {
                 content: [{ type: 'text', text: jsonResult(result) }],
+                isError: payload?.ok === false || undefined,
             };
         }),
     });
@@ -115,15 +148,24 @@ export function registerScriptTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const url = args.url;
             const filePath = args.filePath;
             const script = `async () => {
+        const requested = ${JSON.stringify(url)};
+        const scripts = Array.from(document.querySelectorAll('script[src]')).map(s => s.src);
+        const resolved = scripts.find(s => s === requested)
+          || scripts.find(s => s.includes(requested))
+          || requested;
         try {
-          const resp = await fetch(${JSON.stringify(url)});
-          return await resp.text();
+          const resp = await fetch(resolved, { credentials: 'include', cache: 'force-cache' });
+          if (!resp.ok) {
+            return { ok: false, url: resolved, status: resp.status, error: 'HTTP ' + resp.status };
+          }
+          const text = await resp.text();
+          return { ok: true, url: resolved, source: text, totalLength: text.length };
         } catch(e) {
-          return 'Error: ' + e.message;
+          return { ok: false, url: resolved, error: e && e.message ? e.message : String(e) };
         }
       }`;
             const result = await ctx.bridgeInstance.call('script.evaluate', {
@@ -131,15 +173,20 @@ export function registerScriptTools(register, ctx) {
                 script,
                 timeout: 30,
             });
-            const source = result.result || JSON.stringify(result);
-            if (!source.startsWith('Error:')) {
-                writeFileSync(filePath, source, 'utf-8');
+            const payload = result.result;
+            if (payload?.ok === true && typeof payload.source === 'string') {
+                mkdirSync(dirname(filePath), { recursive: true });
+                writeFileSync(filePath, payload.source, 'utf-8');
                 return {
-                    content: [{ type: 'text', text: jsonResult({ savedTo: filePath, size: source.length }) }],
+                    content: [{
+                            type: 'text',
+                            text: jsonResult({ savedTo: filePath, url: payload.url, size: payload.source.length }),
+                        }],
                 };
             }
             return {
-                content: [{ type: 'text', text: jsonResult({ error: source }) }],
+                content: [{ type: 'text', text: jsonResult({ error: payload?.error || 'Failed to fetch script source', result }) }],
+                isError: true,
             };
         }),
     });
@@ -164,12 +211,12 @@ export function registerScriptTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const query = args.query;
             const isRegex = args.isRegex;
             const caseSensitive = args.caseSensitive;
             const urlFilter = args.urlFilter || '';
-            const maxResults = args.maxResults || 30;
+            const maxResults = args.maxResults ?? 30;
             // Search in all inline scripts and fetch-able external scripts
             const script = `async () => {
         const query = ${JSON.stringify(query)};
@@ -179,15 +226,16 @@ export function registerScriptTools(register, ctx) {
         const maxResults = ${maxResults};
 
         const results = [];
+        const skipped = [];
         const pattern = isRegex ? new RegExp(query, caseSensitive ? '' : 'i') : null;
+        const seenExternal = new Set();
 
-        for (const el of document.querySelectorAll('script')) {
-          const src = el.src || '(inline)';
-          if (urlFilter && !src.toLowerCase().includes(urlFilter.toLowerCase())) continue;
-
-          const text = el.textContent || '';
-          if (text.length > 200000) continue; // skip huge scripts
-
+        const searchText = (src, text, kind) => {
+          if (!text) return;
+          if (text.length > 1000000) {
+            skipped.push({ src, reason: 'too_large', size: text.length });
+            return;
+          }
           const lines = text.split('\\n');
           for (let i = 0; i < lines.length && results.length < maxResults; i++) {
             const line = lines[i];
@@ -197,14 +245,38 @@ export function registerScriptTools(register, ctx) {
             if (matched) {
               results.push({
                 src,
+                kind,
                 line: i + 1,
-                preview: line.substring(0, 200).trim(),
+                preview: line.substring(0, 240).trim(),
               });
             }
           }
+        };
+
+        for (const el of document.querySelectorAll('script')) {
+          const src = el.src || '(inline)';
+          if (urlFilter && !src.toLowerCase().includes(urlFilter.toLowerCase())) continue;
+
+          if (el.src) {
+            if (seenExternal.has(el.src)) continue;
+            seenExternal.add(el.src);
+            try {
+              const resp = await fetch(el.src, { credentials: 'include', cache: 'force-cache' });
+              if (!resp.ok) {
+                skipped.push({ src: el.src, reason: 'http_' + resp.status });
+                continue;
+              }
+              searchText(el.src, await resp.text(), 'external');
+            } catch (e) {
+              skipped.push({ src: el.src, reason: e && e.message ? e.message : String(e) });
+            }
+          } else {
+            searchText(src, el.textContent || '', 'inline');
+          }
+          if (results.length >= maxResults) break;
         }
 
-        return results;
+        return { results, skipped, searchedExternal: seenExternal.size };
       }`;
             const result = await ctx.bridgeInstance.call('script.evaluate', {
                 pageIdx,

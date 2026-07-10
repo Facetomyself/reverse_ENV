@@ -3,7 +3,7 @@
  */
 
 import { RuyiContext } from '../ruyi-context.js';
-import { ToolDef, ToolHandler, ToolRegistrar } from './types.js';
+import { ToolDef, ToolHandler, ToolRegistrar, getPageIdx } from './types.js';
 
 function jsonResult(data: unknown): string {
   return JSON.stringify(data, null, 2);
@@ -27,7 +27,7 @@ export function registerCookieTools(register: ToolRegistrar, ctx: RuyiContext): 
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const result = await ctx.bridgeInstance.call('cookie.get', { pageIdx }) as Record<string, unknown>;
 
       return {
@@ -59,7 +59,7 @@ export function registerCookieTools(register: ToolRegistrar, ctx: RuyiContext): 
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const result = await ctx.bridgeInstance.call('cookie.set', {
         pageIdx,
         cookies: args.cookies,
@@ -88,7 +88,7 @@ export function registerCookieTools(register: ToolRegistrar, ctx: RuyiContext): 
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const result = await ctx.bridgeInstance.call('cookie.delete', {
         pageIdx,
         name: args.name,

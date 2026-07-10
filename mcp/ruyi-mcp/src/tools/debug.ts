@@ -8,7 +8,7 @@
  */
 
 import { RuyiContext } from '../ruyi-context.js';
-import { ToolDef, ToolHandler, ToolRegistrar } from './types.js';
+import { ToolDef, ToolHandler, ToolRegistrar, getPageIdx } from './types.js';
 import type { BreakpointInfo } from '../ruyi-context.js';
 
 function jsonResult(data: unknown): string {
@@ -30,10 +30,7 @@ export function registerDebugTools(register: ToolRegistrar, ctx: RuyiContext): v
       inputSchema: {
         type: 'object',
         properties: {
-          text: {
-            type: 'string',
-            description: '要匹配的代码文本、URL 片段或函数名。含 "xhr" 或 "fetch" 时自动包装网络请求。',
-          },
+          text: { type: 'string', description: '要匹配的代码文本、URL 片段或函数名。' },
           urlFilter: { type: 'string', description: '仅在 URL 匹配的脚本中注入' },
           pageIdx: { type: 'number', default: 0 },
           condition: { type: 'string', description: '断点条件（暂不支持，保留参数兼容性）' },
@@ -42,12 +39,13 @@ export function registerDebugTools(register: ToolRegistrar, ctx: RuyiContext): v
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const text = args.text as string;
       const urlFilter = args.urlFilter as string || '';
 
       const result = await ctx.bridgeInstance.call('debug.set_breakpoint', {
         pageIdx,
+        mode: 'text',
         text,
         urlFilter,
       }) as Record<string, unknown>;
@@ -55,6 +53,7 @@ export function registerDebugTools(register: ToolRegistrar, ctx: RuyiContext): v
       ctx.addBreakpoint({
         breakpointId: result.breakpointId as string,
         text,
+        mode: 'text',
         urlFilter,
         type: 'soft',
       });
@@ -84,18 +83,22 @@ export function registerDebugTools(register: ToolRegistrar, ctx: RuyiContext): v
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const url = args.url as string;
 
       const result = await ctx.bridgeInstance.call('debug.set_breakpoint', {
         pageIdx,
-        text: url,
+        mode: 'xhr',
+        pattern: url,
+        text: `xhr:${url}`,
         urlFilter: '',
       }) as Record<string, unknown>;
 
       ctx.addBreakpoint({
         breakpointId: result.breakpointId as string,
         text: `xhr:${url}`,
+        mode: 'xhr',
+        pattern: url,
         type: 'soft',
       });
 
@@ -142,7 +145,7 @@ export function registerDebugTools(register: ToolRegistrar, ctx: RuyiContext): v
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const bpId = args.breakpointId as string;
 
       await ctx.bridgeInstance.call('debug.remove_breakpoint', {
@@ -174,7 +177,7 @@ export function registerDebugTools(register: ToolRegistrar, ctx: RuyiContext): v
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const result = await ctx.bridgeInstance.call('script.list_preloads', { pageIdx }) as Record<string, unknown>;
 
       return {

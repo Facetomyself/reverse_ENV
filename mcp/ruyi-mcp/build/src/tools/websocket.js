@@ -2,6 +2,7 @@
  * WebSocket message capture tools.
  * Uses JS WebSocket Proxy injection to capture frames.
  */
+import { getPageIdx } from './types.js';
 function jsonResult(data) {
     return JSON.stringify(data, null, 2);
 }
@@ -24,7 +25,7 @@ export function registerWebSocketTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('ws.inject', { pageIdx });
             return {
                 content: [{ type: 'text', text: jsonResult(result) }],
@@ -50,10 +51,10 @@ export function registerWebSocketTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('ws.collect', {
                 pageIdx,
-                clear: args.clear || false,
+                clear: args.clear ?? false,
             });
             return {
                 content: [{ type: 'text', text: jsonResult(result) }],

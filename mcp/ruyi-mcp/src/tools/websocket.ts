@@ -4,7 +4,7 @@
  */
 
 import { RuyiContext } from '../ruyi-context.js';
-import { ToolDef, ToolHandler, ToolRegistrar } from './types.js';
+import { ToolDef, ToolHandler, ToolRegistrar, getPageIdx } from './types.js';
 
 function jsonResult(data: unknown): string {
   return JSON.stringify(data, null, 2);
@@ -31,7 +31,7 @@ export function registerWebSocketTools(register: ToolRegistrar, ctx: RuyiContext
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const result = await ctx.bridgeInstance.call('ws.inject', { pageIdx }) as Record<string, unknown>;
 
       return {
@@ -60,10 +60,10 @@ export function registerWebSocketTools(register: ToolRegistrar, ctx: RuyiContext
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const result = await ctx.bridgeInstance.call('ws.collect', {
         pageIdx,
-        clear: args.clear || false,
+        clear: args.clear ?? false,
       }) as Record<string, unknown>;
 
       return {

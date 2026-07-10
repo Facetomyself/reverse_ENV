@@ -1,6 +1,7 @@
 /**
  * DOM interaction tools: dom_select, dom_get_info, dom_input, dom_click.
  */
+import { getPageIdx } from './types.js';
 function jsonResult(data) {
     return JSON.stringify(data, null, 2);
 }
@@ -27,11 +28,11 @@ export function registerDomTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('dom.select', {
                 pageIdx,
                 selector: args.selector,
-                timeout: args.timeout || 10,
+                timeout: args.timeout ?? 10,
             });
             return {
                 content: [{ type: 'text', text: jsonResult(result) }],
@@ -56,7 +57,7 @@ export function registerDomTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('dom.info', {
                 pageIdx,
                 selector: args.selector,
@@ -87,7 +88,7 @@ export function registerDomTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('dom.input', {
                 pageIdx,
                 selector: args.selector,
@@ -116,7 +117,7 @@ export function registerDomTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('dom.click', {
                 pageIdx,
                 selector: args.selector,

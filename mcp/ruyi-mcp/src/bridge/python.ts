@@ -32,6 +32,16 @@ interface PendingCall {
   timer: ReturnType<typeof setTimeout>;
 }
 
+function bridgeResultError(result: unknown): Error | null {
+  if (!result || typeof result !== 'object' || !('error' in result)) {
+    return null;
+  }
+  const data = result as Record<string, unknown>;
+  const message = String(data.error || 'Python bridge returned an error result');
+  const stack = typeof data.stack === 'string' ? `\n${data.stack}` : '';
+  return new Error(`${message}${stack}`);
+}
+
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
@@ -158,7 +168,12 @@ export class PythonBridge {
                 )
               );
             } else {
-              pending.resolve(response.result);
+              const resultError = bridgeResultError(response.result);
+              if (resultError) {
+                pending.reject(resultError);
+              } else {
+                pending.resolve(response.result);
+              }
             }
           }
         }
@@ -220,11 +235,26 @@ export class PythonBridge {
     try {
       // Try graceful shutdown
       await this.call('__shutdown__', {}, 5000);
+      await this.waitForExit(1000);
     } catch {
       // Force kill
     }
 
-    this.killProcessTree('stop requested');
+    if (this.proc) {
+      this.killProcessTree('stop requested');
+    }
+  }
+
+  private async waitForExit(timeoutMs: number): Promise<void> {
+    const proc = this.proc;
+    if (!proc) return;
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, timeoutMs);
+      proc.once('exit', () => {
+        clearTimeout(timer);
+        resolve();
+      });
+    });
   }
 
   // ------------------------------------------------------------------

@@ -1,6 +1,7 @@
 /**
  * Page management tools: new_page, navigate_page, close_page, select_page, list_pages.
  */
+import { getPageIdx } from './types.js';
 function jsonResult(data) {
     return JSON.stringify(data, null, 2);
 }
@@ -22,6 +23,7 @@ export function registerPageTools(register, ctx) {
                     proxy: { type: 'string', description: '代理地址，如 http://127.0.0.1:7890 或 socks5://host:port' },
                     headless: { type: 'boolean', description: '无头模式，默认 false', default: false },
                     privateMode: { type: 'boolean', description: '隐私模式，默认 false', default: false },
+                    container: { type: 'boolean', description: '浏览器已启动时是否创建 container tab，默认 false', default: false },
                     fingerprint: {
                         type: 'object',
                         description: '智能指纹配置（smart_fingerprint）',
@@ -40,6 +42,7 @@ export function registerPageTools(register, ctx) {
         },
         handler: (async (args) => {
             const url = args.url;
+            const timeout = args.timeout ?? 30;
             // The Python bridge can be restarted after a timeout/crash while the
             // TypeScript MCP context still has stale browserLaunched=true. Refresh
             // before navigating and force a relaunch when the bridge has no pages.
@@ -49,19 +52,36 @@ export function registerPageTools(register, ctx) {
                     ctx.reset();
                 }
             }
-            // If browser not launched, launch with given params
+            // First call launches the browser, then navigates the initial page.
             if (!ctx.state.browserLaunched) {
                 await ctx.launch(args);
+                const result = await ctx.bridgeInstance.call('page.navigate', {
+                    pageIdx: ctx.getActivePageIdx(),
+                    url,
+                    timeout,
+                });
+                await ctx.refreshPages();
+                return {
+                    content: [{ type: 'text', text: jsonResult({ created: true, launched: true, ...result }) }],
+                };
             }
-            // Navigate
-            const result = await ctx.bridgeInstance.call('page.navigate', {
-                pageIdx: ctx.getActivePageIdx(),
+            const launchOnlyArgs = ['proxy', 'headless', 'privateMode', 'fingerprint', 'traceEnabled'];
+            const conflictingArgs = launchOnlyArgs.filter((key) => args[key] !== undefined);
+            if (conflictingArgs.length > 0) {
+                throw new Error(`Browser is already launched; ${conflictingArgs.join(', ')} only apply at launch time. ` +
+                    'Call ruyi_browser_quit first, then ruyi_new_page with the new launch parameters.');
+            }
+            // Browser already exists: ruyi_new_page must create a new tab, not
+            // silently navigate the current active page.
+            const result = await ctx.bridgeInstance.call('page.new', {
                 url,
-                timeout: args.timeout || 30,
+                container: args.container ?? false,
             });
+            const newPageIdx = result.pageIdx;
+            ctx.setActivePageIdx(newPageIdx);
             await ctx.refreshPages();
             return {
-                content: [{ type: 'text', text: jsonResult({ navigated: true, ...result }) }],
+                content: [{ type: 'text', text: jsonResult({ created: true, launched: false, ...result }) }],
             };
         }),
     });
@@ -90,7 +110,7 @@ export function registerPageTools(register, ctx) {
         },
         handler: (async (args) => {
             const navType = args.type || 'url';
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             let result;
             if (navType === 'reload') {
                 result = await ctx.bridgeInstance.call('page.reload', { pageIdx });
@@ -111,7 +131,7 @@ export function registerPageTools(register, ctx) {
                 result = await ctx.bridgeInstance.call('page.navigate', {
                     pageIdx,
                     url,
-                    timeout: args.timeout || 30,
+                    timeout: args.timeout ?? 30,
                 });
             }
             await ctx.refreshPages();
@@ -206,7 +226,7 @@ export function registerPageTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('frame.list', { pageIdx });
             return {
                 content: [{ type: 'text', text: jsonResult(result) }],
@@ -231,7 +251,7 @@ export function registerPageTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('frame.select', {
                 pageIdx,
                 contextId: args.contextId,

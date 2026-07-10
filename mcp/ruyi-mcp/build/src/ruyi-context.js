@@ -3,22 +3,24 @@
  *
  * Tracks: active browser, open pages, breakpoints, trace state, network intercepts.
  */
-const INITIAL_STATE = {
-    alive: false,
-    browserLaunched: false,
-    fingerprintApplied: false,
-    traceEnabled: false,
-    pages: [],
-    activePageIdx: 0,
-    breakpoints: [],
-    captureActive: false,
-    capturePattern: '',
-    proxy: null,
-    lastLaunchParams: null,
-};
+function createInitialState() {
+    return {
+        alive: false,
+        browserLaunched: false,
+        fingerprintApplied: false,
+        traceEnabled: false,
+        pages: [],
+        activePageIdx: 0,
+        breakpoints: [],
+        captureActive: false,
+        capturePattern: '',
+        proxy: null,
+        lastLaunchParams: null,
+    };
+}
 export class RuyiContext {
     bridge;
-    state = { ...INITIAL_STATE };
+    state = createInitialState();
     constructor(bridge) {
         this.bridge = bridge;
     }
@@ -54,7 +56,7 @@ export class RuyiContext {
         catch {
             // Ignore quit errors
         }
-        this.state = { ...INITIAL_STATE };
+        this.state = createInitialState();
     }
     async status() {
         try {
@@ -114,7 +116,7 @@ export class RuyiContext {
     // Reset
     // ------------------------------------------------------------------
     reset() {
-        this.state = { ...INITIAL_STATE };
+        this.state = createInitialState();
     }
 }
 //# sourceMappingURL=ruyi-context.js.map

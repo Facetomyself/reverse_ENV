@@ -1,6 +1,7 @@
 /**
  * Utility tools: take_screenshot, clear_site_data, browser_status.
  */
+import { getPageIdx } from './types.js';
 function jsonResult(data) {
     return JSON.stringify(data, null, 2);
 }
@@ -23,11 +24,11 @@ export function registerUtilTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('page.screenshot', {
                 pageIdx,
                 filePath: args.filePath,
-                fullPage: args.fullPage || false,
+                fullPage: args.fullPage ?? false,
             });
             if (result.base64) {
                 return {
@@ -58,7 +59,7 @@ export function registerUtilTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             await ctx.bridgeInstance.call('page.clear_data', { pageIdx });
             return {
                 content: [{ type: 'text', text: jsonResult({ cleared: true }) }],

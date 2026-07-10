@@ -4,7 +4,7 @@
  */
 
 import { RuyiContext } from '../ruyi-context.js';
-import { ToolDef, ToolHandler, ToolRegistrar } from './types.js';
+import { ToolDef, ToolHandler, ToolRegistrar, getPageIdx } from './types.js';
 
 function jsonResult(data: unknown): string {
   return JSON.stringify(data, null, 2);
@@ -44,12 +44,12 @@ export function registerHumanTools(register: ToolRegistrar, ctx: RuyiContext): v
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const result = await ctx.bridgeInstance.call('human.move', {
         pageIdx,
         target: args.target,
-        algorithm: args.algorithm || 'bezier',
-        style: args.style || 'arc',
+        algorithm: args.algorithm ?? 'bezier',
+        style: args.style ?? 'arc',
       }) as Record<string, unknown>;
 
       return {
@@ -80,11 +80,11 @@ export function registerHumanTools(register: ToolRegistrar, ctx: RuyiContext): v
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const result = await ctx.bridgeInstance.call('human.click', {
         pageIdx,
         target: args.target,
-        algorithm: args.algorithm || 'windmouse',
+        algorithm: args.algorithm ?? 'windmouse',
       }) as Record<string, unknown>;
 
       return {
@@ -112,12 +112,12 @@ export function registerHumanTools(register: ToolRegistrar, ctx: RuyiContext): v
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const result = await ctx.bridgeInstance.call('human.input', {
         pageIdx,
         target: args.target,
         text: args.text,
-        delayMs: args.delayMs || 50,
+        delayMs: args.delayMs ?? 50,
       }) as Record<string, unknown>;
 
       return {

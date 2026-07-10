@@ -3,7 +3,7 @@
  */
 
 import { RuyiContext } from '../ruyi-context.js';
-import { ToolDef, ToolHandler, ToolRegistrar } from './types.js';
+import { ToolDef, ToolHandler, ToolRegistrar, getPageIdx } from './types.js';
 
 function jsonResult(data: unknown): string {
   return JSON.stringify(data, null, 2);
@@ -31,9 +31,9 @@ export function registerNetworkTools(register: ToolRegistrar, ctx: RuyiContext):
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const urlFilter = args.urlFilter as string || '';
-      const limit = (args.limit as number) || 50;
+      const limit = (args.limit as number | undefined) ?? 50;
 
       const script = `() => {
         let entries = performance.getEntriesByType('resource');
@@ -76,7 +76,7 @@ export function registerNetworkTools(register: ToolRegistrar, ctx: RuyiContext):
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const pattern = args.pattern as string || '';
 
       await ctx.bridgeInstance.call('network.capture_start', {
@@ -109,7 +109,7 @@ export function registerNetworkTools(register: ToolRegistrar, ctx: RuyiContext):
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       await ctx.bridgeInstance.call('network.capture_stop', { pageIdx });
       ctx.setCaptureActive(false);
 
@@ -137,11 +137,11 @@ export function registerNetworkTools(register: ToolRegistrar, ctx: RuyiContext):
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const result = await ctx.bridgeInstance.call('network.capture_wait', {
         pageIdx,
-        timeout: args.timeout || 10,
-        count: args.count || 5,
+        timeout: args.timeout ?? 10,
+        count: args.count ?? 5,
       }) as Record<string, unknown>;
 
       return {
@@ -169,11 +169,13 @@ export function registerNetworkTools(register: ToolRegistrar, ctx: RuyiContext):
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
 
       const script = `() => {
-        if (window.__ruyi_initiator_injected) return 'already_injected';
-        window.__ruyi_initiator_requests = [];
+        if (window.__ruyi_initiator_injected) {
+          return { injected: false, status: 'already_injected', buffered: (window.__ruyi_initiator_requests || []).length };
+        }
+        window.__ruyi_initiator_requests = window.__ruyi_initiator_requests || [];
         window.__ruyi_initiator_injected = true;
 
         const captureStack = (url) => {
@@ -184,23 +186,27 @@ export function registerNetworkTools(register: ToolRegistrar, ctx: RuyiContext):
         // Intercept fetch
         const _fetch = window.fetch;
         window.fetch = function(url, init) {
-          const urlStr = typeof url === 'string' ? url : (url.url || '');
+          const urlStr = typeof url === 'string' ? url : (url && url.url) || '';
           const stack = captureStack(urlStr);
           window.__ruyi_initiator_requests.push({
             type: 'fetch', url: urlStr,
+            method: (init && init.method) || (url && url.method) || 'GET',
             time: Date.now(), stack,
           });
           return _fetch.apply(this, arguments);
         };
+        Object.defineProperty(window.fetch, 'name', { value: 'fetch', configurable: true });
+        Object.defineProperty(window.fetch, 'length', { value: _fetch.length, configurable: true });
 
         // Intercept XMLHttpRequest
         const OrigXHR = window.XMLHttpRequest;
-        window.XMLHttpRequest = function() {
+        const RuyiXHR = function() {
           const xhr = new OrigXHR();
           const origOpen = xhr.open;
           xhr.open = function(method, url) {
             const stack = captureStack(url);
             xhr.__ruyi_initiator_url = url;
+            xhr.__ruyi_initiator_method = method;
             xhr.__ruyi_initiator_stack = stack;
             return origOpen.apply(this, arguments);
           };
@@ -209,7 +215,7 @@ export function registerNetworkTools(register: ToolRegistrar, ctx: RuyiContext):
             if (xhr.__ruyi_initiator_url) {
               window.__ruyi_initiator_requests.push({
                 type: 'xhr', url: xhr.__ruyi_initiator_url,
-                method: xhr._method || 'GET',
+                method: xhr.__ruyi_initiator_method || 'GET',
                 time: Date.now(), stack: xhr.__ruyi_initiator_stack,
               });
             }
@@ -217,9 +223,14 @@ export function registerNetworkTools(register: ToolRegistrar, ctx: RuyiContext):
           };
           return xhr;
         };
-        window.XMLHttpRequest.prototype = OrigXHR.prototype;
+        RuyiXHR.prototype = OrigXHR.prototype;
+        Object.defineProperty(RuyiXHR.prototype, 'constructor', { value: OrigXHR, configurable: true });
+        for (const key of ['UNSENT', 'OPENED', 'HEADERS_RECEIVED', 'LOADING', 'DONE']) {
+          if (key in OrigXHR) Object.defineProperty(RuyiXHR, key, { value: OrigXHR[key], configurable: true });
+        }
+        window.XMLHttpRequest = RuyiXHR;
 
-        return 'injected';
+        return { injected: true };
       }`;
 
       const result = await ctx.bridgeInstance.call('script.evaluate', { pageIdx, script }) as Record<string, unknown>;
@@ -232,7 +243,14 @@ export function registerNetworkTools(register: ToolRegistrar, ctx: RuyiContext):
       }) as Record<string, unknown>;
 
       return {
-        content: [{ type: 'text', text: jsonResult({ injected: result, initiators: collect }) }],
+        content: [{
+          type: 'text',
+          text: jsonResult({
+            injected: result,
+            initiators: collect,
+            note: 'Only requests issued after injection are captured. Call this tool again after triggering requests to read the buffer.',
+          }),
+        }],
       };
     }) as ToolHandler,
   });

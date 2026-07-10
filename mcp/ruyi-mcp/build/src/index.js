@@ -23,19 +23,23 @@ async function main() {
     console.error('[ruyi-mcp] Anti-detection: 22-dim fingerprint + human simulation');
     console.error('[ruyi-mcp] Trace: BiDi events + ruyitrace DOM API hooks');
     const bridge = new PythonBridge();
-    // Ensure bridge is stopped on exit
-    process.on('exit', () => {
-        bridge.stop().catch(() => { });
-    });
+    let shuttingDown = false;
+    async function shutdown(signal, code = 0) {
+        if (shuttingDown)
+            return;
+        shuttingDown = true;
+        console.error(`[ruyi-mcp] ${signal} received`);
+        await bridge.stop().catch((err) => {
+            const message = err instanceof Error ? err.message : String(err);
+            console.error(`[ruyi-mcp] Bridge stop failed: ${message}`);
+        });
+        process.exit(code);
+    }
     process.on('SIGINT', () => {
-        console.error('[ruyi-mcp] SIGINT received');
-        bridge.stop().catch(() => { });
-        process.exit(0);
+        void shutdown('SIGINT', 0);
     });
     process.on('SIGTERM', () => {
-        console.error('[ruyi-mcp] SIGTERM received');
-        bridge.stop().catch(() => { });
-        process.exit(0);
+        void shutdown('SIGTERM', 0);
     });
     try {
         const server = await createServer(bridge);

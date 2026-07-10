@@ -3,7 +3,7 @@
  */
 
 import { RuyiContext } from '../ruyi-context.js';
-import { ToolDef, ToolHandler, ToolRegistrar } from './types.js';
+import { ToolDef, ToolHandler, ToolRegistrar, getPageIdx } from './types.js';
 
 function jsonResult(data: unknown): string {
   return JSON.stringify(data, null, 2);
@@ -29,6 +29,7 @@ export function registerPageTools(register: ToolRegistrar, ctx: RuyiContext): vo
           proxy: { type: 'string', description: '代理地址，如 http://127.0.0.1:7890 或 socks5://host:port' },
           headless: { type: 'boolean', description: '无头模式，默认 false', default: false },
           privateMode: { type: 'boolean', description: '隐私模式，默认 false', default: false },
+          container: { type: 'boolean', description: '浏览器已启动时是否创建 container tab，默认 false', default: false },
           fingerprint: {
             type: 'object',
             description: '智能指纹配置（smart_fingerprint）',
@@ -47,6 +48,7 @@ export function registerPageTools(register: ToolRegistrar, ctx: RuyiContext): vo
     },
     handler: (async (args) => {
       const url = args.url as string;
+      const timeout = args.timeout ?? 30;
 
       // The Python bridge can be restarted after a timeout/crash while the
       // TypeScript MCP context still has stale browserLaunched=true. Refresh
@@ -58,22 +60,44 @@ export function registerPageTools(register: ToolRegistrar, ctx: RuyiContext): vo
         }
       }
 
-      // If browser not launched, launch with given params
+      // First call launches the browser, then navigates the initial page.
       if (!ctx.state.browserLaunched) {
         await ctx.launch(args as Record<string, unknown>);
+        const result = await ctx.bridgeInstance.call('page.navigate', {
+          pageIdx: ctx.getActivePageIdx(),
+          url,
+          timeout,
+        }) as Record<string, unknown>;
+
+        await ctx.refreshPages();
+
+        return {
+          content: [{ type: 'text', text: jsonResult({ created: true, launched: true, ...result }) }],
+        };
       }
 
-      // Navigate
-      const result = await ctx.bridgeInstance.call('page.navigate', {
-        pageIdx: ctx.getActivePageIdx(),
+      const launchOnlyArgs = ['proxy', 'headless', 'privateMode', 'fingerprint', 'traceEnabled'];
+      const conflictingArgs = launchOnlyArgs.filter((key) => args[key] !== undefined);
+      if (conflictingArgs.length > 0) {
+        throw new Error(
+          `Browser is already launched; ${conflictingArgs.join(', ')} only apply at launch time. ` +
+            'Call ruyi_browser_quit first, then ruyi_new_page with the new launch parameters.'
+        );
+      }
+
+      // Browser already exists: ruyi_new_page must create a new tab, not
+      // silently navigate the current active page.
+      const result = await ctx.bridgeInstance.call('page.new', {
         url,
-        timeout: args.timeout || 30,
+        container: args.container ?? false,
       }) as Record<string, unknown>;
 
+      const newPageIdx = result.pageIdx as number;
+      ctx.setActivePageIdx(newPageIdx);
       await ctx.refreshPages();
 
       return {
-        content: [{ type: 'text', text: jsonResult({ navigated: true, ...result }) }],
+        content: [{ type: 'text', text: jsonResult({ created: true, launched: false, ...result }) }],
       };
     }) as ToolHandler,
   });
@@ -103,7 +127,7 @@ export function registerPageTools(register: ToolRegistrar, ctx: RuyiContext): vo
     },
     handler: (async (args) => {
       const navType = (args.type as string) || 'url';
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
 
       let result: Record<string, unknown>;
 
@@ -123,7 +147,7 @@ export function registerPageTools(register: ToolRegistrar, ctx: RuyiContext): vo
         result = await ctx.bridgeInstance.call('page.navigate', {
           pageIdx,
           url,
-          timeout: args.timeout || 30,
+          timeout: args.timeout ?? 30,
         }) as Record<string, unknown>;
       }
 
@@ -229,7 +253,7 @@ export function registerPageTools(register: ToolRegistrar, ctx: RuyiContext): vo
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const result = await ctx.bridgeInstance.call('frame.list', { pageIdx }) as Record<string, unknown>;
 
       return {
@@ -257,7 +281,7 @@ export function registerPageTools(register: ToolRegistrar, ctx: RuyiContext): vo
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const result = await ctx.bridgeInstance.call('frame.select', {
         pageIdx,
         contextId: args.contextId,

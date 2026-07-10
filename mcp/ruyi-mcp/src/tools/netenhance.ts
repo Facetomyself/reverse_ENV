@@ -7,7 +7,7 @@
  */
 
 import { RuyiContext } from '../ruyi-context.js';
-import { ToolDef, ToolHandler, ToolRegistrar } from './types.js';
+import { ToolDef, ToolHandler, ToolRegistrar, getPageIdx } from './types.js';
 
 function jsonResult(data: unknown): string {
   return JSON.stringify(data, null, 2);
@@ -36,10 +36,9 @@ export function registerNetEnhanceTools(register: ToolRegistrar, ctx: RuyiContex
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const headers = args.headers as Record<string, string>;
 
-      // Via JS: intercept fetch and XMLHttpRequest
       const headerInjections = Object.entries(headers)
         .map(([k, v]) => [k, v])
         .filter(([k]) => k.toLowerCase() !== 'host'); // Can't override Host
@@ -54,32 +53,51 @@ export function registerNetEnhanceTools(register: ToolRegistrar, ctx: RuyiContex
 
       const script = `() => {
         const extraHeaders = ${headerObj};
-
-        // Intercept fetch
-        const _fetch = window.fetch;
-        window.fetch = function(url, init = {}) {
-          init.headers = { ...init.headers, ...extraHeaders };
-          return _fetch.call(this, url, init);
+        const applyHeaders = (headers) => {
+          const h = new Headers(headers || {});
+          Object.entries(window.__ruyi_extra_headers || extraHeaders)
+            .forEach(([k, v]) => h.set(k, String(v)));
+          return h;
         };
 
-        // Intercept XMLHttpRequest
-        const _open = XMLHttpRequest.prototype.open;
-        const _setRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
-        XMLHttpRequest.prototype.open = function(method, url, ...args) {
-          this.__ruyi_extraHeaders = { ...extraHeaders };
-          return _open.call(this, method, url, ...args);
-        };
-        XMLHttpRequest.prototype.setRequestHeader = function(name, value) {
-          if (this.__ruyi_extraHeaders) {
-            Object.entries(this.__ruyi_extraHeaders).forEach(([k, v]) => {
-              _setRequestHeader.call(this, k, v);
-            });
-            this.__ruyi_extraHeaders = null;
-          }
-          return _setRequestHeader.call(this, name, value);
-        };
+        if (!window.__ruyi_extra_headers_injected) {
+          window.__ruyi_extra_headers_injected = true;
+          window.__ruyi_extra_headers = {};
 
-        return Object.keys(extraHeaders).length;
+          // Intercept fetch.
+          const _fetch = window.fetch;
+          window.fetch = function(input, init = {}) {
+            const mergedInit = { ...init, headers: applyHeaders(init && init.headers) };
+            if (input instanceof Request) {
+              return _fetch.call(this, new Request(input, mergedInit));
+            }
+            return _fetch.call(this, input, mergedInit);
+          };
+          Object.defineProperty(window.fetch, 'name', { value: 'fetch', configurable: true });
+          Object.defineProperty(window.fetch, 'length', { value: _fetch.length, configurable: true });
+
+          // Intercept XMLHttpRequest. Inject headers in send(), so it still
+          // works when the page never calls setRequestHeader().
+          const _open = XMLHttpRequest.prototype.open;
+          const _send = XMLHttpRequest.prototype.send;
+          XMLHttpRequest.prototype.open = function(method, url, ...args) {
+            this.__ruyi_extraHeadersPending = true;
+            return _open.call(this, method, url, ...args);
+          };
+          XMLHttpRequest.prototype.send = function(...args) {
+            if (this.__ruyi_extraHeadersPending) {
+              Object.entries(window.__ruyi_extra_headers || {}).forEach(([k, v]) => {
+                try { this.setRequestHeader(k, String(v)); } catch (_) {}
+              });
+              this.__ruyi_extraHeadersPending = false;
+            }
+            return _send.apply(this, args);
+          };
+        }
+
+        Object.assign(window.__ruyi_extra_headers, extraHeaders);
+
+        return { applied: Object.keys(extraHeaders).length, headers: Object.keys(window.__ruyi_extra_headers) };
       }`;
 
       const result = await ctx.bridgeInstance.call('script.evaluate', { pageIdx, script }) as Record<string, unknown>;
@@ -112,7 +130,7 @@ export function registerNetEnhanceTools(register: ToolRegistrar, ctx: RuyiContex
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
 
       // ruyipage supports set_cache_behavior natively
       try {
@@ -125,7 +143,10 @@ export function registerNetEnhanceTools(register: ToolRegistrar, ctx: RuyiContex
               const _fetch = window.fetch;
               window.fetch = function(url, init = {}) {
                 init.cache = 'no-store';
-                init.headers = { ...init.headers, 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' };
+                const headers = new Headers(init.headers || {});
+                headers.set('Cache-Control', 'no-cache');
+                headers.set('Pragma', 'no-cache');
+                init.headers = headers;
                 return _fetch.call(this, url, init);
               };
             }

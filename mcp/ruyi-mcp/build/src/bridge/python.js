@@ -8,6 +8,15 @@ import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+function bridgeResultError(result) {
+    if (!result || typeof result !== 'object' || !('error' in result)) {
+        return null;
+    }
+    const data = result;
+    const message = String(data.error || 'Python bridge returned an error result');
+    const stack = typeof data.stack === 'string' ? `\n${data.stack}` : '';
+    return new Error(`${message}${stack}`);
+}
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
@@ -120,7 +129,13 @@ export class PythonBridge {
                                 (response.error.data ? `\n${response.error.data}` : '')));
                         }
                         else {
-                            pending.resolve(response.result);
+                            const resultError = bridgeResultError(response.result);
+                            if (resultError) {
+                                pending.reject(resultError);
+                            }
+                            else {
+                                pending.resolve(response.result);
+                            }
                         }
                     }
                 }
@@ -179,11 +194,26 @@ export class PythonBridge {
         try {
             // Try graceful shutdown
             await this.call('__shutdown__', {}, 5000);
+            await this.waitForExit(1000);
         }
         catch {
             // Force kill
         }
-        this.killProcessTree('stop requested');
+        if (this.proc) {
+            this.killProcessTree('stop requested');
+        }
+    }
+    async waitForExit(timeoutMs) {
+        const proc = this.proc;
+        if (!proc)
+            return;
+        await new Promise((resolve) => {
+            const timer = setTimeout(resolve, timeoutMs);
+            proc.once('exit', () => {
+                clearTimeout(timer);
+                resolve();
+            });
+        });
     }
     // ------------------------------------------------------------------
     // RPC

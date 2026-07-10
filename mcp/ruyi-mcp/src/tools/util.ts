@@ -3,7 +3,7 @@
  */
 
 import { RuyiContext } from '../ruyi-context.js';
-import { ToolDef, ToolHandler, ToolRegistrar } from './types.js';
+import { ToolDef, ToolHandler, ToolRegistrar, getPageIdx } from './types.js';
 
 function jsonResult(data: unknown): string {
   return JSON.stringify(data, null, 2);
@@ -29,11 +29,11 @@ export function registerUtilTools(register: ToolRegistrar, ctx: RuyiContext): vo
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const result = await ctx.bridgeInstance.call('page.screenshot', {
         pageIdx,
         filePath: args.filePath,
-        fullPage: args.fullPage || false,
+        fullPage: args.fullPage ?? false,
       }) as Record<string, unknown>;
 
       if (result.base64) {
@@ -67,7 +67,7 @@ export function registerUtilTools(register: ToolRegistrar, ctx: RuyiContext): vo
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       await ctx.bridgeInstance.call('page.clear_data', { pageIdx });
 
       return {

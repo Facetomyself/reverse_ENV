@@ -2,6 +2,7 @@
  * Network intercept tools: intercept_requests, intercept_responses, intercept_wait, intercept_stop.
  * Wraps ruyipage's page.intercept API (BiDi network.addIntercept).
  */
+import { getPageIdx } from './types.js';
 function jsonResult(data) {
     return JSON.stringify(data, null, 2);
 }
@@ -30,7 +31,7 @@ export function registerInterceptTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('intercept.start_req', {
                 pageIdx,
                 urlPatterns: args.urlPatterns,
@@ -65,7 +66,7 @@ export function registerInterceptTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('intercept.start_resp', {
                 pageIdx,
                 urlPatterns: args.urlPatterns,
@@ -96,10 +97,10 @@ export function registerInterceptTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('intercept.wait', {
                 pageIdx,
-                timeout: args.timeout || 10,
+                timeout: args.timeout ?? 10,
             });
             return {
                 content: [{ type: 'text', text: jsonResult(result) }],
@@ -122,7 +123,7 @@ export function registerInterceptTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             await ctx.bridgeInstance.call('intercept.stop', { pageIdx });
             ctx.setCaptureActive(false);
             return {

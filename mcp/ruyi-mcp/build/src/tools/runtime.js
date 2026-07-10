@@ -1,6 +1,7 @@
 /**
  * Runtime evaluation tools: evaluate_script, list_console_messages.
  */
+import { getPageIdx } from './types.js';
 function jsonResult(data) {
     return JSON.stringify(data, null, 2);
 }
@@ -31,8 +32,8 @@ export function registerRuntimeTools(register, ctx) {
         },
         handler: (async (args) => {
             const fn = args.function;
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
-            const timeout = args.timeout || 10;
+            const pageIdx = getPageIdx(args, ctx);
+            const timeout = args.timeout ?? 10;
             // Clean up arrow function wrapper if user passed raw code
             let script = fn.trim();
             // If it's already an arrow function, use as-is
@@ -72,11 +73,11 @@ export function registerRuntimeTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('console.get', {
                 pageIdx,
                 types: args.types,
-                limit: args.limit || 50,
+                limit: args.limit ?? 50,
             });
             return {
                 content: [{ type: 'text', text: jsonResult(result) }],

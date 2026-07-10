@@ -2,6 +2,7 @@
  * Human behavior simulation tools: human_move, human_click, human_input.
  * ruyi unique — no equivalent in js-reverse-mcp.
  */
+import { getPageIdx } from './types.js';
 function jsonResult(data) {
     return JSON.stringify(data, null, 2);
 }
@@ -37,12 +38,12 @@ export function registerHumanTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('human.move', {
                 pageIdx,
                 target: args.target,
-                algorithm: args.algorithm || 'bezier',
-                style: args.style || 'arc',
+                algorithm: args.algorithm ?? 'bezier',
+                style: args.style ?? 'arc',
             });
             return {
                 content: [{ type: 'text', text: jsonResult(result) }],
@@ -71,11 +72,11 @@ export function registerHumanTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('human.click', {
                 pageIdx,
                 target: args.target,
-                algorithm: args.algorithm || 'windmouse',
+                algorithm: args.algorithm ?? 'windmouse',
             });
             return {
                 content: [{ type: 'text', text: jsonResult(result) }],
@@ -101,12 +102,12 @@ export function registerHumanTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('human.input', {
                 pageIdx,
                 target: args.target,
                 text: args.text,
-                delayMs: args.delayMs || 50,
+                delayMs: args.delayMs ?? 50,
             });
             return {
                 content: [{ type: 'text', text: jsonResult(result) }],

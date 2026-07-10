@@ -12,6 +12,8 @@ export interface PageInfo {
 export interface BreakpointInfo {
     breakpointId: string;
     text: string;
+    mode?: 'text' | 'xhr';
+    pattern?: string;
     urlFilter?: string;
     condition?: string;
     type: 'soft';

@@ -3,7 +3,7 @@
  */
 
 import { RuyiContext } from '../ruyi-context.js';
-import { ToolDef, ToolHandler, ToolRegistrar } from './types.js';
+import { ToolDef, ToolHandler, ToolRegistrar, getPageIdx } from './types.js';
 
 function jsonResult(data: unknown): string {
   return JSON.stringify(data, null, 2);
@@ -40,11 +40,11 @@ export function registerSessionTools(register: ToolRegistrar, ctx: RuyiContext):
       },
     },
     handler: (async (args) => {
-      const pageIdx = (args.pageIdx as number) || ctx.getActivePageIdx();
+      const pageIdx = getPageIdx(args, ctx);
       const result = await ctx.bridgeInstance.call('session.export', {
         pageIdx,
         outputFile: args.outputFile,
-        include: args.include || ['cookies', 'localStorage', 'sessionStorage'],
+        include: args.include ?? ['cookies', 'localStorage', 'sessionStorage'],
       }) as Record<string, unknown>;
 
       return {

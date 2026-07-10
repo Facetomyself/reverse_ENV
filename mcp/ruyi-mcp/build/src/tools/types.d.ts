@@ -35,3 +35,7 @@ export interface ToolRegistrar {
         handler: ToolHandler;
     }): void;
 }
+export interface PageContext {
+    getActivePageIdx(): number;
+}
+export declare function getPageIdx(args: Record<string, unknown>, ctx: PageContext): number;

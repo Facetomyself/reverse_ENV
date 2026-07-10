@@ -1,6 +1,7 @@
 /**
  * Cookie management tools: get_cookies, set_cookies, delete_cookies.
  */
+import { getPageIdx } from './types.js';
 function jsonResult(data) {
     return JSON.stringify(data, null, 2);
 }
@@ -21,7 +22,7 @@ export function registerCookieTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('cookie.get', { pageIdx });
             return {
                 content: [{ type: 'text', text: jsonResult(result) }],
@@ -50,7 +51,7 @@ export function registerCookieTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('cookie.set', {
                 pageIdx,
                 cookies: args.cookies,
@@ -77,7 +78,7 @@ export function registerCookieTools(register, ctx) {
             },
         },
         handler: (async (args) => {
-            const pageIdx = args.pageIdx || ctx.getActivePageIdx();
+            const pageIdx = getPageIdx(args, ctx);
             const result = await ctx.bridgeInstance.call('cookie.delete', {
                 pageIdx,
                 name: args.name,

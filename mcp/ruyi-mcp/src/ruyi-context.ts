@@ -15,6 +15,8 @@ export interface PageInfo {
 export interface BreakpointInfo {
   breakpointId: string;
   text: string;
+  mode?: 'text' | 'xhr';
+  pattern?: string;
   urlFilter?: string;
   condition?: string;
   type: 'soft';
@@ -34,23 +36,25 @@ export interface SessionState {
   lastLaunchParams: Record<string, unknown> | null;
 }
 
-const INITIAL_STATE: SessionState = {
-  alive: false,
-  browserLaunched: false,
-  fingerprintApplied: false,
-  traceEnabled: false,
-  pages: [],
-  activePageIdx: 0,
-  breakpoints: [],
-  captureActive: false,
-  capturePattern: '',
-  proxy: null,
-  lastLaunchParams: null,
-};
+function createInitialState(): SessionState {
+  return {
+    alive: false,
+    browserLaunched: false,
+    fingerprintApplied: false,
+    traceEnabled: false,
+    pages: [],
+    activePageIdx: 0,
+    breakpoints: [],
+    captureActive: false,
+    capturePattern: '',
+    proxy: null,
+    lastLaunchParams: null,
+  };
+}
 
 export class RuyiContext {
   private bridge: PythonBridge;
-  state: SessionState = { ...INITIAL_STATE };
+  state: SessionState = createInitialState();
 
   constructor(bridge: PythonBridge) {
     this.bridge = bridge;
@@ -94,7 +98,7 @@ export class RuyiContext {
     } catch {
       // Ignore quit errors
     }
-    this.state = { ...INITIAL_STATE };
+    this.state = createInitialState();
   }
 
   async status(): Promise<Record<string, unknown>> {
@@ -170,6 +174,6 @@ export class RuyiContext {
   // ------------------------------------------------------------------
 
   reset(): void {
-    this.state = { ...INITIAL_STATE };
+    this.state = createInitialState();
   }
 }
