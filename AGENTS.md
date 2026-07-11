@@ -369,3 +369,11 @@ git diff --check
 - 路径变更必须同步更新 CLAUDE.md + AGENTS.md；工具版本号变更必须同步更新
 - 目录不存在或命令不可用时，标注（待建）或（待验证），不得保留过期路径
 - 规范与真实仓库冲突时，以真实仓库为准，并立即更新本文件
+
+## Novel Rank Scout 开篇采样接入
+
+- 需求与主实现仓库：`workspace/novel-rank-scout-spec/`
+- 逆向证据工作区：`workspace/novel-rank-scout-opening-reverse/`，仅保存取证、原始 fixture 和外部 Adapter 原型，不作为主仓库运行时依赖
+- 番茄与起点最终采集均走匿名公开 SSR；浏览器只用于首次取证，生产链路不得依赖 ruyipage、Cookie、登录态或动态签名
+- 正式实现只能进入 `novel_rank_scout/adapters/`、开篇采样 Provider/Parser/Store 层，不得把逆向细节写入 analyzer、report 或创作判断层
+- 章节全文只能通过受控 `body_ref` 进入本地 RawSnapshot/OpeningSampleStore；跨项目 Envelope、stdout、EvidenceDigest 和 canon 禁止内嵌全文
