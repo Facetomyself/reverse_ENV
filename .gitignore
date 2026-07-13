@@ -31,8 +31,10 @@ temp/
 *.tmp
 *.log
 
-# Workspace outputs (user projects)
-workspace/
+# Workspace project container. Only the registry README and explicit gitlinks are tracked.
+workspace/*
+!workspace/README.md
+!workspace/novel-rank-scout-spec
 
 # Storage (reusable binaries/installers)
 storage/*
@@ -112,6 +114,3 @@ tools/stealth-hook-engine/
 .secret
 *.apk
 *.keystore
-
-# 待审核的外部文章 (版权不确定)
-article/pending/

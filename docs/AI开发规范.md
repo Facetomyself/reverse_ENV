@@ -64,6 +64,8 @@ git status --short --branch   # 若已初始化 git
 - `mcp/`：MCP 服务源码（js-reverse-mcp, ruyi-mcp, jadx-mcp-server, reqable-mcp），清单见 `mcp/README.md`
 - `resource/`：资源文件（IDA Pro 便携版 + 汉化 + 许可补丁）
 - `.venv/`：Python 虚拟环境（所有 MCP 服务和 Python 包）
+- `workspace/`：独立项目工作树容器；项目 Git 边界由 `docs/workspace-projects.yaml` 管理
+- `article/`：独立 Private 知识库 submodule，索引由子仓维护
 - `.mcp.json`：项目级 MCP 服务声明
 - `~/.codex/config.toml`：Codex 用户级默认启动配置
 - `AGENTS.md` / `CLAUDE.md`：Codex / Claude 仓库总纲
@@ -96,6 +98,14 @@ git status --short --branch   # 若已初始化 git
 - 知识参考 → `reverse-engineering`（CTF 向，只读）
 
 不将某一平台的工具或流程强加给另一平台。
+
+### 1.4 多仓边界
+
+- `reverse_ENV` 只版本化环境、skill、MCP、治理规则、项目 registry 和少量真实依赖，不承载全部逆向证据。
+- Workspace 项目默认独立 Private 仓库；`submodule` 只用于正式 spec、公共工具或主仓真实依赖，普通目标逆向仓使用 `registry`。
+- 项目仓不得提交第三方二进制、抓包、Cookie、凭据、浏览器 profile、IDA 数据库或反编译全集；这些内容只允许保留在本地工作树，并用 evidence manifest 记录哈希和相对引用。
+- 对 `deferred-active` 项目只能只读审计，禁止任何会改变 HEAD、index、remote、Git 目录或运行文件的迁移动作。
+- 新建或迁移项目仓前后都要运行 `tools/workspace-governance/audit_workspace.py`，并同步 `docs/workspace-projects.yaml`。
 
 ---
 
@@ -148,12 +158,14 @@ git status --short --branch   # 若已初始化 git
 
 ## 5. 测试与验证
 
-本仓库无自动化测试套件。每次改动后最低验证：
+本仓库没有统一业务测试套件。每次改动后最低验证：
 
 1. 新增/修改的脚本能否独立运行（PowerShell 语法无误）
 2. 新增/修改的 MCP 服务能否启动（`--help` 或 `--version` 不报错）
 3. 新增的 CLI 工具能否输出预期版本号
 4. `AGENTS.md` / `CLAUDE.md` 中引用的所有路径是否真实存在
+5. Workspace registry 与本地目录、Git remote、submodule 状态是否一致
+6. 新建项目仓是否通过禁止文件、敏感文件和大文件门禁
 
 ---
 

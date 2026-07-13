@@ -1,0 +1,8 @@
+[submodule "workspace/novel-rank-scout-spec"]
+	path = workspace/novel-rank-scout-spec
+	url = https://github.com/Facetomyself/novel-rank-scout-spec.git
+	branch = master
+[submodule "article"]
+	path = article
+	url = https://github.com/Facetomyself/reverse-engineering-knowledge-base.git
+	branch = main

@@ -6,7 +6,9 @@
 
 | 文档 | 内容 |
 |------|------|
-| `article-index.md` | 跨项目可复用分析文章索引（按主题/技术标签检索） |
+| `article-index.md` | 独立知识库 `article/INDEX.md` 的兼容入口与初始化说明 |
+| `workspace-projects.yaml` | Workspace 独立仓库 registry（路径、remote、接入方式、生命周期） |
+| `workspace-repository-governance.md` | Workspace/Article 多仓边界、迁移与审计规则 |
 | `AI开发规范.md` | AI 协作开发规范（仓库架构、MCP 主线、编码、Git） |
 | `Git与提交规范.md` | Git 操作与提交信息规范 |
 | `工具与环境.md` | 完整工具版本、路径、安装说明 |

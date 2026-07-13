@@ -1,7 +1,7 @@
 ---
 name: article-archiver
 description: |
-  Use when processing D:\reverse_ENV article knowledge-base intake: converting PDFs/HTML/Markdown drafts from article\pending into clean Markdown articles, classifying them under article\*, updating docs\article-index.md, clearing processed pending inputs, and validating encoding, links, and Git diffs.
+  Use when processing the D:\reverse_ENV\article Private submodule: converting PDFs/HTML/Markdown drafts from article\pending into clean Markdown articles, classifying them under article\*, updating article\INDEX.md, clearing processed pending inputs, and validating both repositories.
 ---
 
 This is a Codex repo-scope entrypoint for the existing project skill.

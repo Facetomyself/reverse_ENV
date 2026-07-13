@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Facetomyself/reverse_ENV/tools/workspace-governance/workspace-projects.schema.json",
+  "title": "reverse_ENV workspace project registry",
+  "type": "object",
+  "required": ["version", "updated", "defaults", "projects"],
+  "properties": {
+    "version": {"const": 1},
+    "updated": {"type": "string", "format": "date"},
+    "defaults": {"type": "object"},
+    "projects": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/project"}
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "project": {
+      "type": "object",
+      "required": [
+        "name", "path", "repository_root", "ownership", "last_audited", "kind",
+        "integration", "lifecycle", "readiness", "visibility", "remote", "remote_name",
+        "default_branch", "deliverables"
+      ],
+      "properties": {
+        "name": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+        "path": {"type": "string", "pattern": "^workspace/[A-Za-z0-9._-]+$"},
+        "repository_root": {"type": "string", "pattern": "^workspace/[A-Za-z0-9._/-]+$"},
+        "ownership": {"enum": ["owned", "external"]},
+        "last_audited": {"type": "string", "format": "date"},
+        "kind": {"type": "string", "minLength": 1},
+        "integration": {"enum": ["registry", "submodule", "excluded"]},
+        "target_integration": {"enum": ["registry", "submodule"]},
+        "lifecycle": {"enum": ["planned", "active", "deferred-active", "archived", "excluded"]},
+        "readiness": {"enum": ["ready", "existing", "deferred", "curation-required", "incomplete", "excluded"]},
+        "visibility": {"enum": ["private", "public"]},
+        "remote": {"type": ["string", "null"]},
+        "remote_name": {"type": "string", "minLength": 1},
+        "default_branch": {"type": "string", "minLength": 1},
+        "deliverables": {"enum": ["reverse-three-piece", "project-native", "none"]},
+        "protected": {"type": "boolean"},
+        "notes": {"type": "string"}
+      },
+      "additionalProperties": false
+    }
+  }
+}

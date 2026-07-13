@@ -24,7 +24,7 @@ description: |
 新 App 逆向项目的模拟器链路固定如下：
 
 ```text
-docs/article-index.md 知识库检索
+article/INDEX.md 知识库检索
   -> choose template: re-base / re-xposed / re-stealth
   -> re-init.ps1 -Project <Project> -Template <Template>
   -> optional: apk-reverse/scripts/init-ldplayer-re.ps1 -DeviceSerial <ADB>

@@ -31,6 +31,7 @@
 | web-env | — | `web-env\` | Web JS Node 补环境隔离检查与 xbs 纯 JS 检查器封装 |
 | gh | — | `gh\` | GitHub CLI |
 | go | — | `go\` | Go 工具链 |
+| workspace-governance | — | `workspace-governance\audit_workspace.py` | Workspace registry、remote、submodule 与 Git 禁入文件只读审计 |
 
 ## 约束
 

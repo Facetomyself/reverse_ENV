@@ -46,8 +46,9 @@ reverse_ENV/
 │   ├── MCP服务详情.md         # MCP 架构、配置、工具清单
 │   ├── AI开发规范.md          # AI 协作开发规范
 │   ├── 脚本参考.md            # 脚本调用规范
-│   └── article-index.md      # 知识库文章索引
-├── article/           # 逆向知识库
+│   └── article-index.md      # 独立知识库索引兼容入口
+├── article/           # Private 知识库 submodule
+│   ├── INDEX.md              # canonical index
 │   ├── anti-detection/       # 反检测/指纹对抗
 │   ├── protocols/            # 协议分析（MMTLS 等）
 │   ├── signature-algorithms/ # 签名算法分析
@@ -84,6 +85,7 @@ reverse_ENV/
 ```bash
 git clone https://github.com/Facetomyself/reverse_ENV.git
 cd reverse_ENV
+git submodule update --init article workspace/novel-rank-scout-spec
 ```
 
 ### 2. 部署本地工具
@@ -172,7 +174,7 @@ native-reverse（syscall 定位 → dump/fix → IDA 分析 → Patch → 验证
 
 1. 所有产出物落地到 `workspace/<项目名>/`
 2. 分析完成后按模板交付：`report.md` + `findings.json` + `triage.md`
-3. 有跨项目复用价值的分析文章归档到 `article/` 并更新 `docs/article-index.md`
+3. 有跨项目复用价值的分析文章归档到 `article/` 并更新 `article/INDEX.md`，随后在主仓更新 gitlink
 4. 新增/修改 Skill 时同步更新 `skill/README.md` 和 `.agents/skills/`
 5. 提交前执行自检：`git diff --stat` + `git diff --check`
 6. 提交信息描述真实改动，不写 "update" / "fix"

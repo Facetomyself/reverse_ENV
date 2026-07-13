@@ -26,7 +26,7 @@ description: |
 ## 前置预检
 
 启动协议恢复前必须先做三项预检，并把可复用来源写入 `report.md` 的 evidence/source：
-- 检索 `"D:\reverse_ENV\docs\article-index.md"`，按目标厂商、协议、签名、加密、WebSocket、Webpack 等标签查已有文章。
+- 确认 `article` submodule 已初始化，并检索 `"D:\reverse_ENV\article\INDEX.md"`，按目标厂商、协议、签名、加密、WebSocket、Webpack 等标签查已有文章。
 - 需要外部资料时走 `search-layer`，不要直接 WebFetch；搜索结果只作为线索，必须落到本地证据后再下结论。
 - 命中 GitHub issue/PR/code/release 线索时走 `github-solution-research` 深挖，并记录仓库、URL、commit/issue 编号和复用点。
 

@@ -1,7 +1,7 @@
 ---
 name: article-archiver
 description: |
-  Use when processing D:\reverse_ENV article knowledge-base intake: converting PDFs/HTML/Markdown drafts from article\pending into clean Markdown articles, classifying them under article\*, updating docs\article-index.md, clearing processed pending inputs, and validating encoding, links, and Git diffs. Trigger on requests like "归档文章", "pending PDF 转 md", "吸收归档", "更新知识库索引", or "convert article PDFs to Markdown".
+  Use when processing the D:\reverse_ENV\article Private submodule: converting PDFs/HTML/Markdown drafts from article\pending into clean Markdown articles, classifying them under article\*, updating article\INDEX.md, clearing processed pending inputs, and validating both repositories. Trigger on requests like "归档文章", "pending PDF 转 md", "吸收归档", "更新知识库索引", or "convert article PDFs to Markdown".
 ---
 
 # Article Archiver
@@ -16,7 +16,7 @@ This skill handles:
 - PDF text extraction into Markdown drafts
 - Manual cleanup into final article Markdown
 - Classification into `article/<category>/`
-- `docs/article-index.md` updates
+- `article/INDEX.md` updates
 - Pending queue cleanup after successful validation
 
 Do not use this skill for workspace project deliverables (`report.md`, `findings.json`, `triage.md`). Those stay under `workspace/<project>/` unless they are later distilled into reusable article knowledge.
@@ -25,9 +25,9 @@ Do not use this skill for workspace project deliverables (`report.md`, `findings
 
 Before editing:
 
-1. Run `git status --short --branch`.
+1. Run `git status --short --branch` in `D:\reverse_ENV\` and `git -C D:\reverse_ENV\article status --short --branch`.
 2. List `D:\reverse_ENV\article\pending\`.
-3. Read `D:\reverse_ENV\docs\article-index.md`.
+3. Confirm the submodule is initialized, then read `D:\reverse_ENV\article\INDEX.md`.
 4. Read `D:\reverse_ENV\article\README.md`.
 5. Check existing article naming/category patterns with `rg --files D:\reverse_ENV\article`.
 
@@ -50,9 +50,8 @@ Prefer existing categories when accurate:
 Create a new category only when none of the above is honest. If adding a category, update:
 
 - `article/README.md`
-- `docs/article-index.md`
-- `AGENTS.md`
-- `CLAUDE.md`
+- `article/INDEX.md`
+- `article/AGENTS.md`
 
 ## PDF Conversion
 
@@ -120,7 +119,7 @@ Use lowercase ASCII slugs for filenames, for example:
 
 ## Index Update
 
-After adding an article, update `D:\reverse_ENV\docs\article-index.md`:
+After adding an article, update `D:\reverse_ENV\article\INDEX.md`:
 
 1. Update the generated date to the current date.
 2. Add the article to the correct category table.
@@ -149,17 +148,19 @@ Do not leave a new article only in the category table. If it is not reachable by
 Before finishing:
 
 ```powershell
-git diff --check
-git status --short
+git -C "D:\reverse_ENV\article" diff --check
+git -C "D:\reverse_ENV\article" status --short
+git -C "D:\reverse_ENV" diff --check
+git -C "D:\reverse_ENV" status --short
 ```
 
 Also run these checks when applicable:
 
 ```powershell
-rg -n "已付费|听全文|喜欢作者|写留言|\[PAGE|留言" "D:\reverse_ENV\article\<category>" "D:\reverse_ENV\docs\article-index.md"
+rg -n "已付费|听全文|喜欢作者|写留言|\[PAGE|留言" "D:\reverse_ENV\article\<category>" "D:\reverse_ENV\article\INDEX.md"
 ```
 
-Check Markdown links in `docs/article-index.md` resolve to existing files. A simple Python link checker is acceptable.
+Check Markdown links in `article/INDEX.md` resolve inside the submodule. A simple Python link checker is acceptable.
 
 Preserve existing file encoding and line endings:
 

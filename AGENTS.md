@@ -9,10 +9,10 @@
 | # | 检查项 | 动作 |
 |---|--------|------|
 | 1 | **WebFetch 封禁** | 需要取 URL 内容？→ 禁止 WebFetch，走 `search-layer` / `github-solution-research` / 浏览器方案 |
-| 2 | **知识库检索** | 新项目/新分析任务？→ 查 `docs/article-index.md` 按主题/技术标签检索现成文章 |
+| 2 | **知识库检索** | 新项目/新分析任务？→ 确认 `article` submodule 已初始化，再查 `article/INDEX.md` |
 | 3 | **搜索** | 新任务/新问题？→ `search-layer` → `github-solution-research`，确认无现成方案再动手 |
 | 4 | **Git 状态** | `git status --short --branch` |
-| 5 | **远端同步** | `git remote -v`；涉及 PR/远端时 `git fetch origin && git log --oneline origin/main..HEAD` |
+| 5 | **远端同步** | 读取当前 branch/upstream 后 fetch 对应 remote；禁止把 `origin/main` 硬套到子仓 |
 
 > WebFetch 硬封禁：即使 URL 看起来可访问，也不得直接调用 WebFetch。优先用全局 `search-layer` (client-native search + Exa + Tavily + Grok)、`github-solution-research` (GitHub)、浏览器 MCP (需登录/JS 渲染)。Claude / Codex 均已有本地 `search-layer` skill；若某个源不可用，需明确标注可用替代路径。**此规则优先于所有其他工具选择逻辑。**
 
@@ -31,6 +31,15 @@
 - **IDA 数据库文件**（`.id0`, `.id1`, `.id2`, `.nam`, `.til`, `.i64`）由 IDA 在二进制文件所在目录自动生成。确保二进制文件在项目子目录内，即可避免 IDA 产物污染根目录。
 - **抓包流量文件**（`*.flow`, `*.pcap`, `*.har`）统一放在 `workspace\<项目名>\` 下。
 - **`storage\` 存放可复用的大文件**（安装包、SDK、ISO 等），内容不纳入 Git。
+
+### Workspace 多仓治理
+
+- `workspace\` 是项目容器，不是一个整体 Git 仓库；项目清单以 `docs/workspace-projects.yaml` 为唯一事实源。
+- 非空项目默认建立独立 Private GitHub 仓库。正式 spec、公共工具或被其他仓库直接消费的代码可作为 submodule；目标型逆向项目只登记为 `registry`，不得让主仓克隆链自动拉取全部证据。
+- 项目仓只跟踪 README、AGENTS、三件套、原创源码、测试、脱敏 fixture 和 evidence manifest。APK/IPA/SO、IDA 数据库、HAR/PCAP/flow、Cookie、凭据、浏览器 profile、解包与反编译全集不得进入 Git。
+- 正在运行或存在归属明确脏改动的项目标记为 `deferred-active`；迁移时禁止对其执行 `checkout`、`reset`、`clean`、`stash`、`rebase`、移动目录或 `submodule absorbgitdirs`。
+- 新增、删除、重命名、建仓或变更 remote/submodule 状态时，必须同步 `docs/workspace-projects.yaml`，并运行 `tools/workspace-governance/audit_workspace.py`。
+- `article/` 是独立 Private 知识库 submodule；canonical index 位于 `article/INDEX.md`，`docs/article-index.md` 只保留主仓兼容入口。
 
 ### AI 协作子约束
 
@@ -76,12 +85,12 @@
 | 脚本使用说明 | `docs/脚本参考.md` |
 | AI 协作开发规范 | `docs/AI开发规范.md` |
 | Git 操作规范 | `docs/Git与提交规范.md` |
-| **逆向知识库索引** | `docs/article-index.md` — 按主题/技术标签检索跨项目可复用分析文章 |
-| 逆向知识库文章 | `article/` — 协议分析/反检测/签名算法/加固绕过/Native分析/Web逆向 |
+| **逆向知识库索引** | `article/INDEX.md` — 独立知识库 submodule 的 canonical index；`docs/article-index.md` 为兼容入口 |
+| 逆向知识库文章 | `article/` — Private submodule，包含协议分析/反检测/签名算法/加固绕过/Native分析/Web逆向 |
 
 ## 任务前知识库检索（硬纪律）
 
-**新项目/新分析任务启动时，必须先查 `docs/article-index.md`**，确认是否有现成的同主题/同厂商/同技术栈分析文章可复用。跳过 → 违规。
+**新项目/新分析任务启动时，必须先确认 `article/INDEX.md` 存在；缺失时运行 `git submodule update --init article`，随后按索引检索同主题/同厂商/同技术栈文章。跳过 → 违规。**
 
 | 场景 | 检索方向 |
 |------|---------|
@@ -105,7 +114,7 @@
 | `native-reverse` | Android Native .so 反检测/绕过 | syscall 定位→dump/fix→IDA→patch→验证 |
 | `ldplayer-control` | 雷电模拟器 RE 实例管理 | re-init(-Template)/re-proxy/re-list/re-backup/re-restore/re-destroy — 模板实例 + 项目实例隔离 |
 | `protocol-recovery` | Web 协议恢复 | 签名→Python 采集器 |
-| `article-archiver` | 文章知识库归档 | `article/pending` PDF/HTML/Markdown → 清洗 Markdown → 分类归档 → 更新 `docs/article-index.md` |
+| `article-archiver` | 文章知识库归档 | `article/pending` PDF/HTML/Markdown → 清洗 Markdown → 分类归档 → 更新 `article/INDEX.md` |
 | `github-solution-research` | GitHub 方案搜索 | 问题→证据→方案 |
 | `project-agents-governance` | 项目规范治理 | 生成/维护 CLAUDE.md + AGENTS.md |
 | `prompt` | 提示词优化 | 诊断+优化 |
