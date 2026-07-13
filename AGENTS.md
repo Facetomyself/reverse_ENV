@@ -2,7 +2,7 @@
 
 本文件与 `CLAUDE.md` 并存，功能对等。Codex 在 `D:\reverse_ENV` 及子目录下工作时自动加载。
 
-> MCP 项目配置位于 `.mcp.json` 与 `.codex/config.toml`：ida-multi-mcp、ruyi-mcp。`jadx-ai-mcp`、`js-reverse-mcp`、`reqable`、`first-mcp` 统一按需手动启用，默认不自动初始化。Codex 用户级 `~/.codex/config.toml` 只保留 provider、features、plugins、trust 等个人默认，不放 `D:\reverse_ENV` 专属 MCP。搜索类能力（`search-layer` / `github-solution-research`）属于全局分级策略，不放入项目 `.mcp.json`；Claude 全局环境已有 `search-layer`，Codex 侧已迁移本地 skill 副本到 `~/.codex/skills/search-layer`，并完成 `search.py --mode deep --intent resource` 三源 smoke test（Exa + Tavily + Grok）。
+> MCP 项目配置位于 `.mcp.json` 与 `.codex/config.toml`：ida-multi-mcp、ruyi-mcp。`jadx-ai-mcp`、`js-reverse-mcp`、`reqable`、`first-mcp` 统一按需手动启用，默认不自动初始化。Codex 用户级 `~/.codex/config.toml` 只保留 provider、features、plugins、trust 等个人默认，不放 `D:\reverse_ENV` 专属 MCP。搜索类能力（`search-layer` / `github-solution-research`）属于全局分级策略，不放入项目 `.mcp.json`；Claude/Codex 两份 `search-layer` 保持同步，Grok 采用 grounded Responses API（`grok-4.3` 主检索、`grok-4.5` fallback），streaming、structured outputs 与 `x_search` 均为 opt-in。
 
 ## 任务前强制检查
 
@@ -279,7 +279,7 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 2. **System32 文件无权限 / 同名旧 IDA 库** → `open.ps1` 自动复制到 `%TEMP%\opencode\`；默认不删除 `.i64` / `.id*`。
 3. **IDA 许可单实例** → GUI 和 headless 互斥，跑 headless 前关 GUI。
 4. **jadx-ai-mcp 需先开 GUI** → `tools\jadx-gui.cmd` 启动并加载 APK 后 MCP 才可用。
-5. **ruyi-mcp proxy 需在 launch 时设置** → 启动后无法切换代理。
+5. **ruyi-mcp proxy 需在 launch 时设置** → 启动后无法切换代理。Cliproxy 用户名以 `-` 分段，Sticky `sid` 只使用 ASCII 字母、数字、下划线；含 `-` 的 SID 可能被截断，造成“看似轮换、实际同 IP 复用”。
 6. **NDK 交叉编译** → `tools\android-ndk\toolchains\llvm\prebuilt\windows-x86_64\bin\aarch64-linux-android33-clang.cmd`
 7. **LDPlayer RE 模拟器** → 多实例模板：`re-base`(Root+Frida+CA)、`re-xposed`(+LSPosed+JustTrustMe)、`re-stealth`(+Hide My Applist+Shamiko v0.7.5)。项目实例从模板复制，模板 verified 备份在 `storage\ldplayer-backups\`。`ldconsole restore` 会恢复备份内部实例名，必须通过 `re-restore.ps1` 按 index 恢复并重命名。
 8. **Rust 交叉编译** → 需 `rustup target add aarch64-linux-android x86_64-linux-android`

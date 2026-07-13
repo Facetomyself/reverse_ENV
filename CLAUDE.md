@@ -176,7 +176,7 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
   → 产出三件套 → 审查门 → 知识库回填(有跨项目价值的分析)
 ```
 
-> 多源搜索约束见全局 `~/.claude/CLAUDE.md` 与 `docs/搜索编排规范.md`。`search-layer` / `content-extract` 属 Claude 全局分级能力；Codex 侧已迁移 `search-layer` 本地 skill 副本到 `~/.codex/skills/search-layer`，并完成 `search.py --mode deep --intent resource` 三源 smoke test（Exa + Tavily + Grok）。
+> 多源搜索约束见全局 `~/.claude/CLAUDE.md` 与 `docs/搜索编排规范.md`。`search-layer` / `content-extract` 属全局分级能力；Claude/Codex 两份 `search-layer` 保持同步，Grok 采用 grounded Responses API（`grok-4.3` 主检索、`grok-4.5` fallback），streaming、structured outputs 与 `x_search` 均为 opt-in。
 
 **不得跳阶段。L4 目标不声称完整还原。**
 
@@ -342,7 +342,7 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 4. **jadx-ai-mcp 需先开 GUI** → `tools\jadx-gui.cmd` 启动并加载 APK 后 MCP 才可用。
 5. **Plugin 命名冲突** → `plugins/ida_multi_mcp.py` 若报 "is not a package"，改名为 `mcp_multi_loader.py` 并注入 venv 路径。
 7. **ruyi-mcp 断点为软断点** → BiDi 协议无调试域，Firefox CDP 已于 v141 移除。`ruyi_set_breakpoint_on_text` 通过 preload script + Proxy 包装实现。可获取 `Error().stack` 调用栈字符串，但无法单步/作用域枚举。完整分析见 `docs/ruyi-mcp-devtools-调试能力分析.md`。短期可通过 Proxy 通信通道增强到 Level 2 软断点（覆盖 ~70% 需求），中期需 ruyipage 内核暴露 SpiderMonkey `Debugger` API。
-8. **ruyi-mcp proxy 需在 launch 时设置** → `ruyi_new_page` 的 `proxy` 参数在启动浏览器时生效，启动后无法切换代理。多代理用多标签 container tab（后续版本支持）。
+8. **ruyi-mcp proxy 需在 launch 时设置** → `ruyi_new_page` 的 `proxy` 参数在启动浏览器时生效，启动后无法切换代理。多代理用多标签 container tab（后续版本支持）。Cliproxy 用户名以 `-` 分段，Sticky `sid` 只使用 ASCII 字母、数字、下划线；含 `-` 的 SID 可能被截断并碰撞，批量任务必须同时验证 SID 内复用和 SID 间换 IP。
 9. **First 微信小程序调试 — WMPF 版本偏移量** → 开源版仅覆盖至 19823，新版 WMPF 需从编译版 v1.1.3（存档于 `storage\First-release\`）提取配置。方法：`pyinstxtractor-ng First.exe` → `find . -name "addresses.*.json"` → 复制到 `tools\First\frida\config\win\`。
 10. **NDK 交叉编译** → NDK r29 安装在 `tools\android-ndk\`，未纳入 Git。编译前确认 `tools\android-ndk\toolchains\llvm\prebuilt\windows-x86_64\bin\aarch64-linux-android33-clang.cmd` 存在。
 11. **LDPlayer RE 模拟器** → 多实例模板：`re-base`(Root+Frida+CA)、`re-xposed`(+LSPosed+JustTrustMe)、`re-stealth`(+Hide My Applist+Shamiko v0.7.5)。项目实例从模板复制；模板 verified 备份在 `storage\ldplayer-backups\`。`ldconsole restore` 会恢复备份内部实例名，必须通过 `re-restore.ps1` 按 index 恢复并重命名。`Shamiko v1.2.5` 需 Magisk Canary > 27005，当前 Kitsune/Magisk 27001 使用已验证的 v0.7.5。

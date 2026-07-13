@@ -190,11 +190,13 @@ HTTP 代理，海外住宅 IP，按流量计费。端口 **3010**，大陆直连
 <username>-region-<国家>-st-<州>-sid-<会话ID>-t-<分钟>
 ```
 
+**SID 硬约束:** `<会话ID>` 只使用 ASCII 字母、数字、下划线，例如 `job12165_p1`。禁止使用 `-`；用户名本身以 `-` 分段，含连字符的 SID 可能被截断并与其他任务碰撞，导致不同请求实际复用同一出口 IP。`cliproxy_test.py` 已对此 fail-fast。
+
 | 参数 | 含义 | 示例 |
 |------|------|------|
 | `region-XX` | ISO 3166-1 国家 | `region-US`, `region-SG` |
 | `st-XXX` | 州/省 (可选) | `st-California` |
-| `sid-XXX` | 会话 ID，变了就换 IP | `sid-myapp-sess1` |
+| `sid-XXX` | 会话 ID，变了就换 IP | `sid-myapp_sess1` |
 | `t-N` | Sticky 分钟 (可选, 最长 120) | `t-30` |
 
 **Rotating (每次换 IP):** 不写 `sid` 和 `t`
@@ -206,6 +208,8 @@ youruser-region-US-st-California
 ```
 youruser-region-US-st-Texas-sid-sess1-t-30
 ```
+
+批量分页、图片/CDN 下载、断点续跑和并发诊断见 [Cliproxy 批量任务实战](references/cliproxy-batch-jobs.md)。
 
 **连接:**
 
@@ -354,6 +358,10 @@ $env_path = "D:\reverse_ENV\skill\proxy-usage\.env"
 | 代理连上但目标返回 403 | IP 被目标封禁 | 换 IP |
 | 代理返回 407 | 认证失败 | 检查账密/白名单配置 |
 | Sticky 模式 IP 变了 | 会话过期 | 加大 `t-N` 值 |
+| 不同 SID 仍复用同一 IP | SID 含 `-` 被分段截断，或 SID 实际重复 | 改用 `[A-Za-z0-9_]+`；验证 SID 内同 IP、SID 间不同 IP |
+| 进程存活但产物数不增长 | 代理超时重试、供应商并发节流、同 IP 已被 WAF 标记 | 连续两个观测窗口检查落盘计数；降低并发或换 SID/IP，不要只延长 timeout |
+| 高并发先快后停 | 供应商账号/线路并发限制或 Sticky IP 被目标限速 | 从 4 并发基线逐级增加；零增长立即回退，已落盘页必须跳过 |
+| CDN 直连 TLS 失败 | 大陆到静态资源 CDN 的 TLS/线路问题 | 用已验证代理下载；断点跳过已有文件，Sticky 出口降速后换新 SID |
 | Cliproxy 返回 403 `forbidden ip=...` | 连接来源 IP 不在白名单 | 确认 Clash HK 节点开启；在 Cliproxy 后台将 HK 出口 IP 加入白名单 |
 | ruyi-mcp 代理不生效 | 浏览器已启动 | `ruyi_browser_quit` 后重新 `ruyi_new_page` |
 

@@ -20,6 +20,7 @@ CLIPROXY_PORT = 3010
 TEST_URL = "https://httpbin.org/ip"
 TIMEOUT = 30
 PYTHON_EXE = r"D:\reverse_ENV\.venv\Scripts\python.exe"
+SID_PATTERN = re.compile(r"^[A-Za-z0-9_]+$")
 
 try:
     from dotenv import load_dotenv
@@ -139,7 +140,12 @@ def build_account(user: str, region: str = "US", state: str = "",
         parts.append(f"st-{state}")
     if sticky_min > 0:
         if not sid:
-            sid = f"test-{int(time.time())}"
+            sid = f"test{int(time.time())}"
+        if not SID_PATTERN.fullmatch(sid):
+            raise ValueError(
+                "Cliproxy SID 只允许 ASCII 字母、数字、下划线；"
+                "禁止 '-'，否则用户名分段可能截断 SID 并造成会话碰撞"
+            )
         parts.append(f"sid-{sid}")
         parts.append(f"t-{sticky_min}")
     return "-".join(parts)
@@ -218,7 +224,10 @@ def main():
     parser.add_argument("--region", default="US", help="国家代码 (默认 US)")
     parser.add_argument("--state", default="", help="州/省, 如 California")
     parser.add_argument("--sticky", type=int, default=0, help="Sticky 分钟数 (0=Rotating)")
-    parser.add_argument("--sid", default="", help="自定义 Session ID (默认自动生成)")
+    parser.add_argument(
+        "--sid", default="",
+        help="自定义 Session ID，仅限 ASCII 字母/数字/下划线，禁止连字符 (默认自动生成)",
+    )
     parser.add_argument("--full", action="store_true", help="完整测试: Rotating + Sticky 对比")
     parser.add_argument("--target", default=TEST_URL, help=f"测试目标 URL (默认 {TEST_URL})")
     parser.add_argument("--timeout", type=int, default=TIMEOUT, help=f"超时秒数 (默认 {TIMEOUT})")
@@ -236,6 +245,9 @@ def main():
         print("  1. 命令行: --user xxx --pass yyy", file=sys.stderr)
         print("  2. 环境变量: CLIPROXY_USER + CLIPROXY_PASS", file=sys.stderr)
         sys.exit(1)
+
+    if args.sid and not SID_PATTERN.fullmatch(args.sid):
+        parser.error("--sid 仅允许 ASCII 字母、数字、下划线；禁止使用 '-'")
 
     # 单次测试
     if not args.full:
