@@ -322,7 +322,8 @@ def audit(args: argparse.Namespace) -> tuple[list[ProjectResult], list[Finding]]
         repository_path = root / Path(repository_rel)
         result.exists = project_path.is_dir()
         if not result.exists:
-            findings.append(Finding("error", "missing-path", name, f"directory does not exist: {rel}"))
+            if integration == "submodule" or selected or args.require_local:
+                findings.append(Finding("error", "missing-path", name, f"required local checkout does not exist: {rel}"))
             continue
 
         try:
@@ -401,8 +402,9 @@ def audit(args: argparse.Namespace) -> tuple[list[ProjectResult], list[Finding]]
         registered_dirs = {Path(item["path"]).name for item in projects if item.get("path")}
         for missing in sorted(actual_dirs - registered_dirs):
             findings.append(Finding("error", "unregistered-directory", missing, "workspace directory is absent from registry"))
-        for stale in sorted(registered_dirs - actual_dirs):
-            findings.append(Finding("error", "stale-registry", stale, "registry entry has no workspace directory"))
+        if args.require_local:
+            for stale in sorted(registered_dirs - actual_dirs):
+                findings.append(Finding("error", "stale-registry", stale, "registry entry has no local workspace directory"))
 
     return results, findings
 
@@ -436,6 +438,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--json", action="store_true", dest="json_output")
     parser.add_argument("--output", type=Path, help="write the JSON report using UTF-8")
     parser.add_argument("--strict", action="store_true", help="treat warnings as a failing exit status")
+    parser.add_argument("--require-local", action="store_true", help="require every registry path to exist in this checkout")
     parser.add_argument("--check-github", action="store_true", help="verify GitHub visibility and active default branches")
     parser.add_argument("--gh", type=Path, default=default_root / "tools" / "gh" / "bin" / "gh.exe")
     return parser.parse_args()
