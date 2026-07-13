@@ -79,6 +79,7 @@ tools/apktool/apktool.jar
 tools/gh/
 tools/frida-server
 tools/android-ndk/
+tools/android-sdk/
 tools/android-ndk.zip
 tools/*.0
 *.flow
