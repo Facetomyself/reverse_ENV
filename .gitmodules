@@ -14,3 +14,7 @@
 	path = mcp/ruyi-mcp
 	url = https://github.com/Facetomyself/ruyi-mcp.git
 	branch = main
+[submodule "mcp/wechat-miniapp-re-mcp"]
+	path = mcp/wechat-miniapp-re-mcp
+	url = https://github.com/Facetomyself/wechat-miniapp-re-mcp.git
+	branch = main
