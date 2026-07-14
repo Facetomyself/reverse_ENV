@@ -6,3 +6,11 @@
 	path = article
 	url = https://github.com/Facetomyself/reverse-engineering-knowledge-base.git
 	branch = main
+[submodule "workspace/fanqie-auto-publisher-spec"]
+	path = workspace/fanqie-auto-publisher-spec
+	url = https://github.com/Facetomyself/fanqie-auto-publisher-spec.git
+	branch = master
+[submodule "mcp/ruyi-mcp"]
+	path = mcp/ruyi-mcp
+	url = https://github.com/Facetomyself/ruyi-mcp.git
+	branch = main

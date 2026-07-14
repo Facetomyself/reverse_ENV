@@ -139,16 +139,14 @@ projects:
 - name: fanqie-auto-publisher-spec
   path: workspace/fanqie-auto-publisher-spec
   ownership: owned
-  last_audited: 2026-07-13
+  last_audited: 2026-07-14
   kind: specification
-  integration: registry
-  target_integration: submodule
-  lifecycle: deferred-active
-  readiness: deferred
+  integration: submodule
+  lifecycle: active
+  readiness: existing
   visibility: private
   remote: https://github.com/Facetomyself/fanqie-auto-publisher-spec.git
-  protected: true
-  notes: Active planning work; do not mutate worktree, index, HEAD, remote, or Git directory.
+  notes: Design baseline complete; tracked by reverse_ENV as a formal submodule.
   repository_root: workspace/fanqie-auto-publisher-spec
   remote_name: origin
   default_branch: master

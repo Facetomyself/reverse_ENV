@@ -34,7 +34,7 @@ reverse_ENV/
 │   └── reverse-engineering/  # CTF 参考知识库
 ├── .agents/skills/    # Codex 薄封装入口 → skill/
 ├── mcp/               # MCP 服务源码
-│   ├── ruyi-mcp/             # Firefox/BiDi 增强逆向（56 tools）
+│   ├── ruyi-mcp/             # Public submodule；Firefox/BiDi 增强逆向（56 tools）
 │   ├── js-reverse-mcp/       # Chrome/CDP 调试
 │   ├── jadx-mcp-server/      # jadx GUI MCP 服务端
 │   └── reqable-mcp/          # Reqable 抓包数据查询
@@ -85,8 +85,10 @@ reverse_ENV/
 ```bash
 git clone https://github.com/Facetomyself/reverse_ENV.git
 cd reverse_ENV
-git submodule update --init article workspace/novel-rank-scout-spec
+git submodule update --init --recursive
 ```
+
+其中 `mcp/ruyi-mcp` 来自公开仓库 [`Facetomyself/ruyi-mcp`](https://github.com/Facetomyself/ruyi-mcp)，主仓通过 gitlink 固定已验证版本。
 
 ### 2. 部署本地工具
 

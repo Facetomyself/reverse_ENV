@@ -9,7 +9,11 @@
     },
     "ruyi-mcp": {
       "command": "D:\\reverse_ENV\\tools\\node\\node.exe",
-      "args": ["D:\\reverse_ENV\\mcp\\ruyi-mcp\\build\\src\\index.js"]
+      "args": ["D:\\reverse_ENV\\mcp\\ruyi-mcp\\build\\src\\index.js"],
+      "env": {
+        "RUYI_MCP_PYTHON": "D:\\reverse_ENV\\.venv\\Scripts\\python.exe",
+        "RUYI_FIREFOX_PATH": "D:\\reverse_ENV\\tools\\ruyitrace\\firefox\\firefox.exe"
+      }
     }
   }
 }

@@ -220,6 +220,7 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 | 规则 | 说明 |
 |------|------|
 | 源码归属 | MCP 源码/项目必须在 `mcp/` 下，不得散落根目录或 `tools/` |
+| 独立子仓 | `mcp/ruyi-mcp/` 是 Public Git submodule；修改时先在子仓验证、commit、push，再更新主仓 gitlink。fresh clone 必须先初始化 submodule 并执行 `npm ci` |
 | 配置同步 | 新增/变更项目 MCP 路径时，同步更新 `.mcp.json` + `.codex/config.toml` + `CLAUDE.md` + `AGENTS.md` + `mcp/README.md` + `docs/MCP服务详情.md`；只有全局 MCP 才同步 `~/.codex/config.toml` |
 | pip 管理标注 | pip 安装的 MCP 在 `mcp/README.md` 中标注包名和 venv 位置 |
 | 硬编码路径 | MCP 启动脚本（如 `start-js-reverse.ps1`）中的路径必须使用 `mcp/` 前缀 |

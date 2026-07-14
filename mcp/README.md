@@ -8,6 +8,7 @@
 2. **新增 MCP 先在此登记** — 更新下方表格 + `.mcp.json`
 3. **配置变更同步规范文档** — 路径/版本/前缀变更需更新 `AGENTS.md` / `CLAUDE.md` 工具速查表、`docs/MCP服务详情.md`
 4. **pip 安装的 MCP 标注来源** — 不在本目录下管理的，标注 pip 包名和安装位置
+5. **独立 MCP 仓库使用 submodule** — 主仓只固定 gitlink，源码提交、Issue 和发布在对应公开/私有仓库维护
 
 ## MCP 服务清单
 
@@ -16,7 +17,7 @@
 | `ida-multi-mcp` | `pip: ida_multi_mcp` | `.venv\Scripts\python.exe -m ida_multi_mcp` | pip (venv) | 活跃 |
 | `jadx-ai-mcp` | `mcp\jadx-mcp-server\` | `.venv\Scripts\python.exe jadx_mcp_server.py` | 本地源 | 按需，默认不自动初始化 |
 | `js-reverse-mcp` | `mcp\js-reverse-mcp\` | `powershell tools\chromium\start-js-reverse.ps1` | npm | 按需，默认不自动初始化 |
-| `ruyi-mcp` | `mcp\ruyi-mcp\` | `tools\node\node.exe mcp\ruyi-mcp\build\src\index.js` | npm | 活跃 |
+| `ruyi-mcp` | `mcp\ruyi-mcp\` | `tools\node\node.exe mcp\ruyi-mcp\build\src\index.js` | [公开 Git submodule](https://github.com/Facetomyself/ruyi-mcp) + npm | 活跃 |
 | `reqable` | `mcp\reqable-mcp\` (源) | `.venv\Scripts\reqable-mcp.exe mcp` | pip (venv) | 按需，默认不自动初始化 |
 | `first-mcp` | — (远程) | `http://127.0.0.1:4554/sse` | 外部 SSE | 按需，默认不自动初始化 |
 
@@ -30,6 +31,24 @@
 `jadx-ai-mcp`、`js-reverse-mcp`、`reqable`、`first-mcp` 都依赖额外前置条件，默认不放进自动初始化清单；需要时再临时加入配置。
 
 `search-layer` 是全局搜索分级策略（client-native search + Exa + Tavily + Grok 并行），不属于本仓库 `mcp/` 目录，也不写入项目 `.mcp.json`。Claude 全局环境已配置；Codex 侧已迁移本地 skill 副本到 `~/.codex/skills/search-layer`，并完成 `search.py --mode fast` smoke test。
+
+## ruyi-mcp submodule
+
+首次克隆或 submodule 未初始化时：
+
+```powershell
+git -C "D:\reverse_ENV" submodule update --init "mcp/ruyi-mcp"
+& "D:\reverse_ENV\tools\node\npm.cmd" --prefix "D:\reverse_ENV\mcp\ruyi-mcp" ci
+```
+
+主仓日常使用固定在 gitlink 指向的版本；维护者需要跟进公开仓 `main` 时执行：
+
+```powershell
+git -C "D:\reverse_ENV" submodule update --remote --merge "mcp/ruyi-mcp"
+git -C "D:\reverse_ENV" diff --submodule=log -- "mcp/ruyi-mcp"
+```
+
+确认构建和 MCP 调用正常后，再在主仓提交更新后的 gitlink。项目配置显式注入 `RUYI_MCP_PYTHON` 与 `RUYI_FIREFOX_PATH`，入口仍为 `mcp/ruyi-mcp/build/src/index.js`。
 
 ## Claude → Codex 迁移约束
 

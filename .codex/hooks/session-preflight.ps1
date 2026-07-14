@@ -13,7 +13,9 @@ $checks = @(
     @{ Name = "ADB"; Path = Join-Path $repoRoot "tools\adb\adb.exe"; Required = $true },
     @{ Name = "radare2"; Path = Join-Path $repoRoot "tools\radare2\bin\radare2.exe"; Required = $true },
     @{ Name = "IDA Pro directory"; Path = Join-Path $repoRoot "resource\portable_win"; Required = $true },
-    @{ Name = "ruyi-mcp entry"; Path = Join-Path $repoRoot "mcp\ruyi-mcp\build\src\index.js"; Required = $true },
+    @{ Name = "ruyi-mcp submodule entry"; Path = Join-Path $repoRoot "mcp\ruyi-mcp\build\src\index.js"; Required = $true },
+    @{ Name = "ruyi-mcp npm dependencies"; Path = Join-Path $repoRoot "mcp\ruyi-mcp\node_modules\@modelcontextprotocol\sdk\package.json"; Required = $true },
+    @{ Name = "ruyi-mcp Firefox"; Path = Join-Path $repoRoot "tools\ruyitrace\firefox\firefox.exe"; Required = $true },
     @{ Name = "mitmdump"; Path = Join-Path $repoRoot ".venv\Scripts\mitmdump.exe"; Required = $false },
     @{ Name = "LDPlayer console"; Path = "D:\leidian\LDPlayer9\ldconsole.exe"; Required = $false },
     @{ Name = "LDPlayer adb"; Path = "D:\leidian\LDPlayer9\adb.exe"; Required = $false }
@@ -40,6 +42,7 @@ Write-Host "Search discipline: new tasks/problems must run search-layer first, t
 Write-Host "Search smoke: Codex search-layer deep mode verified with Exa + Tavily + Grok."
 Write-Host "Layering: Claude and Codex both use global + project layers, but Codex project MCP belongs in .codex/config.toml, not .mcp.json."
 Write-Host "MCP: reverse_ENV cold-start MCP is project-scoped: ida-multi-mcp + ruyi-mcp. GUI/SSE/client-bound MCPs stay on-demand."
+Write-Host "Submodule: initialize ruyi-mcp, then run tools\node\npm.cmd --prefix mcp\ruyi-mcp ci."
 Write-Host "Skills: search-layer is a Codex skill in the user skill layer, not a project .mcp.json server."
 
 if ($missingRequired.Count -gt 0) {

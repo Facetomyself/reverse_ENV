@@ -1,6 +1,6 @@
 # MCP 服务详情
 
-项目级 MCP 服务通过 `D:\reverse_ENV\.mcp.json` 声明，Codex 项目级启动配置位于 `D:\reverse_ENV\.codex\config.toml`，stdio 模式由 AI client 按配置拉起。Codex 用户级 `~/.codex/config.toml` 只保留 provider、features、plugins、trust 等个人默认；Claude 全局 MCP 位于 `~/.claude.json`。MCP 源码统一在 `mcp/` 目录下，清单见 `mcp/README.md`。
+项目级 MCP 服务通过 `D:\reverse_ENV\.mcp.json` 声明，Codex 项目级启动配置位于 `D:\reverse_ENV\.codex\config.toml`，stdio 模式由 AI client 按配置拉起。Codex 用户级 `~/.codex/config.toml` 只保留 provider、features、plugins、trust 等个人默认；Claude 全局 MCP 位于 `~/.claude.json`。MCP 源码统一在 `mcp/` 目录下，清单见 `mcp/README.md`；`mcp/ruyi-mcp` 由公开 Git submodule 提供。
 
 ## Claude → Codex 正式迁移规则
 
@@ -34,7 +34,7 @@
 | `ida-multi-mcp` | 0.1.0 | `survey_binary`, `decompile`, `analyze_function`, `idalib_*` 等 | Python venv | 无需额外操作 |
 | `jadx-ai-mcp` | 6.4.0 | `jadx_*` | Python venv | **先启动 jadx-gui 并加载 APK**；按需手动启用，默认不自动初始化 |
 | `js-reverse-mcp` | 3.0.0 | `js-reverse_*` | Node.js 便携版 | Chrome 浏览器；按需手动启用，默认不自动初始化 |
-| `ruyi-mcp` | 0.1.0 | `ruyi_*` | Node.js 便携版 + Python venv | ruyipage Firefox 151.0a1 |
+| `ruyi-mcp` | 0.1.0 | `ruyi_*` | Node.js 便携版 + Python venv | 已初始化公开 submodule + `tools\ruyitrace\firefox\firefox.exe` |
 | `reqable` | 0.3.2 | `reqable_*` | Python venv (stdio) | Reqable ≥2.20 桌面端；按需手动启用，默认不自动初始化 |
 | `first-mcp` | 1.0.9 | — | SSE (127.0.0.1:4554) | First GUI 运行中；按需手动启用，默认不自动初始化 |
 
@@ -94,10 +94,11 @@ MCP client 拉起 ida-multi-mcp (stdio)
 
 ## ruyi-mcp
 
+- **源码**: 公开 submodule [`Facetomyself/ruyi-mcp`](https://github.com/Facetomyself/ruyi-mcp)，本地路径 `mcp\ruyi-mcp`
+- **初始化**: `git submodule update --init mcp/ruyi-mcp`，随后执行 `tools\node\npm.cmd --prefix mcp\ruyi-mcp ci`
 - **入口**: `tools\node\node.exe mcp\ruyi-mcp\build\src\index.js`
-- **Python**: 默认 `.venv\Scripts\python.exe`，可用 `RUYI_MCP_PYTHON` 覆盖
-- **依赖**: ruyipage Firefox 151.0a1（默认 `C:\Users\mengma\AppData\Local\ruyipage\browsers\`；可用 `RUYI_FIREFOX_PATH` 覆盖）
-- **Trace Firefox**: 默认 `tools\ruyitrace\firefox\firefox.exe`，可用 `RUYI_TRACE_FIREFOX_PATH` 覆盖
+- **Python**: 项目配置注入 `RUYI_MCP_PYTHON=D:\reverse_ENV\.venv\Scripts\python.exe`
+- **Firefox**: 项目配置注入 `RUYI_FIREFOX_PATH=D:\reverse_ENV\tools\ruyitrace\firefox\firefox.exe`
 - **架构**: Node.js MCP Server → Python 子进程 (JSON-RPC over stdio) → ruyipage (WebDriver BiDi)
 - **浏览器**: Firefox 151.0a1 定制版（22 维指纹伪装 + 人类行为模拟 + C++ DOM Trace）
 
@@ -195,7 +196,11 @@ Claude Code ← stdio ← FastMCP ← reqable_* 工具查询
     },
     "ruyi-mcp": {
       "command": "D:\\reverse_ENV\\tools\\node\\node.exe",
-      "args": ["D:\\reverse_ENV\\mcp\\ruyi-mcp\\build\\src\\index.js"]
+      "args": ["D:\\reverse_ENV\\mcp\\ruyi-mcp\\build\\src\\index.js"],
+      "env": {
+        "RUYI_MCP_PYTHON": "D:\\reverse_ENV\\.venv\\Scripts\\python.exe",
+        "RUYI_FIREFOX_PATH": "D:\\reverse_ENV\\tools\\ruyitrace\\firefox\\firefox.exe"
+      }
     }
   }
 }
@@ -214,6 +219,10 @@ IDADIR = "D:\\reverse_ENV\\resource\\portable_win"
 [mcp_servers.ruyi-mcp]
 command = "D:\\reverse_ENV\\tools\\node\\node.exe"
 args = ["D:\\reverse_ENV\\mcp\\ruyi-mcp\\build\\src\\index.js"]
+
+[mcp_servers.ruyi-mcp.env]
+RUYI_MCP_PYTHON = "D:\\reverse_ENV\\.venv\\Scripts\\python.exe"
+RUYI_FIREFOX_PATH = "D:\\reverse_ENV\\tools\\ruyitrace\\firefox\\firefox.exe"
 
 # On-demand examples:
 # [mcp_servers.jadx-ai-mcp]

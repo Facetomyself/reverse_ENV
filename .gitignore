@@ -35,6 +35,7 @@ temp/
 workspace/*
 !workspace/README.md
 !workspace/novel-rank-scout-spec
+!workspace/fanqie-auto-publisher-spec
 
 # Storage (reusable binaries/installers)
 storage/*

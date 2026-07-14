@@ -240,7 +240,7 @@ export class PythonBridge {
 
   constructor() {
     const pythonPath = 'D:\\reverse_ENV\\.venv\\Scripts\\python.exe';
-    const scriptPath = 'D:\\reverse_ENV\\ruyi-mcp\\bridge\\ruyi_bridge.py';
+    const scriptPath = 'D:\\reverse_ENV\\mcp\\ruyi-mcp\\bridge\\ruyi_bridge.py';
 
     this.proc = spawn(pythonPath, [scriptPath], {
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -283,36 +283,16 @@ export class PythonBridge {
 
 ## 3. 项目初始化
 
-```bash
-mkdir D:\reverse_ENV\mcp\ruyi-mcp
-cd D:\reverse_ENV\mcp\ruyi-mcp
+`ruyi-mcp` 已作为公开 submodule 接入原路径。首次初始化并安装锁定依赖：
 
-# 初始化 Node.js 项目
-D:\reverse_ENV\tools\node\node.exe -e "
-  const fs = require('fs');
-  const pkg = {
-    name: 'ruyi-mcp',
-    version: '0.1.0',
-    type: 'module',
-    main: 'build/src/index.js',
-    scripts: {
-      build: 'tsc',
-      start: 'node build/src/index.js'
-    },
-    dependencies: {
-      '@modelcontextprotocol/sdk': '^1.21.1'
-    },
-    devDependencies: {
-      '@types/node': '^24.3.3',
-      'typescript': '^5.9.2'
-    }
-  };
-  fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
-"
-
-# npm install (用便携 Node)
-D:\reverse_ENV\tools\node\npm.cmd install
+```powershell
+git -C "D:\reverse_ENV" submodule update --init "mcp/ruyi-mcp"
+Set-Location "D:\reverse_ENV\mcp\ruyi-mcp"
+& "D:\reverse_ENV\tools\node\npm.cmd" ci
+& "D:\reverse_ENV\tools\node\npm.cmd" run build
 ```
+
+维护者需要跟进公开仓 `main` 时，执行 `git -C "D:\reverse_ENV" submodule update --remote --merge "mcp/ruyi-mcp"`；验证通过后在主仓提交新的 gitlink。
 
 ## 4. Phase 1：首批 8 个工具（引导验证）
 
@@ -343,7 +323,11 @@ D:\reverse_ENV\tools\node\npm.cmd install
   "mcpServers": {
     "ruyi-mcp": {
       "command": "D:\\reverse_ENV\\tools\\node\\node.exe",
-      "args": ["D:\\reverse_ENV\\ruyi-mcp\\build\\src\\index.js"]
+      "args": ["D:\\reverse_ENV\\mcp\\ruyi-mcp\\build\\src\\index.js"],
+      "env": {
+        "RUYI_MCP_PYTHON": "D:\\reverse_ENV\\.venv\\Scripts\\python.exe",
+        "RUYI_FIREFOX_PATH": "D:\\reverse_ENV\\tools\\ruyitrace\\firefox\\firefox.exe"
+      }
     }
   }
 }
