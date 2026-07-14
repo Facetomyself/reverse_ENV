@@ -108,6 +108,7 @@ tools/serena/
 tools/web-env/runtimes/
 tools/stealth-hook-engine/
 tools/Gwxapkg-runtime/
+tools/codex-session-patcher/
 
 # 代理凭证 (敏感信息)
 **/proxy-usage/.env
