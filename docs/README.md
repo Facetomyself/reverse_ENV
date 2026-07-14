@@ -20,6 +20,7 @@
 | `搜索编排规范.md` | 多源搜索（search-layer/github-solution-research）的编排规范 |
 | `ruyi-mcp-引导方案.md` | ruyi-mcp 引导与部署方案 |
 | `ruyi-mcp-devtools-调试能力分析.md` | ruyi-mcp 软断点调试能力 vs js-reverse-mcp CDP 对比 |
+| `ruyipage-upstream-update-audit-2026-07-14.md` | RuyiPage 1.2.46、151-proxy、Issue/CI 与 ruyi-mcp 兼容审计 |
 
 ## 维护规则
 
