@@ -14,6 +14,16 @@
         "RUYI_MCP_PYTHON": "D:\\reverse_ENV\\.venv\\Scripts\\python.exe",
         "RUYI_FIREFOX_PATH": "D:\\reverse_ENV\\tools\\ruyipage\\runtimes\\151-proxy\\firefox\\firefox.exe"
       }
+    },
+    "wechat-miniapp-re-mcp": {
+      "command": "D:\\reverse_ENV\\tools\\node\\node.exe",
+      "args": ["D:\\reverse_ENV\\mcp\\wechat-miniapp-re-mcp\\build\\src\\index.js"],
+      "env": {
+        "REVERSE_ENV_ROOT": "D:\\reverse_ENV",
+        "WXMP_WORKSPACE_ROOT": "D:\\reverse_ENV\\workspace",
+        "WXMP_GWXAPKG": "D:\\reverse_ENV\\tools\\Gwxapkg-runtime\\gwxapkg.exe",
+        "WXMP_LEGACY_PROFILE_DIR": "D:\\reverse_ENV\\tools\\First\\frida\\config\\win"
+      }
     }
   }
 }

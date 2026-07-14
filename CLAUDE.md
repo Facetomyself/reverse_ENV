@@ -435,7 +435,7 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | ruyiTrace DOMTrace | `tools\ruyitrace\ruyitrace.ps1`（专用 `tools\ruyitrace\firefox\`） |
 | ruyi-mcp 0.1.1 (Web 增强 MCP) | `tools\node\node.exe D:\reverse_ENV\mcp\ruyi-mcp\build\src\index.js` |
 | reqable-mcp (抓包数据查询) | `.venv\Scripts\reqable-mcp.exe mcp`（源: `mcp\reqable-mcp\`） |
-| wechat-miniapp-re-mcp | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js`（stdio 懒 attach，完整真实 CDP 门禁前按需启用） |
+| wechat-miniapp-re-mcp | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js`（stdio 冷启动，真实 WMPF v19977 CDP 门禁已通过。环境变量: `WXMP_LEGACY_PROFILE_DIR`, `WXMP_WORKSPACE_ROOT`, `WXMP_GWXAPKG`, `REVERSE_ENV_ROOT`） |
 | Gwxapkg 2.7.4 | `tools\Gwxapkg-runtime\gwxapkg.exe`（源码 submodule: `tools\Gwxapkg\`） |
 | JDK 21 | `tools\jdk\` |
 | Node.js 20.20.2 | `tools\node\node.exe` |
