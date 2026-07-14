@@ -12,7 +12,7 @@
       "args": ["D:\\reverse_ENV\\mcp\\ruyi-mcp\\build\\src\\index.js"],
       "env": {
         "RUYI_MCP_PYTHON": "D:\\reverse_ENV\\.venv\\Scripts\\python.exe",
-        "RUYI_FIREFOX_PATH": "D:\\reverse_ENV\\tools\\ruyitrace\\firefox\\firefox.exe"
+        "RUYI_FIREFOX_PATH": "D:\\reverse_ENV\\tools\\ruyipage\\runtimes\\151-proxy\\firefox\\firefox.exe"
       }
     }
   }

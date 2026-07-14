@@ -34,6 +34,8 @@
 
 ## ruyi-mcp submodule
 
+当前公开子仓版本为 `0.1.1`，Python 依赖固定为 `ruyiPage==1.2.46`。
+
 首次克隆或 submodule 未初始化时：
 
 ```powershell
@@ -49,6 +51,13 @@ git -C "D:\reverse_ENV" diff --submodule=log -- "mcp/ruyi-mcp"
 ```
 
 确认构建和 MCP 调用正常后，再在主仓提交更新后的 gitlink。项目配置显式注入 `RUYI_MCP_PYTHON` 与 `RUYI_FIREFOX_PATH`，入口仍为 `mcp/ruyi-mcp/build/src/index.js`。
+
+Firefox runtime 分层如下：
+
+- 当前 `.mcp.json` / `.codex/config.toml` 已指向 `tools\ruyipage\runtimes\151-proxy\firefox\firefox.exe`，作为项目 BiDi runtime。
+- 真实 HTTP 认证代理和 percent-encoded 凭据门禁已通过；SOCKS5 因当前供应商无对应产品只完成 offline contract，待有可用供应商时补真实出口门禁。
+- `ruyi_trace_start` / `ruyi_trace_stop` / `ruyi_trace_get_results` 是 RuyiPage BiDi JSON Trace，不是 C++ DOMTrace。
+- C++ DOMTrace 继续使用 `tools\ruyitrace\ruyitrace.ps1` 和专用 `tools\ruyitrace\firefox\`。脚本设置 `MOZ_DISABLE_LAUNCHER_PROCESS=1`，将 `<output>_<PID>.ndjson` 分片合并到 `-Output`；`-Limit` 可选。
 
 ## Claude → Codex 迁移约束
 

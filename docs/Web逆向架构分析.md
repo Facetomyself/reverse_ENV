@@ -4,7 +4,7 @@
 
 **当前架构状态：已进入“双 MCP 并行”阶段。** `ruyi-mcp` 已作为 Firefox/BiDi 全链路 MCP 接入并暴露 **56 tools**；`js-reverse-mcp` 保留 Chrome/CDP 的完整断点、单步、作用域优势。二者不是替代关系，而是按能力边界互补。
 
-**执行路由：Web JS 默认走 `ruyi-reverse` / `ruyi-mcp`。** 只有明确需要 CDP 级暂停、单步、作用域枚举，且目标无强反检测需求时，才切 `mcp-js-reverse-playbook` / `js-reverse-mcp`；强反检测、指纹取证、DOM trace、人类行为模拟一律优先 ruyi。
+**执行路由：Web JS 默认走 `ruyi-reverse` / `ruyi-mcp`。** 只有明确需要 CDP 级暂停、单步、作用域枚举，且目标无强反检测需求时，才切 `mcp-js-reverse-playbook` / `js-reverse-mcp`；强反检测、指纹取证、BiDi Trace / DOMTrace、人类行为模拟一律优先 ruyi 工具链。
 
 > 本文早期章节保留了 ruyi-mcp 43-tool 设计草案，用作演进背景和能力对照；实际执行口径以本节、`AGENTS.md`、`CLAUDE.md`、`docs/MCP服务详情.md` 为准。
 
@@ -366,19 +366,18 @@ ruyi-mcp = js-reverse-mcp 等价工具 (22)
 
 ---
 
-#### 4.2.11 指纹追踪 (Fingerprint Trace) — 4 tools（ruyi 独有）
+#### 4.2.11 BiDi 追踪 (BiDi Trace) — 3 tools（ruyi 独有）
 
 | # | 工具 | 关键参数 | 说明 |
 |---|------|---------|------|
-| R35 | `ruyi_trace_start` | `pageIdx`, `categories`([canvas,webgl,audio,...]), `outputFile` | 启动 DOM 追踪 |
-| R36 | `ruyi_trace_stop` | `pageIdx` | 停止追踪，保存 NDJSON |
-| R37 | `ruyi_trace_get_results` | `pageIdx`, `category`, `limit` | 读取追踪结果 |
-| R38 | `ruyi_trace_analyze` | `outputFile`, `category`, `format`(summary/detail) | 分析 NDJSON |
+| R35 | `ruyi_trace_start` | `pageIdx`, `outputFile` | 启动 RuyiPage/WebDriver BiDi JSON Trace |
+| R36 | `ruyi_trace_stop` | `pageIdx` | 停止记录，可将 JSON dump 保存到 `outputFile` |
+| R37 | `ruyi_trace_get_results` | `pageIdx`, `limit` | 读取内存中最近的结构化 BiDi 事件 |
 
 **实现要点：**
-- `trace_start/stop` 控制 ruyitrace 的 `MOZ_DOM_TRACE=1` 内核 Hook
-- 如果追踪需要独立 Firefox 进程，则 `trace_start` 自动管理子进程
-- `trace_get_results` 实时读取 NDJSON 流，支持增量获取
+- `trace_start/stop` 通过 RuyiPage `Settings.trace_enabled` 和 `page.trace` 控制 BiDi 事件记录
+- launch 时启用可保留初始导航证据；运行时首次 start 会建立新 trace 段
+- C++ DOMTrace 是独立 T3 能力，由 `tools\ruyitrace\ruyitrace.ps1` 启动专用 Firefox，不伪装成 MCP `ruyi_trace_*`
 
 ---
 
@@ -457,11 +456,11 @@ Observe ──────→ Capture ──────→ Rebuild ────
 - `ruyi_set_proxy` + `ruyi_set_fingerprint` 在打开页面前配置反检测环境
 - `ruyi_dom_select` + `ruyi_dom_get_info` 直接检查页面 DOM 状态
 - `ruyi_intercept_requests` 在请求发出前就拦截
-- `ruyi_trace_start` 一边观察一边追踪 DOM API 调用
+- `ruyi_trace_start` 一边观察一边记录结构化 BiDi 命令与事件
 
 **Rebuild 阶段 ruyi-mcp 的额外能力：**
 - `ruyi_export_session` 导出完整浏览器状态供 Node 补环境参考
-- `ruyi_trace_analyze` 分析哪些 DOM API 被实际调用，指导补环境
+- BiDi Trace 用于定位导航、网络与运行时时序；需要 DOM API 维度时再用 `ruyitrace.ps1` + `trace_analyzer.py`
 
 ---
 
@@ -497,7 +496,7 @@ Observe ──────→ Capture ──────→ Rebuild ────
 **关键决策：**
 - **MCP 层用 Node.js**（复用 js-reverse-mcp 的 MCP server 框架 + 工具注册模式）
 - **BiDi 客户端**通过 WebSocket 连接 Firefox（ruyipage 的 Python 包里已有实现，需要移植或用 Node.js 重写 BiDi 客户端）
-- **Trace Controller** 管理 ruyitrace Firefox 子进程，通过 NDJSON pipe 通信
+- **实际落地分层**：MCP Bridge 只管理 RuyiPage BiDi JSON Trace；C++ DOMTrace Firefox 由独立 CLI 管理，不经 MCP 子进程伪装
 
 ### 6.2 分阶段实现
 
@@ -555,16 +554,17 @@ await script.addPreloadScript({
 
 **需要：** 把 ruyipage Python 包的关键逻辑移植到 Node.js BiDi 客户端，或通过子进程调用 Python CLI 桥接。
 
-#### Phase 3：指纹追踪集成（ruyitrace 封装）
+#### Phase 3：Trace 分层落地
 
-**目标：** ruyi-mcp 具备 DOM API 指纹追踪能力。
+**目标：** ruyi-mcp 提供 BiDi JSON Trace，DOM API 内核取证保持独立 CLI。
 
 | 步骤 | 内容 | 基础 |
 |------|------|------|
-| 3.1 | Trace 启动/停止 (R35-R36) | ruyitrace `MOZ_DOM_TRACE=1` |
-| 3.2 | Trace 结果读取 (R37-R38) | NDJSON 解析 |
+| 3.1 | BiDi Trace 启动/停止 (R35-R36) | RuyiPage `Settings` + `page.trace` |
+| 3.2 | BiDi Trace 结果读取 (R37) | 内存 JSON entries / dump |
+| 3.3 | C++ DOMTrace | `tools\ruyitrace\ruyitrace.ps1` + PID 分片 NDJSON |
 
-**关键问题：** ruyitrace 要求独立 Firefox 进程。如果必须与 ruyipage 分离，则 `ruyi_trace_start` 启动独立 trace 浏览器，`ruyi_export_session` 负责 Cookie 同步。
+**关键边界：** `ruyi_trace_start` 不启动独立 DOMTrace 浏览器。需要 T3 内核取证时，先用 `ruyi_export_session` 保存状态，再交给 DOMTrace 专用 Firefox。
 
 #### Phase 4：人类模拟 + Session 导出
 
@@ -604,7 +604,8 @@ skill/ruyi-reverse/
 ```
 Web JS 路由决策树：
   ├── 默认 → ruyi-reverse (ruyi-mcp)
-  │     ├── 需要指纹取证 / DOM trace → ruyi_trace_* 子流程
+  │     ├── 需要 BiDi 时序取证 → ruyi_trace_* 子流程
+  │     ├── 需要 C++ DOM API 取证 → 导出 session 后运行 tools\ruyitrace\ruyitrace.ps1
   │     ├── 需要过验证码 / 人类行为 → ruyi_fingerprint_* + ruyi_human_*
   │     └── 需要导出会话 → ruyi_export_session
   ├── 明确需要 CDP 暂停 / 单步 / 作用域枚举，且无强反检测 → mcp-js-reverse-playbook (js-reverse-mcp)

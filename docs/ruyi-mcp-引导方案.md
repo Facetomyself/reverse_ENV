@@ -5,9 +5,9 @@
 | 项目 | 值 | 状态 |
 |------|-----|:---:|
 | Node.js | v20.20.2（`tools\node\node.exe`） | ✅ >= 20.19.0 |
-| ruyipage | 1.2.43（`.venv\Lib\site-packages\ruyipage\`） | ✅ |
-| ruyipage Firefox | `C:\Users\mengma\AppData\Local\ruyipage\browsers\firefox-151.0a1-151-ruyi-win64\firefox\firefox.exe` | ✅ |
-| ruyitrace Firefox | `tools\ruyitrace\firefox\firefox.exe` | ✅ |
+| ruyipage | 1.2.46（`.venv\Lib\site-packages\ruyipage\`） | ✅ |
+| ruyipage BiDi Firefox | `tools\ruyipage\runtimes\151-proxy\firefox\firefox.exe` | ✅ |
+| ruyitrace DOMTrace Firefox | `tools\ruyitrace\firefox\firefox.exe` | ✅（独立 CLI） |
 | Python venv | `.venv\Scripts\python.exe` | ✅ |
 | MCP SDK | `@modelcontextprotocol/sdk` 1.21.1（js-reverse-mcp 已安装） | ✅ |
 
@@ -20,7 +20,7 @@
 │  src/                                            │
 │  ├── index.ts          # MCP entry point         │
 │  ├── server.ts         # MCP server setup         │
-│  ├── tools/            # 43 tool definitions     │
+│  ├── tools/            # 56 tool definitions     │
 │  │   ├── page.ts       # R01-R04                 │
 │  │   ├── script.ts     # R05-R07                 │
 │  │   ├── search.ts     # R08                     │
@@ -31,9 +31,9 @@
 │  │   ├── antidetect.ts # R24-R27  (ruyi 独有)    │
 │  │   ├── human.ts      # R28-R30  (ruyi 独有)    │
 │  │   ├── dom.ts        # R31-R34  (ruyi 独有)    │
-│  │   ├── trace.ts      # R35-R38  (ruyi 独有)    │
+│  │   ├── trace.ts      # 3 BiDi Trace tools       │
 │  │   ├── netenhance.ts # R39-R42  (ruyi 独有)    │
-│  │   └── session.ts    # R43      (ruyi 独有)    │
+│  │   └── session.ts    # Session 导出              │
 │  │                                                │
 │  ├── bridge/           # Python 桥接层            │
 │  │   ├── python.ts     # 子进程管理 + JSON-RPC   │
@@ -58,7 +58,7 @@
 ```
 
 **为什么用 Python 子进程桥接而不是纯 Node.js：**
-- ruyipage 1.2.43 是成熟的 Python 包，直接重写成本高、风险大
+- ruyipage 1.2.46 是成熟的 Python 包，直接重写成本高、风险大
 - BiDi WebSocket 协议虽然标准，但 ruyipage 的 `smart_fingerprint`、`handle_cloudflare_challenge` 等高级功能是 Python 实现的业务逻辑
 - 子进程桥接让我们**立即获得全部 ruyipage 能力**，同时保留未来逐步移植到 Node.js 的路径
 - 桥接协议用 JSON-RPC（stdin/stdout），零网络开销，简单可靠
@@ -294,9 +294,9 @@ Set-Location "D:\reverse_ENV\mcp\ruyi-mcp"
 
 维护者需要跟进公开仓 `main` 时，执行 `git -C "D:\reverse_ENV" submodule update --remote --merge "mcp/ruyi-mcp"`；验证通过后在主仓提交新的 gitlink。
 
-## 4. Phase 1：首批 8 个工具（引导验证）
+## 4. Phase 1：首批 8 个工具（历史引导验证）
 
-从 43 个工具中选出**最能验证架构可行性**的首批：
+早期 43 tools 设计基线中先选出下列 8 个工具验证架构；当前实现已扩展为 56 tools：
 
 | # | 工具 | 理由 | 复杂度 |
 |---|------|------|:---:|
@@ -326,7 +326,7 @@ Set-Location "D:\reverse_ENV\mcp\ruyi-mcp"
       "args": ["D:\\reverse_ENV\\mcp\\ruyi-mcp\\build\\src\\index.js"],
       "env": {
         "RUYI_MCP_PYTHON": "D:\\reverse_ENV\\.venv\\Scripts\\python.exe",
-        "RUYI_FIREFOX_PATH": "D:\\reverse_ENV\\tools\\ruyitrace\\firefox\\firefox.exe"
+        "RUYI_FIREFOX_PATH": "D:\\reverse_ENV\\tools\\ruyipage\\runtimes\\151-proxy\\firefox\\firefox.exe"
       }
     }
   }
@@ -335,20 +335,22 @@ Set-Location "D:\reverse_ENV\mcp\ruyi-mcp"
 
 （与现有 `js-reverse-mcp` 并列，`reverse-coordinator` 按反检测强度路由）
 
-## 6. 从引导到完整的路线图
+## 6. 从引导到完整的历史路线图
+
+> 当前已落地 56 tools。MCP 内的 3 个 `ruyi_trace_*` 工具是 BiDi JSON Trace；C++ DOMTrace 始终由独立 `tools\ruyitrace\ruyitrace.ps1` 承担。
 
 ```
 Phase 1 (当前)         Phase 2                Phase 3              Phase 4
-引导验证 8 tools ──→ 补齐 22 核心对齐 ──→ ruyi 独有全量 ──→ ruyitrace 集成
+引导验证 8 tools ──→ 补齐 22 核心对齐 ──→ ruyi 独有全量 ──→ BiDi Trace
                                                                     │
 ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
 │ new_page         │ │ list_scripts     │ │ human_move       │ │ trace_start      │
 │ navigate_page    │ │ get_script_source│ │ human_click      │ │ trace_stop       │
 │ evaluate_script  │ │ save_script_     │ │ human_input      │ │ trace_get_results│
-│ set_proxy        │ │ source           │ │ dom_input        │ │ trace_analyze    │
+│ set_proxy        │ │ source           │ │ dom_input        │ │                  │
 │ set_fingerprint  │ │ search_in_sources│ │ dom_click        │ │                  │
 │ dom_select       │ │ list_network_    │ │ intercept_req    │ │ (此时 ruyi-mcp   │
-│ dom_get_info     │ │ requests         │ │ intercept_res    │ │  43 tools 齐全)  │
+│ dom_get_info     │ │ requests         │ │ intercept_res    │ │  56 tools 齐全)  │
 │ export_session   │ │ get_request_     │ │ set_extra_headers│ │                  │
 │                  │ │ initiator        │ │ set_cache_       │ │                  │
 │ (验证架构可行性)  │ │ get_websocket_   │ │ behavior         │ │                  │
@@ -361,7 +363,7 @@ Phase 1 (当前)         Phase 2                Phase 3              Phase 4
 │                  │ │ list_breakpoints │ │ list_console     │ │                  │
 │                  │ │ remove_breakpoint│ │                  │ │                  │
 │                  │ │                  │ │                  │ │                  │
-│                  │ │ (22 核心对齐      │ │ (+13 独有)       │ │ (+4 trace)       │
+│                  │ │ (22 核心对齐      │ │ (+扩展能力)     │ │ (+3 trace)       │
 │                  │ │  js-reverse-mcp)  │ │                  │ │                  │
 └──────────────────┘ └──────────────────┘ └──────────────────┘ └──────────────────┘
         2-3天               1-2周               1-2周               1周
@@ -410,11 +412,12 @@ Phase 1 (当前)         Phase 2                Phase 3              Phase 4
 | `ruyi_intercept_responses` | `network.intercept_resp` | `page.intercept.start_responses()` |
 | `ruyi_set_extra_headers` | `network.extra_headers` | `page.network.set_extra_headers()` |
 | `ruyi_set_cache_behavior` | `network.cache` | `page.set_cache_behavior(mode)` |
-| **ruyitrace 集成 ↓** | | |
+| **BiDi Trace ↓** | | |
 | `ruyi_trace_start` | `trace.start` | `opts.enable_trace(True)` |
 | `ruyi_trace_stop` | `trace.stop` | `page.trace.dump_json()` |
 | `ruyi_trace_get_results` | `trace.results` | `page.trace.latest(n)` |
-| `ruyi_trace_analyze` | `trace.analyze` | `trace_analyzer.py` (subprocess) |
+
+C++ DOMTrace 不在 MCP Bridge 内启停；需要 DOM API 内核取证时，单独调用 `tools\ruyitrace\ruyitrace.ps1` 和 `trace_analyzer.py`。
 
 ## 8. 关键 API 能力对照（已验证存在）
 

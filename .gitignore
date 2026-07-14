@@ -52,6 +52,7 @@ storage/*
 # Large binaries (track separately)
 resource/portable_win/
 tools/ruyitrace/firefox/
+tools/ruyipage/runtimes/
 resource/kg_patch/
 resource/misc/
 resource/ida93.torrent

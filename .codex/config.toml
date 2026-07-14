@@ -17,7 +17,7 @@ args = ["D:\\reverse_ENV\\mcp\\ruyi-mcp\\build\\src\\index.js"]
 
 [mcp_servers.ruyi-mcp.env]
 RUYI_MCP_PYTHON = "D:\\reverse_ENV\\.venv\\Scripts\\python.exe"
-RUYI_FIREFOX_PATH = "D:\\reverse_ENV\\tools\\ruyitrace\\firefox\\firefox.exe"
+RUYI_FIREFOX_PATH = "D:\\reverse_ENV\\tools\\ruyipage\\runtimes\\151-proxy\\firefox\\firefox.exe"
 
 # On-demand MCPs stay disabled by default. Enable only when the prerequisite GUI,
 # browser debugging port, SSE endpoint, or desktop client is already running.

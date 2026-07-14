@@ -197,7 +197,7 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 | `idalib_*` | ida-multi-mcp | headless 会话管理 (open/close/list/status) |
 | `jadx_*` | jadx-ai-mcp | APK 类/方法搜索/反编译/xref |
 | `js-reverse_*` | js-reverse-mcp | Chrome/CDP 调试优先 — 断点/脚本/网络/运行时 (~22 tools) |
-| `ruyi_*` | ruyi-mcp | Firefox/BiDi 全链路增强 — 反检测/指纹/人类模拟/trace/JS逆向 (56 tools) |
+| `ruyi_*` | ruyi-mcp | Firefox/BiDi 全链路增强 — 反检测/指纹/人类模拟/BiDi JSON Trace/JS逆向 (56 tools) |
 | `reqable_*` | reqable-mcp | Reqable 抓包数据查询 — HTTP/WebSocket 流量搜索/分析/代码生成 (~17 tools) |
 | `serena_*` | serena (user) | 代码符号搜索/引用追踪/语义搜索/项目导航 |
 | `deepcon_*` | deepcon (user) | 包文档语义搜索/API 参考/代码示例检索 |
@@ -259,16 +259,23 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 | MCP 服务 | 浏览器/协议 | 核心优势 | 适用场景 |
 |---------|-------------|---------|---------|
 | `js-reverse-mcp` | Chrome / CDP | **完整 JS 断点调试**（断点/单步/调用栈/作用域） | 需要 CDP 级运行时调试、无强反检测要求 |
-| `ruyi-mcp` | Firefox / BiDi | **反检测 + 指纹分析 + trace + 人类模拟** | 需要过验证码、指纹取证、DOM trace、人类行为模拟（**所有站点通用**） |
+| `ruyi-mcp` | Firefox / BiDi | **反检测 + 指纹分析 + BiDi JSON Trace + 人类模拟** | 需要过验证码、指纹取证、运行时 Trace、人类行为模拟（**所有站点通用**） |
 
 **选择规则：**
 1. 需要 CDP 完整断点调试（`get_paused_info`、`step`、调用栈查看）→ 用 `js-reverse_*`
-2. 需要指纹分析、DOM trace、过 Cloudflare/hCaptcha、反检测浏览 → 用 `ruyi_*`（**无论目标站点反检测强度如何**）
+2. 需要指纹分析、BiDi Trace、过 Cloudflare/hCaptcha、反检测浏览 → 用 `ruyi_*`（**无论目标站点反检测强度如何**）
 3. ruyi-mcp 功能更全面（56 tools vs 22），指纹分析和 trace 能力在弱检测站点同样实用
 4. 两者可互补：`ruyi_export_session` → 导出 Cookie/Storage → js-reverse-mcp 继续 CDP 调试
 5. **禁止** 在强反检测站点上单独用 js-reverse-mcp（Chrome 无指纹伪装，会被封）— 需先经 ruyi-mcp 过检
 
 **工具前缀隔离：** 同一浏览器 session 内不混用两个前缀的工具。跨工具协作通过 `ruyi_export_session` 显式桥接。
+
+### ruyi Trace 与 Firefox runtime 分层
+
+- `ruyi-mcp 0.1.1` 固定 `ruyiPage==1.2.46`；`ruyi_trace_*` 产出 RuyiPage/WebDriver BiDi JSON Trace，不是 C++ DOMTrace。
+- 项目 BiDi runtime 放在 `tools\ruyipage\runtimes\`，浏览器二进制不进 Git；当前 `151-proxy` 固定在 `tools\ruyipage\runtimes\151-proxy\firefox\firefox.exe`。
+- `tools\ruyitrace\firefox\` 只用于 C++ DOMTrace。`ruyitrace.ps1` 设置 `MOZ_DISABLE_LAUNCHER_PROCESS=1`，将 `<output>_<PID>.ndjson` 分片合并到 `-Output`；`-Limit` 可选。
+- `.mcp.json` / `.codex/config.toml` 已切到 `151-proxy`；真实 HTTP 与 percent-encoded 凭据已通过。SOCKS5 只完成 offline contract，待有可用供应商时补真实出口门禁。
 
 ### js-reverse-mcp 双模式约束
 
@@ -298,7 +305,7 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 
 ### 反检测能力边界（指纹伪装）
 
-**注意区分：`ruyitrace` 是监控取证工具（被动记录页面查了什么指纹），不做伪装。** 反检测伪装由 `ruyipage smart_fingerprint` 和 `CloakBrowser` 承担。
+**注意区分：MCP 的 `ruyi_trace_*` 是 BiDi JSON Trace；`tools\ruyitrace\ruyitrace.ps1` 才是 C++ DOMTrace CLI。二者都属于监控取证，不做伪装。** 反检测伪装由 `ruyipage smart_fingerprint` 和 `CloakBrowser` 承担。
 
 | 伪装维度 | ruyipage (Firefox/fpfile) | CloakBrowser (Chromium/C++) | 说明 |
 |---------|--------------------------|---------------------------|------|
@@ -358,6 +365,7 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 11. **LDPlayer RE 模拟器** → 多实例模板：`re-base`(Root+Frida+CA)、`re-xposed`(+LSPosed+JustTrustMe)、`re-stealth`(+Hide My Applist+Shamiko v0.7.5)。项目实例从模板复制；模板 verified 备份在 `storage\ldplayer-backups\`。`ldconsole restore` 会恢复备份内部实例名，必须通过 `re-restore.ps1` 按 index 恢复并重命名。`Shamiko v1.2.5` 需 Magisk Canary > 27005，当前 Kitsune/Magisk 27001 使用已验证的 v0.7.5。
 12. **Rust 交叉编译** → 需 `rustup target add aarch64-linux-android x86_64-linux-android`。`.cargo/config.toml` 的 NDK 路径已通过 `tools\android-ndk\` 重定位。
 13. **Shadow Hook Frida JS agent 能力边界** → 仅做公开 API 过滤（dl_iterate_phdr / maps read），无法从 linker 内部 solist 摘除 soinfo。如需完整摘除，编译 `tools\hide-soinfo\`。
+14. **ruyi Trace 不是 DOMTrace** → `151-proxy` 无 `RUYI_DOMTRACE.txt` 且不产出 DOMTrace；C++ DOMTrace 必须继续使用 `tools\ruyitrace\firefox\`。
 
 ## Git约束
 
@@ -417,9 +425,9 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | LDPlayer 9 底层管控 | `tools\ldplayer\ldplayer.ps1` （RE 管理用 `skill\ldplayer-control\scripts\`） |
 | Chromium 152 (备用浏览器) | `tools\chromium\chrome-win\chrome.exe`（系统 Chrome 不可用时 fallback） |
 | js-reverse-mcp 包装脚本 | `powershell -File tools\chromium\start-js-reverse.ps1` |
-| ruyipage 指纹浏览器 | `.venv\Scripts\python.exe -m ruyipage` |
-| ruyiTrace DOM 追踪 | `tools\ruyitrace\ruyitrace.ps1` |
-| ruyi-mcp (Web 增强 MCP) | `tools\node\node.exe D:\reverse_ENV\mcp\ruyi-mcp\build\src\index.js` |
+| ruyipage 1.2.46 / 151-proxy | `.venv\Scripts\python.exe -m ruyipage`；项目 runtime: `tools\ruyipage\runtimes\151-proxy\firefox\firefox.exe` |
+| ruyiTrace DOMTrace | `tools\ruyitrace\ruyitrace.ps1`（专用 `tools\ruyitrace\firefox\`） |
+| ruyi-mcp 0.1.1 (Web 增强 MCP) | `tools\node\node.exe D:\reverse_ENV\mcp\ruyi-mcp\build\src\index.js` |
 | reqable-mcp (抓包数据查询) | `.venv\Scripts\reqable-mcp.exe mcp`（源: `mcp\reqable-mcp\`） |
 | JDK 21 | `tools\jdk\` |
 | Node.js 20.20.2 | `tools\node\node.exe` |

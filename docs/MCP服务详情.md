@@ -34,7 +34,7 @@
 | `ida-multi-mcp` | 0.1.0 | `survey_binary`, `decompile`, `analyze_function`, `idalib_*` 等 | Python venv | 无需额外操作 |
 | `jadx-ai-mcp` | 6.4.0 | `jadx_*` | Python venv | **先启动 jadx-gui 并加载 APK**；按需手动启用，默认不自动初始化 |
 | `js-reverse-mcp` | 3.0.0 | `js-reverse_*` | Node.js 便携版 | Chrome 浏览器；按需手动启用，默认不自动初始化 |
-| `ruyi-mcp` | 0.1.0 | `ruyi_*` | Node.js 便携版 + Python venv | 已初始化公开 submodule + `tools\ruyitrace\firefox\firefox.exe` |
+| `ruyi-mcp` | 0.1.1 | `ruyi_*` | Node.js 便携版 + Python venv (`ruyiPage==1.2.46`) | 已初始化公开 submodule；Firefox runtime 按 BiDi / DOMTrace 分层 |
 | `reqable` | 0.3.2 | `reqable_*` | Python venv (stdio) | Reqable ≥2.20 桌面端；按需手动启用，默认不自动初始化 |
 | `first-mcp` | 1.0.9 | — | SSE (127.0.0.1:4554) | First GUI 运行中；按需手动启用，默认不自动初始化 |
 
@@ -98,9 +98,11 @@ MCP client 拉起 ida-multi-mcp (stdio)
 - **初始化**: `git submodule update --init mcp/ruyi-mcp`，随后执行 `tools\node\npm.cmd --prefix mcp\ruyi-mcp ci`
 - **入口**: `tools\node\node.exe mcp\ruyi-mcp\build\src\index.js`
 - **Python**: 项目配置注入 `RUYI_MCP_PYTHON=D:\reverse_ENV\.venv\Scripts\python.exe`
-- **Firefox**: 项目配置注入 `RUYI_FIREFOX_PATH=D:\reverse_ENV\tools\ruyitrace\firefox\firefox.exe`
+- **版本**: `ruyi-mcp 0.1.1`，依赖固定为 `ruyiPage==1.2.46`
+- **当前 Firefox 配置**: `RUYI_FIREFOX_PATH=D:\reverse_ENV\tools\ruyipage\runtimes\151-proxy\firefox\firefox.exe`
+- **Firefox BuildID**: `20260702113527`；`tools\ruyitrace\firefox\` 仅保留给 DOMTrace CLI
 - **架构**: Node.js MCP Server → Python 子进程 (JSON-RPC over stdio) → ruyipage (WebDriver BiDi)
-- **浏览器**: Firefox 151.0a1 定制版（22 维指纹伪装 + 人类行为模拟 + C++ DOM Trace）
+- **浏览器**: Firefox 151.0a1 定制版（22 维指纹伪装 + 人类行为模拟）；C++ DOMTrace 由独立 runtime 和 CLI 提供
 
 ### 核心工具（56 tools，分 15 类）
 
@@ -118,18 +120,26 @@ MCP client 拉起 ida-multi-mcp (stdio)
 | WebSocket | `ruyi_websocket_inject`, `ruyi_get_websocket_messages` | 注入 WebSocket Proxy 并采集 send/receive 消息 |
 | 软断点调试 | `ruyi_set_breakpoint_on_text`, `ruyi_break_on_xhr`, `ruyi_list_breakpoints`, `ruyi_remove_breakpoint`, `ruyi_list_preload_scripts` | preload script + Proxy 软断点 |
 | 人类模拟 | `ruyi_human_move`, `ruyi_human_click`, `ruyi_human_input` | bezier/windmouse 算法鼠标操作 |
-| 指纹追踪 | `ruyi_trace_start`, `ruyi_trace_stop`, `ruyi_trace_get_results` | BiDi 事件 + ruyitrace DOM Hook |
+| 指纹追踪 | `ruyi_trace_start`, `ruyi_trace_stop`, `ruyi_trace_get_results` | RuyiPage/WebDriver BiDi JSON Trace；不是 C++ DOMTrace |
 | 网络增强 | `ruyi_set_extra_headers`, `ruyi_set_cache_behavior` | 全局 Headers + 缓存策略 |
 | 辅助 | `ruyi_take_screenshot`, `ruyi_clear_site_data`, `ruyi_browser_status`, `ruyi_browser_quit` | 截图/清除状态/状态查询 |
 
-> **所有站点通用。** 反检测/指纹分析/DOM trace/人类模拟等增强能力，无论目标站点反检测强度如何都可用。CF/hCaptcha 等强反检测站点必须使用。
+> **所有站点通用。** 反检测、指纹分析、BiDi Trace、人类模拟等增强能力无论目标站点反检测强度如何都可用。CF/hCaptcha 等强反检测站点必须使用。
+
+### BiDi Trace 与 DOMTrace 边界
+
+- `ruyi_trace_*` 操作 RuyiPage Tracer，结果和 `outputFile` 都是 JSON；launch/runtime Trace entries 增长、stop 后冻结已通过回归。
+- `tools\ruyitrace\ruyitrace.ps1` 操作 Firefox C++ DOM Hook，输出 NDJSON，和 MCP 的 `ruyi_trace_*` 不是同一条链路。
+- DOMTrace CLI 设置 `MOZ_DOM_TRACE=1`、`MOZ_DISABLE_LAUNCHER_PROCESS=1`。Firefox 生成的 `<output>_<PID>.ndjson` 会在退出后合并到 `-Output`；`-Limit` 为可选的每进程行数上限。
+- `151-proxy` 没有 `RUYI_DOMTRACE.txt` marker，实际验证也不生成 DOMTrace。`tools\ruyitrace\firefox\` 因此继续作为 DOMTrace 专用 runtime。
+- 真实 HTTP 认证代理与 percent-encoded 凭据已通过；SOCKS5 因当前供应商无产品只完成 offline contract，待有可用供应商时补真实出口门禁。
 
 ### 与 js-reverse-mcp 的关系
 
 ```
 Web RE 目标 → 按需求能力选择
   ├── 需要 CDP 完整断点调试 → js-reverse-mcp (Chrome/CDP, ~22 tools)
-  ├── 需要反检测/指纹/trace/人类模拟 → ruyi-mcp (Firefox/BiDi, 56 tools)
+  ├── 需要反检测/指纹/BiDi Trace/人类模拟 → ruyi-mcp (Firefox/BiDi, 56 tools)
   └── 两者都需要 → ruyi 过检 + export_session → js-reverse 调试
 ```
 
@@ -199,7 +209,7 @@ Claude Code ← stdio ← FastMCP ← reqable_* 工具查询
       "args": ["D:\\reverse_ENV\\mcp\\ruyi-mcp\\build\\src\\index.js"],
       "env": {
         "RUYI_MCP_PYTHON": "D:\\reverse_ENV\\.venv\\Scripts\\python.exe",
-        "RUYI_FIREFOX_PATH": "D:\\reverse_ENV\\tools\\ruyitrace\\firefox\\firefox.exe"
+        "RUYI_FIREFOX_PATH": "D:\\reverse_ENV\\tools\\ruyipage\\runtimes\\151-proxy\\firefox\\firefox.exe"
       }
     }
   }
@@ -222,7 +232,7 @@ args = ["D:\\reverse_ENV\\mcp\\ruyi-mcp\\build\\src\\index.js"]
 
 [mcp_servers.ruyi-mcp.env]
 RUYI_MCP_PYTHON = "D:\\reverse_ENV\\.venv\\Scripts\\python.exe"
-RUYI_FIREFOX_PATH = "D:\\reverse_ENV\\tools\\ruyitrace\\firefox\\firefox.exe"
+RUYI_FIREFOX_PATH = "D:\\reverse_ENV\\tools\\ruyipage\\runtimes\\151-proxy\\firefox\\firefox.exe"
 
 # On-demand examples:
 # [mcp_servers.jadx-ai-mcp]

@@ -84,7 +84,7 @@ Phase 3 — 分析:
 | 坑点 | 现象 | 解决 |
 |------|------|------|
 | trace_start 后无数据 | get_results 空 | 确保 trace_start 在操作之前 |
-| NDJSON 空 | 没记录到调用 | 检查 RUYI_DOMTRACE.txt; 关其他 Firefox |
+| NDJSON 空 | 没记录到调用 | 检查 `RUYI_DOMTRACE.txt` 和 `MOZ_DISABLE_LAUNCHER_PROCESS=1`；关闭其他 Firefox |
 | 指纹脚本动态加载 | scripts 列表找不到 | 先触发操作再 search |
 | 代码混淆 | stack 不清 | T3 C++ stack 更清晰 |
 

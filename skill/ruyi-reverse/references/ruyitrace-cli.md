@@ -9,6 +9,7 @@
 |------|-----|
 | 内核路径 | `"D:\reverse_ENV\tools\ruyitrace\firefox\firefox.exe"` |
 | 追踪机制 | `MOZ_DOM_TRACE=1` → C++ 层 Hook |
+| Windows 启动约束 | `MOZ_DISABLE_LAUNCHER_PROCESS=1`，避免 launcher 提前退出 |
 | 输出格式 | NDJSON（每行一条 API 调用） |
 | 标记文件 | `"D:\reverse_ENV\tools\ruyitrace\firefox\RUYI_DOMTRACE.txt"` (**禁止删除**) |
 
@@ -29,6 +30,8 @@
 powershell -File "D:\reverse_ENV\tools\ruyitrace\ruyitrace.ps1" `
   -Url "https://target.com" `
   -Output "D:\reverse_ENV\workspace\<project>\trace.ndjson" `
+  [-Limit 200000] `
+  [-KeepProcessFiles] `
   [-Headless]
 ```
 
@@ -38,6 +41,10 @@ powershell -File "D:\reverse_ENV\tools\ruyitrace\ruyitrace.ps1" `
 | `-Output` | NDJSON 输出路径，必须传 quoted absolute 路径 | `"D:\reverse_ENV\workspace\<project>\trace.ndjson"` |
 | `-Profile` | Firefox profile 目录 | 临时 |
 | `-Headless` | 无头模式 | 否 |
+| `-Limit` | 每个 Firefox 进程的最大 NDJSON 行数；`0` 使用内核默认 | `0` |
+| `-KeepProcessFiles` | 保留内核生成的 `<output>_<PID>.ndjson` 分片 | 否 |
+
+Firefox 内核会在 `MOZ_DOM_TRACE_FILE` 的文件名后追加 PID。包装脚本会等待本轮分片稳定，再合并到 `-Output` 指定的单一 NDJSON；默认删除已合并的 PID 分片。
 
 ## NDJSON 格式
 

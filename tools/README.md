@@ -29,6 +29,8 @@
 | stealth-hook-engine | — | `stealth-hook-engine\` | 隐身 Hook 引擎 |
 | protocol-recovery | — | `protocol-recovery\` | 协议恢复 CLI 工具 |
 | web-env | — | `web-env\` | Web JS Node 补环境隔离检查与 xbs 纯 JS 检查器封装 |
+| ruyipage Firefox runtime | 151-proxy | `ruyipage\runtimes\151-proxy\firefox\firefox.exe` | ruyiPage 1.2.46 / ruyi-mcp 0.1.1 项目 BiDi runtime |
+| ruyiTrace | v1.2 | `ruyitrace\ruyitrace.ps1` | C++ DOMTrace NDJSON 采集；使用独立 Firefox trace kernel |
 | gh | — | `gh\` | GitHub CLI |
 | go | — | `go\` | Go 工具链 |
 | workspace-governance | — | `workspace-governance\audit_workspace.py` | Workspace registry、remote、submodule 与 Git 禁入文件只读审计 |
@@ -37,6 +39,7 @@
 
 - **所有工具不依赖系统 PATH**，通过绝对路径调用
 - **补环境 runtime 隔离**：`tools\node\node.exe` 是项目主 Node，不得为 addon / isolated-vm 切换或覆盖；Node 25/26、xbs addon、TLS 指纹客户端只能放 `tools\web-env\runtimes\` 或 `workspace\<项目名>\.runtime\`
+- **ruyipage runtime 隔离**：浏览器二进制放入 `tools\ruyipage\runtimes\` 并排除 Git；`tools\ruyitrace\firefox\` 继续作为 DOMTrace 专用 runtime，不得被普通 BiDi runtime 覆盖
 - 大文件不纳入 Git（`jadx/`, `jdk/`, `node/`, `android-ndk/`, `mingw64/`, `chromium/` 等已在 `.gitignore`）
 - 新增工具后同步更新本 README + `CLAUDE.md` 工具速查表 + `docs/工具与环境.md`
 - MCP 服务源码不放在此目录，统一在 `mcp/` 下
