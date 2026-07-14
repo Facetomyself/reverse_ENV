@@ -1,5 +1,5 @@
 version: 1
-updated: 2026-07-13
+updated: 2026-07-14
 defaults:
   owner: Facetomyself
   visibility: private
@@ -151,6 +151,21 @@ projects:
   remote_name: origin
   default_branch: master
   deliverables: project-native
+- name: fanqie-auto-publisher-reverse
+  path: workspace/fanqie-auto-publisher-reverse
+  ownership: owned
+  last_audited: 2026-07-14
+  kind: web-reverse
+  integration: registry
+  lifecycle: planned
+  readiness: curation-required
+  visibility: private
+  remote: https://github.com/Facetomyself/fanqie-auto-publisher-reverse.git
+  notes: Local reverse evidence workspace for Fanqie publisher protocol recovery; raw traffic and private captures remain local until curated.
+  repository_root: workspace/fanqie-auto-publisher-reverse
+  remote_name: origin
+  default_branch: main
+  deliverables: reverse-three-piece
 - name: First
   path: workspace/First
   ownership: owned
@@ -379,6 +394,21 @@ projects:
   remote_name: origin
   default_branch: master
   deliverables: none
+- name: tripadvisor-chengdu-reviews
+  path: workspace/tripadvisor-chengdu-reviews
+  ownership: owned
+  last_audited: 2026-07-14
+  kind: mini-program-web-reverse
+  integration: registry
+  lifecycle: planned
+  readiness: curation-required
+  visibility: private
+  remote: https://github.com/Facetomyself/tripadvisor-chengdu-reviews.git
+  notes: Planning and capture scaffold for Chengdu attractions top-10 and experiences review collection; raw traffic stays local ignored evidence.
+  repository_root: workspace/tripadvisor-chengdu-reviews
+  remote_name: origin
+  default_branch: main
+  deliverables: reverse-three-piece
 - name: wechat-mp-history-hook
   path: workspace/wechat-mp-history-hook
   ownership: owned
