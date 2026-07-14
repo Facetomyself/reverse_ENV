@@ -18,6 +18,7 @@
    - `jadx-ai-mcp`：依赖 `jadx-gui` + 已加载 APK
    - `js-reverse-mcp`：依赖浏览器调试端口或包装脚本拉起浏览器
    - `reqable`：依赖 Reqable 桌面端与本地上报链
+   - `wechat-miniapp-re-mcp`：stdio 可冷握手；真实 WMPF CDP 全链路门禁完成前按需启用
    - `first-mcp`：依赖 First GUI 与本地 SSE
 4. **规范名统一**
    - Web CDP 调试 MCP 的项目规范名为 `js-reverse-mcp`
@@ -36,6 +37,7 @@
 | `js-reverse-mcp` | 3.0.0 | `js-reverse_*` | Node.js 便携版 | Chrome 浏览器；按需手动启用，默认不自动初始化 |
 | `ruyi-mcp` | 0.1.1 | `ruyi_*` | Node.js 便携版 + Python venv (`ruyiPage==1.2.46`) | 已初始化公开 submodule；Firefox runtime 按 BiDi / DOMTrace 分层 |
 | `reqable` | 0.3.2 | `reqable_*` | Python venv (stdio) | Reqable ≥2.20 桌面端；按需手动启用，默认不自动初始化 |
+| `wechat-miniapp-re-mcp` | 0.1.0 | `wxmp_*` | Node.js 便携版 + lazy Frida + Gwxapkg adapter | stdio 可冷握手；真实 WMPF CDP 全链路门禁完成前按需启用 |
 | `first-mcp` | 1.0.9 | — | SSE (127.0.0.1:4554) | First GUI 运行中；按需手动启用，默认不自动初始化 |
 
 ## ida-multi-mcp
@@ -184,7 +186,20 @@ Claude Code ← stdio ← FastMCP ← reqable_* 工具查询
 - 数据库: `%APPDATA%\reqable-mcp\requests.db`（SQLite）
 - 保留期: 默认 7 天（`REQABLE_RETENTION_DAYS`）
 
-## first-mcp
+## wechat-miniapp-re-mcp
+
+- **源码**: Private submodule `mcp\wechat-miniapp-re-mcp\`
+- **入口**: `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js`
+- **模式**: stdio；目标发现、Frida、WMPF bridge 和 Gwxapkg 均按调用懒加载
+- **工具前缀**: `wxmp_*`（46 tools）
+- **Workspace**: `workspace\<项目名>\wechat-miniapp\`
+- **静态后端**: `tools\Gwxapkg-runtime\gwxapkg.exe`
+- **Profile**: clean-room schema；本地兼容测试可通过 `WXMP_LEGACY_PROFILE_DIR` 读取外部 profile，不复制进子仓
+- **状态**: cold-start / contract / mock bridge / WMPF 19977 Frida attach 已验证；真实 runtime WebSocket、context、evaluate、breakpoint、Network、trace/replay 仍待完成
+
+按需 Codex 配置见 `.codex/config.toml` 注释段。完整 Plan 与完成度见子仓 `docs/plan.md`、`docs/progress.md`。
+
+## first-mcp（Legacy）
 
 - **模式**: 远程 SSE (`http://127.0.0.1:4554/sse`)
 - **前提**: 先启动 `First GUI`，并确认本地 SSE 服务已监听 `127.0.0.1:4554`
@@ -193,6 +208,8 @@ Claude Code ← stdio ← FastMCP ← reqable_* 工具查询
 ### 原因
 
 `first-mcp` 依赖外部 GUI 与本地 SSE 服务。若在工作区启动时直接初始化，而 `First GUI` 尚未运行，MCP client 会在握手阶段报连接失败。为了避免启动噪音，默认从自动初始化配置中移除；只有在需要微信小程序调试时再临时加入配置。
+
+新工作流优先使用 `wechat-miniapp-re-mcp`；First 仅保留人工 GUI fallback 和外部 profile 兼容测试参考。
 
 ## .mcp.json 配置
 

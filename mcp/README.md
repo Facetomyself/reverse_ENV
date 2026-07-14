@@ -19,6 +19,7 @@
 | `js-reverse-mcp` | `mcp\js-reverse-mcp\` | `powershell tools\chromium\start-js-reverse.ps1` | npm | 按需，默认不自动初始化 |
 | `ruyi-mcp` | `mcp\ruyi-mcp\` | `tools\node\node.exe mcp\ruyi-mcp\build\src\index.js` | [公开 Git submodule](https://github.com/Facetomyself/ruyi-mcp) + npm | 活跃 |
 | `reqable` | `mcp\reqable-mcp\` (源) | `.venv\Scripts\reqable-mcp.exe mcp` | pip (venv) | 按需，默认不自动初始化 |
+| `wechat-miniapp-re-mcp` | `mcp\wechat-miniapp-re-mcp\` | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js` | [Private Git submodule](https://github.com/Facetomyself/wechat-miniapp-re-mcp) + npm | 建设中；按需启用 |
 | `first-mcp` | — (远程) | `http://127.0.0.1:4554/sse` | 外部 SSE | 按需，默认不自动初始化 |
 
 ## 配置入口
@@ -28,7 +29,7 @@
 - Codex 项目 MCP: `.codex/config.toml` (reverse_ENV 项目启动配置)
 - Codex 用户配置: `~/.codex/config.toml` (provider、features、plugins、trust 等个人默认；不放 `D:\reverse_ENV` 专属 MCP)
 
-`jadx-ai-mcp`、`js-reverse-mcp`、`reqable`、`first-mcp` 都依赖额外前置条件，默认不放进自动初始化清单；需要时再临时加入配置。
+`jadx-ai-mcp`、`js-reverse-mcp`、`reqable`、`wechat-miniapp-re-mcp`、`first-mcp` 默认不放进自动初始化清单；需要时再临时启用。`wechat-miniapp-re-mcp` 本身可冷握手，但完整真实 CDP 门禁尚未完成，暂按需管理。
 
 `search-layer` 是全局搜索分级策略（client-native search + Exa + Tavily + Grok 并行），不属于本仓库 `mcp/` 目录，也不写入项目 `.mcp.json`。Claude 全局环境已配置；Codex 侧已迁移本地 skill 副本到 `~/.codex/skills/search-layer`，并完成 `search.py --mode fast` smoke test。
 
@@ -58,6 +59,21 @@ Firefox runtime 分层如下：
 - 真实 HTTP 认证代理和 percent-encoded 凭据门禁已通过；SOCKS5 因当前供应商无对应产品只完成 offline contract，待有可用供应商时补真实出口门禁。
 - `ruyi_trace_start` / `ruyi_trace_stop` / `ruyi_trace_get_results` 是 RuyiPage BiDi JSON Trace，不是 C++ DOMTrace。
 - C++ DOMTrace 继续使用 `tools\ruyitrace\ruyitrace.ps1` 和专用 `tools\ruyitrace\firefox\`。脚本设置 `MOZ_DISABLE_LAUNCHER_PROCESS=1`，将 `<output>_<PID>.ndjson` 分片合并到 `-Output`；`-Limit` 可选。
+
+## wechat-miniapp-re-mcp submodule
+
+Private 子仓提供 `wxmp_*` 工具，用于 PC 微信 WMPF 与 wxapkg 专用逆向。服务采用 stdio + lazy attach，启动时不要求微信、Frida target、GUI 或 SSE。
+
+首次初始化与验证：
+
+```powershell
+git -C "D:\reverse_ENV" submodule update --init "mcp/wechat-miniapp-re-mcp" "tools/Gwxapkg"
+& "D:\reverse_ENV\tools\node\npm.cmd" --prefix "D:\reverse_ENV\mcp\wechat-miniapp-re-mcp" ci
+powershell -NoProfile -ExecutionPolicy Bypass -File "D:\reverse_ENV\tools\build-gwxapkg.ps1"
+& "D:\reverse_ENV\tools\node\npm.cmd" --prefix "D:\reverse_ENV\mcp\wechat-miniapp-re-mcp" run check
+```
+
+当前仍按需启用。进度、真实门禁和剩余项见 `mcp\wechat-miniapp-re-mcp\docs\progress.md`。
 
 ## Claude → Codex 迁移约束
 

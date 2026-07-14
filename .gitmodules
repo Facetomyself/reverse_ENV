@@ -18,3 +18,7 @@
 	path = mcp/wechat-miniapp-re-mcp
 	url = https://github.com/Facetomyself/wechat-miniapp-re-mcp.git
 	branch = main
+[submodule "tools/Gwxapkg"]
+	path = tools/Gwxapkg
+	url = https://github.com/25smoking/Gwxapkg.git
+	branch = main

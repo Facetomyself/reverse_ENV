@@ -24,6 +24,7 @@
 | Vineflower | 1.11.2 | `vineflower\vineflower-1.11.2.jar` | Java 反编译备选引擎 |
 | dex2jar | 2.4.31 | `dex2jar\dex-tools-2.4.31\` | DEX→JAR 转换 |
 | First | — | `First\` | 微信小程序调试 |
+| Gwxapkg | 2.7.4 | `Gwxapkg\` + `Gwxapkg-runtime\gwxapkg.exe` | 微信小程序/小游戏 wxapkg 解密、解包、还原与 repack；源码为 Public submodule，运行产物忽略 |
 | Frida gadget | 17.15.3 | `frida-gadget-*.so` | Frida gadget 注入库 |
 | frida-server | — | `frida-server` | Android frida-server 单文件二进制 |
 | hide-soinfo | — | `hide-soinfo\` | 内存隐藏 C 库 |
@@ -44,3 +45,4 @@
 - 大文件不纳入 Git（`jadx/`, `jdk/`, `node/`, `android-ndk/`, `mingw64/`, `chromium/` 等已在 `.gitignore`）
 - 新增工具后同步更新本 README + `CLAUDE.md` 工具速查表 + `docs/工具与环境.md`
 - MCP 服务源码不放在此目录，统一在 `mcp/` 下
+- Gwxapkg 构建：`powershell -NoProfile -ExecutionPolicy Bypass -File "D:\reverse_ENV\tools\build-gwxapkg.ps1"`

@@ -435,13 +435,14 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | ruyiTrace DOMTrace | `tools\ruyitrace\ruyitrace.ps1`（专用 `tools\ruyitrace\firefox\`） |
 | ruyi-mcp 0.1.1 (Web 增强 MCP) | `tools\node\node.exe D:\reverse_ENV\mcp\ruyi-mcp\build\src\index.js` |
 | reqable-mcp (抓包数据查询) | `.venv\Scripts\reqable-mcp.exe mcp`（源: `mcp\reqable-mcp\`） |
-| wechat-miniapp-re-mcp | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js`（建设中，stdio 懒 attach） |
+| wechat-miniapp-re-mcp | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js`（stdio 懒 attach，完整真实 CDP 门禁前按需启用） |
+| Gwxapkg 2.7.4 | `tools\Gwxapkg-runtime\gwxapkg.exe`（源码 submodule: `tools\Gwxapkg\`） |
 | JDK 21 | `tools\jdk\` |
 | Node.js 20.20.2 | `tools\node\node.exe` |
 | Web Env | `tools\web-env\` |
 | MinGW-w64 14.2.0 (C/GCC) | `tools\mingw64\mingw64\bin\gcc.exe` |
 | QuickJS (qjs_min) | `tools\quickjs\qjs_min.exe` |
-| First (微信小程序调试) | `powershell -File tools\First\first-gui.ps1` |
+| First (微信小程序调试 Legacy) | `powershell -File tools\First\first-gui.ps1` |
 | First CLI (无头模式) | `powershell -File tools\First\first-cli.ps1` |
 | Shadow Hook 隐身工具 | `python skill\native-reverse\scripts\tools\shadow-hook\stealth-runner.py` |
 | hide-soinfo C 库 | `tools\hide-soinfo\` (需 NDK 编译) |

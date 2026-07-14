@@ -2,7 +2,7 @@
 
 本文件与 `CLAUDE.md` 并存，功能对等。Codex 在 `D:\reverse_ENV` 及子目录下工作时自动加载。
 
-> MCP 项目配置位于 `.mcp.json` 与 `.codex/config.toml`：ida-multi-mcp、ruyi-mcp。`jadx-ai-mcp`、`js-reverse-mcp`、`reqable`、`first-mcp` 统一按需手动启用，默认不自动初始化。Codex 用户级 `~/.codex/config.toml` 只保留 provider、features、plugins、trust 等个人默认，不放 `D:\reverse_ENV` 专属 MCP。搜索类能力（`search-layer` / `github-solution-research`）属于全局分级策略，不放入项目 `.mcp.json`；Claude/Codex 两份 `search-layer` 保持同步，Grok 采用 grounded Responses API（`grok-4.3` 主检索、`grok-4.5` fallback），streaming、structured outputs 与 `x_search` 均为 opt-in。
+> MCP 项目配置位于 `.mcp.json` 与 `.codex/config.toml`：ida-multi-mcp、ruyi-mcp。`jadx-ai-mcp`、`js-reverse-mcp`、`reqable`、`wechat-miniapp-re-mcp`、`first-mcp` 统一按需手动启用，默认不自动初始化。Codex 用户级 `~/.codex/config.toml` 只保留 provider、features、plugins、trust 等个人默认，不放 `D:\reverse_ENV` 专属 MCP。搜索类能力（`search-layer` / `github-solution-research`）属于全局分级策略，不放入项目 `.mcp.json`；Claude/Codex 两份 `search-layer` 保持同步，Grok 采用 grounded Responses API（`grok-4.3` 主检索、`grok-4.5` fallback），streaming、structured outputs 与 `x_search` 均为 opt-in。
 
 ## 任务前强制检查
 
@@ -358,8 +358,9 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | ruyiTrace DOMTrace | `tools\ruyitrace\ruyitrace.ps1`（专用 `tools\ruyitrace\firefox\`） |
 | ruyi-mcp 0.1.1 | `tools\node\node.exe mcp\ruyi-mcp\build\src\index.js` |
 | reqable-mcp | `.venv\Scripts\reqable-mcp.exe mcp` |
-| wechat-miniapp-re-mcp | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js`（建设中，stdio 懒 attach） |
-| First (微信小程序) | `powershell -File tools\First\first-gui.ps1` |
+| wechat-miniapp-re-mcp | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js`（stdio 懒 attach，完整真实 CDP 门禁前按需启用） |
+| Gwxapkg 2.7.4 | `tools\Gwxapkg-runtime\gwxapkg.exe`（源码 submodule: `tools\Gwxapkg\`） |
+| First (微信小程序 Legacy) | `powershell -File tools\First\first-gui.ps1` |
 | Google Chrome | `C:\Program Files\Google\Chrome\Application\chrome.exe` |
 
 ## Claude → Codex MCP 迁移规则
