@@ -15,6 +15,7 @@
 | zipalign | — | `adb\zipalign.exe` | APK 对齐 |
 | apksigner | 0.9 | `adb\apksigner.bat` | APK 签名 |
 | Android NDK | r29 | `android-ndk\` | C/C++ 交叉编译 |
+| panda-dex-dumper | 1.0.0 | `panda-dex-dumper\panda-dex-dumper` | P4nda0s AArch64 whole-DEX 内存 dump；LDPlayer x86_64 + `libnb.so` 路线已验证，详见 [README](panda-dex-dumper/README.md) |
 | MinGW-w64 | 14.2.0 | `mingw64\mingw64\bin\gcc.exe` | Windows C 编译 |
 | QuickJS | — | `quickjs\qjs_min.exe` | 轻量 JS 引擎 |
 | LDPlayer | 9 | `ldplayer\ldplayer.ps1` | 雷电模拟器管控 |
@@ -24,7 +25,7 @@
 | dex2jar | 2.4.31 | `dex2jar\dex-tools-2.4.31\` | DEX→JAR 转换 |
 | First | — | `First\` | 微信小程序调试 |
 | Frida gadget | 17.15.3 | `frida-gadget-*.so` | Frida gadget 注入库 |
-| frida-server | — | `frida-server\` | Android frida-server 二进制 |
+| frida-server | — | `frida-server` | Android frida-server 单文件二进制 |
 | hide-soinfo | — | `hide-soinfo\` | 内存隐藏 C 库 |
 | stealth-hook-engine | — | `stealth-hook-engine\` | 隐身 Hook 引擎 |
 | protocol-recovery | — | `protocol-recovery\` | 协议恢复 CLI 工具 |

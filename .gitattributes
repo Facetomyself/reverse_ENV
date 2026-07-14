@@ -1,0 +1,33 @@
+* text=auto eol=lf
+
+*.apk binary
+*.apks binary
+*.xapk binary
+*.dex binary
+*.odex binary
+*.vdex binary
+*.so binary
+*.dll binary
+*.exe binary
+*.bin binary
+*.i64 binary
+*.id0 binary
+*.id1 binary
+*.id2 binary
+*.nam binary
+*.til binary
+*.pcap binary
+*.flow binary
+*.har binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.pdf binary
+*.docx binary
+*.xlsx binary
+*.pptx binary
+*.zip binary
+*.7z binary
+*.rar binary

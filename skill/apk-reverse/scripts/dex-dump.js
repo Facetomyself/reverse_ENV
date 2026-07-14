@@ -1,148 +1,119 @@
 /**
- * dex-dump.js — Frida DEX memory dumper for packed Android apps
+ * dex-dump.js — observation-only DEX/ClassLoader trace for packed Android apps.
  *
- * 三种 dump 策略，按加固强度依次尝试:
- *   1. Hook ClassLoader/DexFile — 拦截 DEX 加载回调
- *   2. 扫描 /proc/self/maps — 找到 DEX 内存映射后 dump
- *   3. Hook in-memory DEX — 在 defineClass 时保存字节码
+ * Capabilities:
+ *   - trace DexFile.loadDex and file-backed class-loader construction;
+ *   - trace InMemoryDexClassLoader construction;
+ *   - inspect registered dexElements after Application.attach.
  *
- * 用法:
- *   frida -U -f <package> -l dex-dump.js --no-pause
- *   frida -U <pid> -l dex-dump.js
- *
- * 输出: /sdcard/Download/dex_dump_*.dex
+ * This script never reads or writes DEX bytes. Use dump-dex.ps1 for the
+ * validated panda whole-DEX export route.
  */
 
-var dumpDir = "/sdcard/Download/";
-var dumpCount = 0;
-var dumpedHashes = new Set();
+'use strict';
 
-function writeDex(name, bytes) {
-    var f = new File(dumpDir + name, "wb");
-    f.write(bytes);
-    f.close();
-    console.log("[+] Dumped: " + dumpDir + name + " (" + bytes.length + " bytes)");
+function safeText(value) {
+    try {
+        return value === null || value === undefined ? '<null>' : value.toString();
+    } catch (_) {
+        return '<unprintable>';
+    }
 }
 
-// ============================================================
-// Strategy 1: Hook DexFile & BaseDexClassLoader constructors
-// ============================================================
-Java.perform(function() {
-    try {
-        var DexFile = Java.use("dalvik.system.DexFile");
+function inspectDexElements(loader, reason) {
+    if (loader === null || loader === undefined) return;
 
-        // Hook loadDex — catches most packers
-        DexFile.loadDex.overload('java.lang.String', 'java.lang.String', 'int').implementation = function(src, opt, flags) {
-            console.log("[DexFile.loadDex] src=" + src + " opt=" + opt);
-            var result = this.loadDex(src, opt, flags);
+    try {
+        let klass = loader.getClass();
+        let pathListField = null;
+        while (klass !== null) {
+            try {
+                pathListField = klass.getDeclaredField('pathList');
+                break;
+            } catch (_) {
+                klass = klass.getSuperclass();
+            }
+        }
+
+        if (pathListField === null) {
+            console.log('[loader] ' + reason + ' class=' + loader.getClass().getName() + ' pathList=<not-found>');
+            return;
+        }
+
+        pathListField.setAccessible(true);
+        const pathList = pathListField.get(loader);
+        const elementsField = pathList.getClass().getDeclaredField('dexElements');
+        elementsField.setAccessible(true);
+        const elements = elementsField.get(pathList);
+        const count = elements === null ? 0 : elements.length;
+        console.log('[loader] ' + reason + ' class=' + loader.getClass().getName() + ' dexElements=' + count);
+        for (let i = 0; i < Math.min(count, 20); i++) {
+            console.log('  [' + i + '] ' + safeText(elements[i]));
+        }
+        if (count > 20) console.log('  ... ' + (count - 20) + ' more elements');
+    } catch (error) {
+        console.log('[loader] inspection failed for ' + reason + ': ' + error);
+    }
+}
+
+Java.perform(function () {
+    try {
+        const DexFile = Java.use('dalvik.system.DexFile');
+        const loadDex = DexFile.loadDex.overload('java.lang.String', 'java.lang.String', 'int');
+        loadDex.implementation = function (sourcePath, outputPath, flags) {
+            console.log('[DexFile.loadDex] source=' + sourcePath + ' output=' + outputPath + ' flags=' + flags);
+            return loadDex.call(this, sourcePath, outputPath, flags);
+        };
+    } catch (error) {
+        console.log('[DexFile.loadDex] hook unavailable: ' + error);
+    }
+
+    try {
+        const DexClassLoader = Java.use('dalvik.system.DexClassLoader');
+        const init = DexClassLoader.$init.overload(
+            'java.lang.String',
+            'java.lang.String',
+            'java.lang.String',
+            'java.lang.ClassLoader'
+        );
+        init.implementation = function (dexPath, optimizedDirectory, librarySearchPath, parent) {
+            console.log('[DexClassLoader] dexPath=' + dexPath + ' libPath=' + librarySearchPath);
+            const result = init.call(this, dexPath, optimizedDirectory, librarySearchPath, parent);
+            inspectDexElements(this, 'DexClassLoader.<init>');
             return result;
         };
-
-        // Hook constructor(String) — catches DexClassLoader paths
-        DexFile.$init.overload('java.lang.String').implementation = function(path) {
-            console.log("[DexFile.<init>] " + path);
-            return this.$init(path);
-        };
-    } catch(e) {
-        console.log("[-] DexFile hooks failed: " + e);
+    } catch (error) {
+        console.log('[DexClassLoader] hook unavailable: ' + error);
     }
 
-    // Hook BaseDexClassLoader
     try {
-        var BaseDexClassLoader = Java.use("dalvik.system.BaseDexClassLoader");
-        BaseDexClassLoader.$init.overload('java.lang.String', 'java.io.File', 'java.lang.String', 'java.lang.ClassLoader').implementation = function(dexPath, optDir, libDir, parent) {
-            console.log("[BaseDexClassLoader] dexPath=" + dexPath + " libDir=" + libDir);
-            return this.$init(dexPath, optDir, libDir, parent);
-        };
-    } catch(e) {
-        console.log("[-] BaseDexClassLoader hook failed: " + e);
-    }
-
-    // Hook PathClassLoader
-    try {
-        var PathClassLoader = Java.use("dalvik.system.PathClassLoader");
-        PathClassLoader.$init.overload('java.lang.String', 'java.lang.String', 'java.lang.ClassLoader').implementation = function(dexPath, libSearchPath, parent) {
-            console.log("[PathClassLoader] dexPath=" + dexPath);
-            return this.$init(dexPath, libSearchPath, parent);
-        };
-    } catch(e) {
-        console.log("[-] PathClassLoader hook failed: " + e);
-    }
-});
-
-// ============================================================
-// Strategy 2: Read in-memory DEX via /proc/self/maps (root)
-// ============================================================
-function dumpMemoryDEX() {
-    Java.perform(function() {
-        try {
-            var maps = Java.use("java.io.RandomAccessFile").$new("/proc/self/maps", "r");
-            var buffer = Java.array('byte', [1024 * 1024]);
-            var line = "";
-            var content = "";
-
-            // Read maps file
-            var reader = Java.use("java.io.BufferedReader").$new(
-                Java.use("java.io.InputStreamReader").$new(
-                    Java.use("java.io.FileInputStream").$new("/proc/self/maps")
-                )
-            );
-            while ((line = reader.readLine()) !== null) {
-                content += line + "\n";
-            }
-            reader.close();
-        } catch(e) {
-            console.log("[-] Cannot read /proc/self/maps (need root): " + e);
-        }
-    });
-}
-
-// ============================================================
-// Strategy 3: Dump current ClassLoader's DEX elements
-// ============================================================
-function dumpLoadedDEX(classLoader) {
-    Java.perform(function() {
-        try {
-            var clz = Java.use("dalvik.system.DexPathList$Element");
-            var fieldPath = clz.class.getDeclaredField("path");
-            fieldPath.setAccessible(true);
-
-            // ... iterate over pathList elements
-            var pathListField = classLoader.getClass().getSuperclass().getDeclaredField("pathList");
-            pathListField.setAccessible(true);
-            var pathList = pathListField.get(classLoader);
-            var dexElementsField = pathList.getClass().getDeclaredField("dexElements");
-            dexElementsField.setAccessible(true);
-            var dexElements = Java.array('java.lang.Object', dexElementsField.get(pathList));
-
-            console.log("[+] Found " + (dexElements ? dexElements.length : 0) + " DEX elements in ClassLoader");
-        } catch(e) {
-            console.log("[-] dumpLoadedDEX error: " + e);
-        }
-    });
-}
-
-// ============================================================
-// Main: Hook Application.attach to intercept all classloaders
-// ============================================================
-Java.perform(function() {
-    try {
-        var ActivityThread = Java.use("android.app.ActivityThread");
-        ActivityThread.currentActivityThread.implementation = function() {
-            console.log("[*] ActivityThread.currentActivityThread called");
-            return this.currentActivityThread();
-        };
-    } catch(e) {}
-
-    // Hook system ClassLoader
-    setTimeout(function() {
-        Java.perform(function() {
-            var cl = Java.classFactory.loader;
-            console.log("[*] Frida ClassLoader loaded, dumping known elements...");
-            dumpLoadedDEX(cl);
+        const InMemoryDexClassLoader = Java.use('dalvik.system.InMemoryDexClassLoader');
+        InMemoryDexClassLoader.$init.overloads.forEach(function (overload) {
+            overload.implementation = function () {
+                const signature = overload.argumentTypes.map(function (type) { return type.className; }).join(', ');
+                console.log('[InMemoryDexClassLoader] constructor=(' + signature + ')');
+                const result = overload.apply(this, arguments);
+                inspectDexElements(this, 'InMemoryDexClassLoader.<init>');
+                return result;
+            };
         });
-    }, 3000);
+    } catch (error) {
+        console.log('[InMemoryDexClassLoader] unavailable on this Android version: ' + error);
+    }
+
+    try {
+        const Application = Java.use('android.app.Application');
+        const attach = Application.attach.overload('android.content.Context');
+        attach.implementation = function (context) {
+            const result = attach.call(this, context);
+            const loader = context.getClassLoader();
+            console.log('[Application.attach] package=' + context.getPackageName());
+            inspectDexElements(loader, 'Application.attach');
+            return result;
+        };
+    } catch (error) {
+        console.log('[Application.attach] hook failed: ' + error);
+    }
 });
 
-console.log("[*] dex-dump.js loaded. Strategies: 1) DexFile hooks 2) maps scan 3) ClassLoader dump");
-console.log("[*] Trigger app interaction to fire hooks. Dumps saved to " + dumpDir);
+console.log('[*] dex-dump.js loaded: observation only; no DEX bytes will be exported');

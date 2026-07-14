@@ -3,6 +3,7 @@
 set -euo pipefail
 
 usage() {
+  local exit_code="${1:-0}"
   cat <<EOF
 Usage: find-api-calls.sh <source-dir> [OPTIONS]
 
@@ -27,7 +28,7 @@ Options:
 Output:
   Results are printed as file:line:match for easy navigation.
 EOF
-  exit 0
+  exit "$exit_code"
 }
 
 SOURCE_DIR=""
@@ -52,15 +53,20 @@ while [[ $# -gt 0 ]]; do
     --paths)    SEARCH_PATHS=true;     SEARCH_ALL=false; shift ;;
     --auth)     SEARCH_AUTH=true;      SEARCH_ALL=false; shift ;;
     --all)      SEARCH_ALL=true; shift ;;
-    -h|--help)  usage ;;
-    -*)         echo "Error: Unknown option $1" >&2; usage ;;
-    *)          SOURCE_DIR="$1"; shift ;;
+    -h|--help)  usage 0 ;;
+    -*)         echo "Error: Unknown option $1" >&2; usage 2 ;;
+    *)
+      if [[ -n "$SOURCE_DIR" ]]; then
+        echo "Error: Multiple source directories supplied: $SOURCE_DIR and $1" >&2
+        usage 2
+      fi
+      SOURCE_DIR="$1"; shift ;;
   esac
 done
 
 if [[ -z "$SOURCE_DIR" ]]; then
   echo "Error: No source directory specified." >&2
-  usage
+  usage 2
 fi
 
 if [[ ! -d "$SOURCE_DIR" ]]; then
@@ -273,7 +279,10 @@ if [[ "$SEARCH_ALL" == true || "$SEARCH_URLS" == true ]]; then
 
   if [[ -f "$DENYLIST" ]]; then
     # Build a single combined regex from the denylist (one line each).
-    DENY_REGEX="$(grep -vE '^\s*(#|$)' "$DENYLIST" | tr '\n' '|' | sed 's/|$//')"
+    # A leading `\.` in the data file means a hostname suffix, including the
+    # apex itself. Convert it to (^|\.) so google.com and www.google.com both
+    # match the same rule.
+    DENY_REGEX="$(grep -vE '^\s*(#|$)' "$DENYLIST" | sed -E 's/^\\\./(^|\\.)/' | tr '\n' '|' | sed 's/|$//')"
     THIRD_HOSTS=$(grep -E "$DENY_REGEX" "$HOSTS_TMP" || true)
     FIRST_HOSTS=$(grep -vE "$DENY_REGEX" "$HOSTS_TMP" || true)
   else

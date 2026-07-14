@@ -31,7 +31,7 @@ PYTHON_EXE="${PYTHON_EXE:-D:/reverse_ENV/.venv/Scripts/python.exe}"
 [[ ! -x "$PYTHON_EXE" ]] && { echo "Python not found or not executable: $PYTHON_EXE (set PYTHON_EXE)" >&2; exit 1; }
 
 "$PYTHON_EXE" - "$DIR" "$@" <<'PY'
-import json, os, re, sys, subprocess
+import json, os, re, sys
 DIR = sys.argv[1]
 args = sys.argv[2:]
 with open(os.path.join(DIR, "mapping.json"), "r", encoding="utf-8") as fh:
@@ -65,18 +65,32 @@ def by_pkg(p):
                 print(f"    {o}")
 
 def grep_annot(pattern, sources):
-    res = subprocess.run(
-        ["grep", "-rEn", "--include=*.java", pattern, sources],
-        capture_output=True, text=True, encoding="utf-8", errors="replace")
-    for line in res.stdout.splitlines():
-        try:
-            path, lineno, content = line.split(":", 2)
-        except ValueError:
-            continue
-        rel = os.path.relpath(path, sources)
-        obf = rel.replace(os.sep, ".")[:-5]
-        suffix = f"  // {MAP[obf]}" if obf in MAP else ""
-        print(f"{rel}:{lineno}:{content}{suffix}")
+    try:
+        compiled = re.compile(pattern)
+    except re.error as exc:
+        print(f"invalid regex: {exc}", file=sys.stderr)
+        sys.exit(2)
+    if not os.path.isdir(sources):
+        print(f"source directory not found: {sources}", file=sys.stderr)
+        sys.exit(1)
+    for root, _, files in os.walk(sources):
+        for name in sorted(files):
+            if not name.endswith((".java", ".kt")):
+                continue
+            path = os.path.join(root, name)
+            try:
+                with open(path, "r", encoding="utf-8", errors="replace") as fh:
+                    lines = list(fh)
+            except OSError:
+                continue
+            rel = os.path.relpath(path, sources)
+            obf = os.path.splitext(rel)[0].replace(os.sep, ".")
+            suffix = f"  // {MAP[obf]}" if obf in MAP else ""
+            for lineno, content in enumerate(lines, 1):
+                if not compiled.search(content):
+                    continue
+                display = rel.replace(os.sep, "/")
+                print(f"{display}:{lineno}:{content.rstrip()}{suffix}")
 
 if args[0] == "-o" and len(args) == 2:
     by_obf(args[1])

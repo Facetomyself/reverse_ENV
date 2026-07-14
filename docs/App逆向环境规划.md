@@ -135,6 +135,27 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "D:\reverse_ENV\skill\ldplay
 powershell -NoProfile -ExecutionPolicy Bypass -File "D:\reverse_ENV\skill\apk-reverse\scripts\init-ldplayer-re.ps1" -DeviceSerial <ADB from re-list>
 ```
 
+脚本成功门不是“frida-server 有 PID”，而是 ADB/Root/ABI、host/device Frida 版本和 host-to-device 进程枚举 handshake 全部通过。
+
+## 模拟器 whole-DEX 脱壳路线
+
+当前 `tools\panda-dex-dumper\panda-dex-dumper` 是 AArch64 ELF。LDPlayer 9 模板主 ABI 为 x86_64，但 Android 9 实例通过 `libnb.so` native bridge 已验证可以执行：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File `
+  "D:\reverse_ENV\skill\apk-reverse\scripts\dump-dex.ps1" `
+  -Project myapp -Package com.example.app -DeviceSerial <ADB> -Launch
+```
+
+已验证范围：
+
+- 普通 App：19 个 DEX / 21,134,420 bytes，最大 DEX 经 jadx 生成 2,884 个 Java 文件。
+- 起点读书 / 360 Jiagu VIP 样本：13 个 DEX / 73,247,772 bytes，最佳 DEX 生成 4,181 个 Java 文件，其中 4,073 个为 `com.qidian`；仍有大量 loading/decompile errors，只能称部分脱壳。
+
+因此这条模拟器路线标记为**可用**，适用于真实代码加载后以内存标准 whole DEX 存在的目标，也覆盖部分企业壳样本。它不是企业壳通杀：方法抽取、CompactDex、VMP、Dex2C、强 anti-dump、多进程和 lazy loading 必须按样本另行验证或转 `native-reverse`。
+
+`dump-dex.ps1` 会校验 AArch64 执行条件、PID 归属、超时、DEX magic/header/class_defs，并在失败时保留设备端证据、best-effort 恢复被 panda 暂停的目标进程。详见 `skill\apk-reverse\references\packing-and-unpacking.md`。
+
 ## 真机边界
 
 模拟器适合快速验证、批量重置、抓包和 Hook，但不是强检测最终答案。出现以下信号时切真机：

@@ -118,6 +118,9 @@
 | `article-archiver` | 文章知识库归档 | `article/pending` PDF/HTML/Markdown → 清洗 Markdown → 分类归档 → 更新 `article/INDEX.md` |
 
 **路由**: `.so`/native 反检测/绕过 → `native-reverse`；`.so` 纯静态分析 → `ida-reverse`/`radare2`；APK Java → `apk-reverse`。
+**APK 逆向主链**: `fingerprint.sh`（框架/加固/ABI）→ `decode.ps1` + `manifest-summary.ps1` → Java/smali/native 主战场决策 → 按需 `dump-dex.ps1` / `frida-run.ps1` / 代理抓包 → patch/重建/API 提取 → 三件套。
+**APK 加固分流**: 整体加密、完整 DEX 已回填 → `dump-dex.ps1`（panda）；方法抽取/按需回填 → 标 `partial/triage-only`，转 FART/dexfix 类方案；VMP/Dex2C/壳化 `.so` → `native-reverse`，不得继续把 DEX dump 当完整脱壳。
+**APK framework 约束**: Flutter/RN/Unity/壳 marker 可并存；单一 runtime `.so` 不得触发“停止 Java/DEX 分析”，以业务类、bundle、metadata、壳和运行时证据决定 hybrid 主战场。
 **Web JS 路由**: **默认 -> `ruyi-reverse`（统一编排器）** — 7 模块 x 两级深度，按任务主动组合 (Anti-Detect/Observe/Capture/Trace/Human-Sim/Debug/Export)。需 CDP 完整断点调试且无反检测需求 -> `mcp-js-reverse-playbook`。两者**可互补**，通过 Export 桥接。
 **Web 补环境路由**: 浏览器取证完成后，需要把原始网页 JS 放到 Node.js 中运行、补 `window/document/navigator/storage/crypto`、生成 sign/token 或对齐 fixtures 时，切到 `web-env-patcher`；协议采集器交付再切 `protocol-recovery`。
 
@@ -383,11 +386,12 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | APK | `frida-run.ps1` | Frida 注入 |
 | APK | `rebuild-sign-install.ps1` | 重建→签名→安装 |
 | APK | `manifest-summary.ps1` | Manifest 摘要 |
-| APK | `recover-kotlin-names.sh` | Phase 3.5 R8 混淆类名恢复 |
+| APK | `recover-kotlin-names.sh` | Kotlin 高置信类名恢复 + 低置信 d2 候选分离 |
 | APK | `lookup-name.sh` | 查询类名映射 (obf->real/搜索/标注grep) |
-| APK | `find-api-calls.sh` | Phase 5 HTTP API 提取 (7库+URL分桶+HMAC) |
-| APK | `init-ldplayer-re.ps1` | LDPlayer RE 模拟器环境一键初始化 (Frida+root+system) |
-| APK | `dex-dump.js` | Frida DEX 内存 Dump (三种策略抗加固壳) |
+| APK | `find-api-calls.sh` | HTTP/API/URL/auth/sign 候选扫描，结果需证据复核 |
+| APK | `init-ldplayer-re.ps1` | 指定 LDPlayer ADB 设备 Root/ABI/Frida 版本与 handshake 验证 |
+| APK | `dump-dex.ps1` | panda whole-DEX wrapper；ABI/PID/超时/结构校验/失败留证 |
+| APK | `dex-dump.js` | Frida DEX 加载观察（triage-only，不写出 DEX） |
 | IDA | `start.ps1` | 环境验证 |
 | IDA | `open.ps1` | idalib 路径预处理（不打开数据库） |
 | r2 | `recon.ps1` | 一站式侦察 |

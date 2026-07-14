@@ -1,557 +1,305 @@
 ---
 name: apk-reverse
-description: 在 CLI 环境下做 Android APK 逆向时使用。适用于 APK 解包、Java 反编译、smali 修改、重打包、Frida 动态 Hook，以及按需切换到 so/native 分析。优先使用本机已安装的 jadx、apktool、frida、adb、ida-reverse、radare2。
+description: Use for Android APK/XAPK/APKS reverse engineering in D:\reverse_ENV, including framework/protector fingerprinting, split-aware decode, manifest and Java/Kotlin/smali analysis, LDPlayer/Frida runtime work, validated whole-DEX dumping with panda, Kotlin name recovery, API candidate extraction, patch/rebuild/sign/install, and handoff of native .so, Unity IL2CPP, VMP, or Dex2C targets.
 ---
 
-# APK 逆向 CLI 作业规范
+# APK Reverse
 
-## 适用范围
+Use this skill for Android packages. Keep every target and artifact under
+`D:\reverse_ENV\workspace\<project>\`; do not place APK/DEX/SO files directly in
+the workspace root and do not commit raw targets, dumps, captures, credentials,
+or full decompilation trees.
 
-当任务属于以下场景时优先使用本 skill：
+## Required preflight
 
-- 分析 APK 的 Java 业务逻辑
-- 定位登录、签名、风控、证书校验、root 检测
-- 查看与修改 `AndroidManifest.xml`
-- 查看与修改 smali
-- 重打包 APK
-- 用 Frida 做 Java/native 动态 Hook
-- APK 内含 `.so` 时切到 native 分析
-- **APK 快速指纹识别** (框架/混淆度/HTTP栈) — Phase 0
-- **Kotlin 类名恢复** (R8 混淆 → 真实类名) — Phase 3.5
-- **HTTP API 系统性提取** (Retrofit/OkHttp/Ktor/Apollo/Volley + URL分桶 + HMAC检测)
+1. Confirm `D:\reverse_ENV\article\INDEX.md` exists. For a new target, search it
+   for the vendor, protector, framework, anti-debug, and protocol family.
+2. Run `git status --short --branch` and preserve unrelated dirty work.
+3. Copy the reverse-coordinator templates into the project when the four
+   canonical artifacts do not exist:
+   - `report.md`
+   - `findings.json`
+   - `triage.md`
+   - `workspace.json`
+4. Use `search-layer`, then `github-solution-research`, before installing or
+   adopting an external unpacker. Do not auto-install APKiD, Flutter, Hermes,
+   Unity, Frida, or unpacking dependencies.
 
-## 当前机器已验证可用的 CLI 工具
+## Core decision model
 
-- `jadx` `1.5.5`
-- `apktool` `3.0.2`
-- `frida-ps` / `frida` `17.15.3`
-- `adb`
-- `java`
-- **`vineflower` `1.11.2`** (optional — 复杂 Java/lambda/泛型输出质量优于 jadx)
-- **`dex2jar` `2.4.31`** (optional — Fernflower/Vineflower 反编译 APK 的前置依赖)
+Framework, protector, and code-location markers are a set, not a mutually
+exclusive enum. A package can contain Flutter assets, many DEX files, a native
+signer, and a commercial shell at the same time.
 
-## 优先使用脚本的场景
+Priority:
 
-以下流程高频且参数容易出错，优先用 skill 自带脚本：
+```text
+protector / runtime-encrypted DEX
+  -> stub + manifest triage
+  -> wait for real-code loading
+  -> whole-DEX dump when standard DEX exists in memory
 
-- **APK 快速指纹识别**: `scripts/fingerprint.sh` — 框架检测/混淆度/HTTP栈/下一步建议
-- 一次性完成 `jadx + apktool` 落盘并产出摘要：`scripts/decode.ps1`
-- Frida 设备检查、进程列举、spawn/attach 注入：`scripts/frida-run.ps1`
-- 重建、对齐、签名、安装 APK：`scripts/rebuild-sign-install.ps1`
-- 快速抽取 Manifest 关键组件与权限：`scripts/manifest-summary.ps1`
-- **Kotlin 类名恢复** (R8 混淆 → 真实类名): `scripts/recover-kotlin-names.sh` + `scripts/lookup-name.sh`
-- **HTTP API 系统性提取**: `scripts/find-api-calls.sh` — Retrofit/OkHttp/Ktor/Apollo/Volley + URL分桶 + HMAC检测
-
-脚本入口约定：
-
-- PowerShell 脚本统一用绝对路径调用：`powershell -File "D:\reverse_ENV\skill\apk-reverse\scripts\<script>.ps1"`
-- Bash 脚本需要 Git Bash / MSYS2 / WSL 等 bash 环境，统一用 `bash D:/reverse_ENV/skill/apk-reverse/scripts/<script>.sh`
-- Bash 脚本内需要 Python 时默认使用 `D:/reverse_ENV/.venv/Scripts/python.exe`，可通过 `PYTHON_EXE` 覆盖；不要依赖裸 `python3`
-- APK、解包产物、报告和中间文件默认落到 `D:\reverse_ENV\workspace\<项目名>\`，不要放到 `D:\DOWNLOAD` 或 skill 目录
-
-以下一行命令保持直接调用，不单独封装：
-
-- `adb devices`
-- `adb logcat`
-- `frida-ps -U`
-- `jadx --version`
-- `apktool --version`
-
-## 自带脚本
-
-### `scripts/fingerprint.sh` — Phase 0 快速指纹
-
-在反编译之前做快速 triage，避免在 Flutter/RN/Cordova/Xamarin 应用上浪费时间反编译 Java。
-
-```bash
-bash D:/reverse_ENV/skill/apk-reverse/scripts/fingerprint.sh <file.apk|file.xapk>
+no protector, or dump already reviewed
+  -> choose business-code surface from evidence:
+     Java/Kotlin | smali | native/JNI | Unity IL2CPP | Flutter AOT |
+     React Native/Hermes | Cordova assets | Xamarin assemblies
 ```
 
-输出（一屏内）：
-- **移动框架** (Flutter / React Native / Cordova / Xamarin / Native Kotlin/Compose)
-- **HTTP 栈** (Retrofit / OkHttp / Ktor / Apollo / Volley) — 通过 DEX 字符串扫描
-- **DI/序列化** (Hilt / Dagger / Koin / kotlinx.serialization / Moshi / Gson)
-- **混淆度** (LOW/MODERATE/HIGH — 基于根级短名包数量)
-- **第三方 SDK** (AppsFlyer / Datadog / Sentry / Firebase / Stripe 等)
-- **Native libraries** (合并所有 split APK 的 `.so` 列表)
-- **推荐下一步** — Flutter 建议 blutter/strings；RN 建议 hbctool；Cordova 建议直接解压；Native 建议继续反编译
+Never stop Java/Kotlin triage solely because `libflutter.so`, `libhermes.so`, or
+another framework runtime is present. Treat `fingerprint.sh` output as routing
+evidence, not proof.
 
-### `scripts/recover-kotlin-names.sh` — Phase 3.5 R8 混淆类名恢复
-
-从 Kotlin metadata 注解 (`@DebugMetadata`, `@Metadata.d2`) 中挖掘被 R8 混淆前的原始类名。
-
-```bash
-# 构建 obf -> real 映射
-bash D:/reverse_ENV/skill/apk-reverse/scripts/recover-kotlin-names.sh D:/reverse_ENV/workspace/demo/jadx/sources/ D:/reverse_ENV/workspace/demo/mapping/
-
-# 产出:
-#   output/mapping/mapping.tsv    obf_fqn <TAB> real_fqn <TAB> file
-#   output/mapping/mapping.json   { obf_fqn: real_fqn, ... }
-#   output/mapping/by_package/    按真实包名索引
-```
-
-典型恢复率：~100% 的 `*Repository` / `*ViewModel` / `*UseCase` / `*Impl`，~80% 的 DTO。
-
-### `scripts/lookup-name.sh` — 查询类名映射
-
-```bash
-# 按真实类名搜索
-bash D:/reverse_ENV/skill/apk-reverse/scripts/lookup-name.sh D:/reverse_ENV/workspace/demo/mapping/ LoginRepository
-
-# 混淆 -> 真实
-bash D:/reverse_ENV/skill/apk-reverse/scripts/lookup-name.sh D:/reverse_ENV/workspace/demo/mapping/ -o a.b.c
-
-# 按包名列出
-bash D:/reverse_ENV/skill/apk-reverse/scripts/lookup-name.sh D:/reverse_ENV/workspace/demo/mapping/ -p com.example.feature
-
-# 在源码中 grep 并标注真实类名
-bash D:/reverse_ENV/skill/apk-reverse/scripts/lookup-name.sh D:/reverse_ENV/workspace/demo/mapping/ --grep '/api/' D:/reverse_ENV/workspace/demo/jadx/sources/
-```
-
-### `scripts/find-api-calls.sh` — Phase 5 HTTP API 系统性提取
-
-7 种 HTTP 库全覆盖 + URL 去噪分桶 + HMAC 签名检测。
-
-```bash
-# 全扫描
-bash D:/reverse_ENV/skill/apk-reverse/scripts/find-api-calls.sh D:/reverse_ENV/workspace/demo/jadx/sources/
-
-# 定向扫描
-bash D:/reverse_ENV/skill/apk-reverse/scripts/find-api-calls.sh D:/reverse_ENV/workspace/demo/jadx/sources/ --retrofit
-bash D:/reverse_ENV/skill/apk-reverse/scripts/find-api-calls.sh D:/reverse_ENV/workspace/demo/jadx/sources/ --ktor
-bash D:/reverse_ENV/skill/apk-reverse/scripts/find-api-calls.sh D:/reverse_ENV/workspace/demo/jadx/sources/ --apollo
-bash D:/reverse_ENV/skill/apk-reverse/scripts/find-api-calls.sh D:/reverse_ENV/workspace/demo/jadx/sources/ --urls     # 去噪 + 分桶
-bash D:/reverse_ENV/skill/apk-reverse/scripts/find-api-calls.sh D:/reverse_ENV/workspace/demo/jadx/sources/ --paths    # 混淆后仍可提取的路径字面量
-bash D:/reverse_ENV/skill/apk-reverse/scripts/find-api-calls.sh D:/reverse_ENV/workspace/demo/jadx/sources/ --auth     # Bearer/HMAC/API Key
-```
-
-`--urls` 模式通过 `third_party_hosts.txt` (120+ 域名) 自动将 URL 分为 first-party 和 third-party，按频次排序输出。
-
-### `scripts/init-ldplayer-re.ps1` — LDPlayer RE 模拟器环境一键初始化
+## Phase 0: fingerprint first
 
 ```powershell
-powershell -File "D:\reverse_ENV\skill\apk-reverse\scripts\init-ldplayer-re.ps1"
-powershell -File "D:\reverse_ENV\skill\apk-reverse\scripts\init-ldplayer-re.ps1" -DeviceSerial "127.0.0.1:7555"
+& "C:\Program Files\Git\bin\bash.exe" `
+  "D:/reverse_ENV/skill/apk-reverse/scripts/fingerprint.sh" `
+  "D:/reverse_ENV/workspace/<project>/app.apk"
 ```
 
-自动化步骤: ADB 连接检测 → 绑定唯一 `DeviceSerial` → Root 验证 → 系统可写确认 → 推送/启动 Frida server → 状态报告。多设备连接时必须显式传 `-DeviceSerial`；`-Instance` 不再用于猜测 ADB serial。
+The script is split-aware and reports:
 
-LDPlayer 实例创建、模板复制、代理、备份和恢复由 `ldplayer-control` 负责；本脚本只处理指定 ADB 设备内部的 Root / Frida 就绪。
+- framework markers, primary route, and confidence;
+- protector markers for 360 Jiagu, Legu, SecNeo/Bangcle, Ijiami, Baidu,
+  Naga, AppSealing, and DexGuard;
+- DEX/ABI/native-library counts;
+- HTTP, DI, serialization, obfuscation, and SDK hints;
+- Unity IL2CPP, Flutter, React Native, Cordova/Capacitor, Xamarin, Kotlin,
+  and Compose routing.
 
-### `scripts/dex-dump.js` — Frida DEX 内存 Dump
+Built-in protector patterns are lightweight evidence. If project-local APKiD is
+available, use it as additional Phase 0 evidence; absence is not an error.
 
-```bash
-# spawn 模式 (从启动开始 Hook ClassLoader)
-frida -U -f com.example.app -l D:/reverse_ENV/skill/apk-reverse/scripts/dex-dump.js
+### Route rules
 
-# attach 模式 (附加到已运行的进程)
-frida -U <pid> -l D:/reverse_ENV/skill/apk-reverse/scripts/dex-dump.js
-```
+| Evidence | Main route |
+|---|---|
+| Protector marker, stub Application, or almost no business classes | Runtime-load observation, then `dump-dex.ps1` |
+| Standard whole DEX appears after load | panda whole-DEX baseline |
+| Methods remain empty/stubbed after valid DEX export | Method extraction or sample-specific repair; panda is insufficient |
+| `cdex` / CompactDex | Dedicated CDEX handling; panda is insufficient |
+| VMP / Dex2C / core logic in `.so` | `native-reverse` |
+| `libil2cpp.so` + `libunity.so` + `global-metadata.dat` | Unity IL2CPP route, then native/IDA handoff |
+| Flutter `libapp.so` | Flutter AOT route plus minimal Android host review |
+| Hermes/RN bundle | Hermes bundle route plus minimal Android host review |
+| Cordova/Capacitor assets | Web assets plus bridge/manifest review |
+| Readable DEX | Normal Java/Kotlin/smali route |
 
-三种策略依次尝试:
-1. **Hook DexFile/ClassLoader** — 拦截 DEX 加载路径
-2. **/proc/self/maps 扫描** — 找 DEX 内存映射后 dump (需 root)
-3. **ClassLoader 遍历** — 反射读取已加载 DEX elements
+Read `references/packing-and-unpacking.md` whenever a protector, dump, method
+extraction, CDEX, VMP, Dex2C, lazy loading, or anti-dump condition appears.
 
-输出: `/sdcard/Download/dex_dump_*.dex`
-
-### `scripts/decode.ps1`
-
-用途：
-
-- 统一跑 `jadx` 和 `apktool`
-- 默认在 `D:\reverse_ENV\workspace\<Name>\` 创建任务输出目录
-- 输出 `package`、`java_files`、`smali_dirs`、`so_files` 等摘要
-- 兼容 `jadx` 部分反编译错误但仍然有可用产物的情况
-
-示例：
+## Phase 1: controlled decode
 
 ```powershell
-powershell -File "D:\reverse_ENV\skill\apk-reverse\scripts\decode.ps1" -ApkPath "D:\reverse_ENV\workspace\demo\app.apk" -Clean
-powershell -File "D:\reverse_ENV\skill\apk-reverse\scripts\decode.ps1" -ApkPath "D:\reverse_ENV\workspace\demo\app.apk" -Name demo -SkipJadx
+powershell -NoProfile -ExecutionPolicy Bypass -File `
+  "D:\reverse_ENV\skill\apk-reverse\scripts\decode.ps1" `
+  -ApkPath "D:\reverse_ENV\workspace\<project>\app.apk" `
+  -Name "<project>" -Clean
 ```
 
-### `scripts/frida-run.ps1`
+Use `-NoDexChecksum` only for a dumped DEX/APK whose checksum failure is already
+recorded. The wrapper pins project-local jadx/apktool, preserves the source APK,
+refuses to overwrite old generated directories without `-Clean`, and writes:
 
-用途：
+- `decode-summary.json` with SHA-256, tool exit codes, counts, and pipeline status;
+- `manifest-summary.txt`;
+- `jadx\` and `apktool\` outputs.
 
-- 统一 Frida 的设备、进程、spawn/attach 入口
-- 避免手写参数时混淆 `-f`、`-n`、`-U`
+Interpretation:
 
-示例：
+- jadx non-zero with useful source output can be `partial`, not total failure;
+- apktool output is the source of truth for manifest/resources/smali patching;
+- `<50` Java files is only a packing heuristic, not proof;
+- if both branches produce no useful artifact, the wrapper fails.
+
+## Phase 2: choose the business-code surface
+
+Inspect, in order:
+
+1. `manifest-summary.txt`, Application, launcher, exported components, providers,
+   processes, network-security flags, and native library loading.
+2. `BuildConfig`, network clients, login/token/sign/encrypt/root/certificate/
+   WebView/JNI paths.
+3. `apktool\smali*`, resources, assets, and native libraries when jadx is partial.
+4. Runtime behavior only after static evidence identifies a target or a loading
+   boundary.
+
+Handoff immediately when evidence says the main surface is elsewhere:
+
+- `.so`, JNI, anti-Frida, anti-debug, syscall, anonymous executable mappings,
+  VMP, or Dex2C -> `native-reverse`;
+- pure static SO/ELF work -> `ida-reverse` or `radare2`;
+- Unity IL2CPP -> read `references/unity-il2cpp-dump.md`, then hand off extracted
+  native artifacts and metadata;
+- Flutter/RN external tools are optional and may be absent. Prefer current
+  blutter or Hermes decompilers only after version and repository evidence is
+  checked; do not silently fall back to obsolete hbctool/Doldrums guidance.
+
+## Phase 3: LDPlayer, Frida, and DEX export
+
+Use `ldplayer-control` to create or resolve a project instance. Templates are
+not target workspaces. Then initialize the explicit ADB device:
 
 ```powershell
-powershell -File "D:\reverse_ENV\skill\apk-reverse\scripts\frida-run.ps1" -ListDevices
-powershell -File "D:\reverse_ENV\skill\apk-reverse\scripts\frida-run.ps1" -Usb -ListProcesses
-powershell -File "D:\reverse_ENV\skill\apk-reverse\scripts\frida-run.ps1" -Usb -Spawn -Package com.example.app -ScriptPath "D:\hooks\test.js"
+powershell -NoProfile -ExecutionPolicy Bypass -File `
+  "D:\reverse_ENV\skill\apk-reverse\scripts\init-ldplayer-re.ps1" `
+  -DeviceSerial "<adb-serial>"
 ```
 
-### `scripts/rebuild-sign-install.ps1`
+This validates ADB, root, ABI/native bridge, host/device Frida version, server
+startup, and a real host-to-device Frida process-enumeration handshake.
 
-用途：
-
-- `apktool b` 重建 APK
-- `zipalign` 对齐
-- `apksigner` 签名与验签
-- 可选直接 `adb install`
-
-示例：
+### Whole-DEX baseline: panda on LDPlayer
 
 ```powershell
-powershell -File "D:\reverse_ENV\skill\apk-reverse\scripts\rebuild-sign-install.ps1" -ProjectDir "D:\reverse_ENV\workspace\demo\apktool" -Clean
-powershell -File "D:\reverse_ENV\skill\apk-reverse\scripts\rebuild-sign-install.ps1" -ProjectDir "D:\reverse_ENV\workspace\demo\apktool" -Install -Reinstall -DeviceSerial "127.0.0.1:7555"
+powershell -NoProfile -ExecutionPolicy Bypass -File `
+  "D:\reverse_ENV\skill\apk-reverse\scripts\dump-dex.ps1" `
+  -Project "<project>" -Package "<package>" `
+  -DeviceSerial "<adb-serial>" -Launch
 ```
 
-说明：
+The project binary is AArch64. The validated LDPlayer 9 route is an x86_64
+Android 9 instance with Root and `libnb.so` native bridge. The wrapper enforces:
 
-- 默认生成并复用调试 keystore；如果 `ProjectDir` 位于 `D:\reverse_ENV\workspace\<项目名>\` 下，默认 keystore 位于该项目目录，不写入 skill 目录
-- 默认 keystore 仅用于调试签名，不用于正式发布；脚本输出会隐藏 keystore 绝对路径，避免把敏感路径混进日志
-- 默认输出到 `ProjectDir` 同目录，便于和原始包、解包目录放在一起
+- connected explicit device and Root;
+- AArch64 ABI/native-bridge compatibility;
+- one unambiguous PID, or an explicit PID whose `/proc/<pid>/cmdline` belongs
+  to the package;
+- isolated output, timeout, SHA-256, DEX magic/header/class validation;
+- unconditional best-effort `SIGCONT` because panda pauses the target;
+- device evidence retention when the dump or validation is not clean.
 
-### `scripts/manifest-summary.ps1`
+`metadata.json` statuses:
 
-用途：
+| Status | Meaning |
+|---|---|
+| `complete-enough` | Every pulled file is structurally valid and the tool/pull exited cleanly; still not proof of complete unpacking |
+| `partial` | At least one valid DEX exists, but another file or tool stage is incomplete |
+| `invalid` | Files exist but none pass structural validation |
+| `no-dex` | No DEX was pulled |
 
-- 抽取包名
-- 列权限
-- 列 activity/service/receiver/provider
-- 标出主启动 activity
+Local evidence as of 2026-07-14:
 
-示例：
+- ordinary app: 19 DEX / 21,134,420 bytes; largest DEX produced 2,884 Java files;
+- 360 Jiagu VIP sample: 13 DEX / 73,247,772 bytes; best DEX produced 4,181
+  Java files, including 4,073 `com.qidian` files, but with substantial load and
+  decompile errors. Record this as **partial unpacking**, not universal support.
+
+The LDPlayer route is therefore usable for standard whole-DEX recovery after
+runtime loading, including some enterprise-shell samples. It does not claim
+support for every shell, edition, Android version, method extraction, CDEX,
+VMP, Dex2C, anti-dump, or lazy-loaded process.
+
+### Frida observation and hooks
+
+Use `frida-run.ps1` for stable device/target selection:
 
 ```powershell
-powershell -File "D:\reverse_ENV\skill\apk-reverse\scripts\manifest-summary.ps1" -ManifestPath "D:\reverse_ENV\workspace\demo\apktool\AndroidManifest.xml"
+powershell -NoProfile -ExecutionPolicy Bypass -File `
+  "D:\reverse_ENV\skill\apk-reverse\scripts\frida-run.ps1" `
+  -DeviceId "<frida-device-id>" -Spawn -Package "<package>" `
+  -ScriptPath "D:\reverse_ENV\skill\apk-reverse\scripts\dex-dump.js"
 ```
 
-如果要分析 `.so`、`lib/arm64-v8a/*.so`、`lib/armeabi-v7a/*.so`，再结合：
+`dex-dump.js` is observation-only. It traces `DexFile`, file-backed loaders,
+`InMemoryDexClassLoader`, `Application.attach`, and registered DEX elements; it
+does not read or write DEX bytes. Read `references/frida-best-practices.md`
+before native hooks or loader-timing work.
 
-- `ida-reverse`
-- `radare2`
+## Phase 4: code recovery and API candidates
 
-## 工具分工
-
-### `jadx`
-
-用于：
-
-- Java 反编译阅读
-- 包名、类名、方法名搜索
-- 先从高层逻辑理解 APK
-
-常用命令：
-
-```bash
-jadx -d jadx_out app.apk
-jadx --single-class com.example.LoginActivity -d jadx_out app.apk
-jadx --deobf -d jadx_out app.apk
-```
-
-### `apktool`
-
-用于：
-
-- 解包 APK
-- 查看和修改 `AndroidManifest.xml`
-- 查看和修改 smali
-- 重建 APK
-
-常用命令：
-
-```bash
-apktool d app.apk -o apktool_out
-apktool b apktool_out -o rebuilt.apk
-```
-
-### `frida`
-
-用于：
-
-- 动态观察 Java 方法调用
-- Hook native 导出函数
-- 绕过 root 检测、证书校验、调试检测
-
-常用命令：
-
-```bash
-frida-ps -U
-frida -U -f com.example.app -l hook.js
-frida-trace -U -f com.example.app -j '*!*certificate*'
-```
-
-### `adb`
-
-用于：
-
-- 设备连接
-- 安装 APK
-- 查看日志
-- 拉取文件
-
-常用命令：
-
-```bash
-adb devices
-adb -s 127.0.0.1:7555 install -r "D:\reverse_ENV\workspace\demo\rebuilt-signed.apk"
-adb -s 127.0.0.1:7555 shell pm list packages
-adb -s 127.0.0.1:7555 logcat
-adb -s 127.0.0.1:7555 pull /data/local/tmp/file "D:\reverse_ENV\workspace\demo\"
-```
-
-## 推荐工作流
-
-### 0. Phase 0 — 快速指纹 (必须第一步)
-
-**在反编译之前跑 `fingerprint.sh`，确定 APK 类型和下一步方向。**
-
-```bash
-bash D:/reverse_ENV/skill/apk-reverse/scripts/fingerprint.sh app.apk
-```
-
-根据输出决定：
-- **Flutter** → 停止。Dart 代码在 `libapp.so` 中，用 blutter / reFlutter / `strings libapp.so`
-- **React Native** → 停止。JS 代码在 `assets/index.android.bundle`，用 hbctool (Hermes) 或直接 grep
-- **Cordova/Capacitor** → 停止。代码在 `assets/www/`，直接解压看 HTML/JS
-- **Xamarin/.NET MAUI** → 停止。代码在 `assemblies/` (.NET DLL)，用 ILSpy/dotPeek
-- **Native Android (Java/Kotlin)** → 继续 Phase 1
-
-### 1. Triage
-
-先确定 APK 大致构成，不急着改包或 Hook。
-
-建议动作：
-
-1. 用 `jadx -d jadx_out app.apk` 导出 Java 代码
-2. 用 `apktool d app.apk -o apktool_out` 导出 smali 和资源
-3. 先看：
-   - `AndroidManifest.xml`
-   - 主 `package`
-   - `application`、`activity`、`service`、`receiver`
-   - `lib/` 目录里是否有 `.so`
-   - **所有 `BuildConfig.java`** — 几乎不被混淆，常泄露 base URL、API key、feature flag
-
-### 2. Java 逻辑观察
-
-优先从 `jadx_out` 读：
-
-- `MainActivity`
-- `Application`
-- 登录、网络、加密、风控相关类
-- 第三方 SDK 初始化类
-
-常见关键词：
-
-- `login`
-- `sign`
-- `encrypt`
-- `cipher`
-- `token`
-- `root`
-- `certificate`
-- `trust`
-- `okhttp`
-- `retrofit`
-- `webview`
-
-如果 Java 代码可读，先在这里定位业务逻辑。
-
-### 2.5 Phase 2.5 — 加固壳 DEX 内存 Dump
-
-如果 Phase 0 报告高混淆 + 加固壳标志，或 jadx 反编译产出极少 Java 文件 (< 50 个):
-
-**方式 A: Frida DEX dump (x86 模拟器, 当下可用)**
-
-```bash
-frida -U -f <package> -l D:/reverse_ENV/skill/apk-reverse/scripts/dex-dump.js
-```
-
-**方式 B: panda-dex-dumper (ARM64 真机, ptrace 方案, 待补充源码编译)**
-
-```bash
-adb -s 127.0.0.1:7555 push "D:\reverse_ENV\tools\panda-dex-dumper\panda-dex-dumper" /data/local/tmp/
-adb -s 127.0.0.1:7555 shell su -c "/data/local/tmp/panda-dex-dumper --pid $(pidof <package>)"
-adb -s 127.0.0.1:7555 pull /data/local/tmp/panda/ "D:\reverse_ENV\workspace\demo\panda\"
-```
-
-Dump 出的 DEX 用 jadx 重新反编译后继续 Phase 3。
-
-### 2.5 Phase 3.5 — Kotlin 类名恢复 (混淆 Kotlin 应用必做)
-
-如果 Phase 0 报告混淆度为 MODERATE/HIGH 且应用为 Kotlin/Compose：
-
-```bash
-# 构建映射
-bash D:/reverse_ENV/skill/apk-reverse/scripts/recover-kotlin-names.sh D:/reverse_ENV/workspace/demo/jadx/sources/ D:/reverse_ENV/workspace/demo/mapping/
-
-# 用 lookup 替代 plain grep
-bash D:/reverse_ENV/skill/apk-reverse/scripts/lookup-name.sh D:/reverse_ENV/workspace/demo/mapping/ --grep '"/api/' D:/reverse_ENV/workspace/demo/jadx/sources/
-```
-
-典型恢复 ~100% 的 `*Repository` / `*ViewModel` / `*Impl`。详见 `references/kotlin-name-recovery.md`。
-
-### 3. Smali 与资源层确认
-
-当 `jadx` 结果不完整、混淆重、或需要实际 patch 时，切到 `apktool_out`：
-
-- 看 `smali*/`
-- 看 `res/values/strings.xml`
-- 看 `AndroidManifest.xml`
-
-优先 patch：
-
-- `android:exported`
-- 调试标记
-- root 检测返回值
-- 登录验证逻辑
-- 证书校验分支
-
-### 4. 重建与安装
-
-修改后：
-
-```bash
-apktool b apktool_out -o rebuilt.apk
-```
-
-或者直接用脚本闭环：
+For obfuscated Kotlin, produce an evidence-aware map:
 
 ```powershell
-powershell -File "D:\reverse_ENV\skill\apk-reverse\scripts\rebuild-sign-install.ps1" -ProjectDir "D:\reverse_ENV\workspace\demo\apktool" -Install -Reinstall -DeviceSerial "127.0.0.1:7555"
+& "C:\Program Files\Git\bin\bash.exe" `
+  "D:/reverse_ENV/skill/apk-reverse/scripts/recover-kotlin-names.sh" `
+  "D:/reverse_ENV/workspace/<project>/jadx/sources" `
+  "D:/reverse_ENV/workspace/<project>/mapping"
 ```
 
-说明：
+- `mapping.json` contains high-confidence `DebugMetadata.c` or jadx rename
+  evidence only;
+- `candidates.tsv` contains low-confidence `Metadata.d2` references and must
+  not be treated as authoritative class identity;
+- coverage is sample-dependent; never promise a recovery percentage.
 
-- 本 skill 只保证 `apktool` 重建链路
-- 若后续需要正式安装到设备，通常还需要签名流程
-- 如果任务进入签名/对齐，补充 `apksigner` / `zipalign`
+Use `lookup-name.sh` for queries or annotated regex search. Read
+`references/kotlin-name-recovery.md` for interpretation.
 
-### 5. 动态 Hook
+For HTTP/API triage:
 
-静态分析不足时，用 Frida：
-
-- Hook 登录函数
-- Hook `OkHttp` / `Retrofit` / `WebView` 关键点
-- Hook `javax.crypto`、`MessageDigest`
-- Hook root 检测函数
-- Hook SSL pinning 逻辑
-
-原则：
-
-- 先 Hook Java 层，再看是否需要 native Hook
-- 先打印参数与返回值，再决定是否主动修改返回值
-
-建议：
-
-- 简单一次性命令直接用 `frida-*`
-- 需要稳定复用的注入流程优先走 `scripts/frida-run.ps1`
-
-### 5.5 Phase 5 — API 系统性提取
-
-```bash
-bash D:/reverse_ENV/skill/apk-reverse/scripts/find-api-calls.sh D:/reverse_ENV/workspace/demo/jadx/sources/
+```powershell
+& "C:\Program Files\Git\bin\bash.exe" `
+  "D:/reverse_ENV/skill/apk-reverse/scripts/find-api-calls.sh" `
+  "D:/reverse_ENV/workspace/<project>/jadx/sources" --all
 ```
 
-产出 Tier 1（全量端点表）+ Tier 2（auth/payment 等重点端点深度文档）。详见 `references/api-extraction-patterns.md` 和 `references/call-flow-analysis.md`。
+This script prints grep-based candidates for Retrofit, OkHttp, Ktor, Apollo,
+Volley, paths, URLs, auth, and signing signals. It does **not** automatically
+produce a verified Tier 1/Tier 2 inventory. Promote candidates into findings
+only after call-site, request-method, host/path, auth, and runtime evidence are
+correlated. Read `references/api-extraction-patterns.md` and
+`references/call-flow-analysis.md`.
 
-### 6. Native `.so` 分流
+## Phase 5: patch, rebuild, sign, install
 
-如果 APK 中包含关键 `.so`：
+Patch smali/resources only after the target branch is evidenced. Then:
 
-- 用 `apktool` 或 `jadx` 找到 `lib/**/*.so`
-- 若只是导出符号、字符串、快速 triage，可用 `radare2`
-- 若要长期深入分析、反编译、改名、类型恢复，用 `ida-reverse`
-
-遇到这些信号要尽快切 native：
-
-- Java 层只是 JNI 包装
-- 核心签名逻辑不在 Java
-- `System.loadLibrary()` 后关键逻辑消失
-- 证书校验/风控在 `.so` 中
-
-## 输出要求
-
-每次 APK 分析最终在 `D:\reverse_ENV\workspace\<项目名>\` 下至少交付三件套：
-
-- `report.md`：人工可读报告，说明结论、证据、限制和下一步
-- `findings.json`：结构化 findings，字段至少包含 `id`、`severity`、`claim`、`evidence`、`source`、`status`
-- `triage.md`：分阶段记录 L0/L1/L2/L3/L4 判断、已做动作和未验证项
-
-最终报告至少说明：
-
-- 入口组件与关键类
-- 关键逻辑在 Java、smali 还是 `.so`
-- 已确认的敏感点：登录、签名、root、SSL、WebView、JNI
-- 如果做了 patch，说明改了什么
-- 如果做了 Hook，说明 Hook 了哪个类/方法/导出函数
-- **如果做了 API 提取**：Tier 1 全量表 (Host/Method/Path/Auth/Source) + 重点端点 Tier 2 详情
-- **如果做了类名恢复**：恢复率统计 + mapping 文件路径
-- 证据链：每个 claim 必须指向具体文件、行号、函数名、命令输出或运行时日志；未验证结论标注 `待验证`
-- 脱敏：报告和 JSON 中不得输出真实 token、cookie、私钥、账号密码、内部代理凭据；只保留脱敏片段和证据位置
-- L4 目标只做 triage-only，不声称完整还原、完整绕过或完整复现
-
-## 参考文档
-
-| 文档 | 内容 |
-|------|------|
-| `references/api-extraction-patterns.md` | Retrofit/OkHttp/Ktor/Apollo/Volley grep 模式库 + 端点文档模板 (Tier1/Tier2) |
-| `references/call-flow-analysis.md` | Activity→ViewModel→Repository→HTTP 调用链追踪技术 + 混淆对抗策略 |
-| `references/kotlin-name-recovery.md` | R8/Kotlin metadata 类名恢复原理 + 局限性 + 阅读流 |
-| `references/third_party_hosts.txt` | URL 分桶用第三方域名 denylist (120+ 域名: Firebase/AppsFlyer/Stripe/...) |
-| `references/frida-best-practices.md` | Frida 脚本最佳实践 (loader hook 时机/anti-init陷阱/现代API) |
-| `references/unity-il2cpp-dump.md` | Unity IL2CPP 符号提取 (→ IDA 导入 C# 类名/方法名) |
-
-## 渐进式披露阶段
-
-本 skill 的工作流已按 `reverse-coordinator` 的四个深度等级对齐：
-
-| 阶段 | 深度 | 对应本 skill 步骤 | 产出 |
-|------|------|-------------------|------|
-| 分类 | L0 | 步骤 0 Phase 0 指纹 | 框架识别、混淆度、HTTP栈、下一步建议 |
-| 侦察 | L1 | 步骤 1-2 Triage + Java 观察 | manifest 摘要、package、so 列表、关键类/方法 |
-| 决策 | — | 步骤 3 判断主战场 | 确定为 Java/smali/native 主线 |
-| 深挖 | L2-L3 | 步骤 2.5-5 | 类名恢复映射、smali patch、Frida Hook、API 提取、native 分流 |
-| 产出 | — | 步骤 5.5 Phase 5 + 步骤 6 | 报告 + Hook 脚本 + API 端点表 (Tier1/Tier2) |
-
-> 遵循 `reverse-coordinator` 约定：不得跳过 L0 分类直接做 L3 深挖。
-
-## 禁止事项
-
-- 不要一开始就盲目改 smali
-- 不要在没看 manifest 和主入口前就写 Hook
-- 不要把 Java 反编译不完整直接等同于”逻辑不可分析”
-- 不要在 `.so` 明显承载核心逻辑时继续死磕 Java 层
-
-## 快速命令备忘
-
-```bash
-# === Phase 0: 指纹 ===
-bash D:/reverse_ENV/skill/apk-reverse/scripts/fingerprint.sh app.apk
-
-# === 反编译 Java ===
-jadx -d jadx_out app.apk
-
-# === 解包 APK ===
-apktool d app.apk -o apktool_out
-
-# === 重建 APK ===
-apktool b apktool_out -o rebuilt.apk
-
-# === Phase 3.5: Kotlin 类名恢复 ===
-bash D:/reverse_ENV/skill/apk-reverse/scripts/recover-kotlin-names.sh D:/reverse_ENV/workspace/demo/jadx/sources/ D:/reverse_ENV/workspace/demo/mapping/
-bash D:/reverse_ENV/skill/apk-reverse/scripts/lookup-name.sh D:/reverse_ENV/workspace/demo/mapping/ --grep '/api/' D:/reverse_ENV/workspace/demo/jadx/sources/
-
-# === Phase 5: API 提取 ===
-bash D:/reverse_ENV/skill/apk-reverse/scripts/find-api-calls.sh D:/reverse_ENV/workspace/demo/jadx/sources/        # 全扫描
-bash D:/reverse_ENV/skill/apk-reverse/scripts/find-api-calls.sh D:/reverse_ENV/workspace/demo/jadx/sources/ --urls # URL分桶
-
-# === Fernflower/Vineflower (高级) ===
-# APK → dex2jar → Fernflower (对复杂 lambda/泛型输出质量更优)
-java -jar D:/reverse_ENV/tools/dex2jar/dex-tools-2.4.31/lib/dex-tools-2.4.31.jar -f -o app.jar app.apk
-java -jar D:/reverse_ENV/tools/vineflower/vineflower-1.11.2.jar -dgs=1 -mpm=60 app.jar vineflower_out/
-
-# === 设备与进程 ===
-adb devices
-frida-ps -U
-
-# === 启动并注入 ===
-frida -U -f com.example.app -l hook.js
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File `
+  "D:\reverse_ENV\skill\apk-reverse\scripts\rebuild-sign-install.ps1" `
+  -ProjectDir "D:\reverse_ENV\workspace\<project>\apktool" `
+  -Install -Reinstall -DeviceSerial "<adb-serial>" -Clean
 ```
+
+The wrapper uses project-local apktool/JDK/build-tools, sanitizes output names,
+keeps signing passwords out of child-process arguments, signs/verifies, and:
+
+- uses build-tools 35 `zipalign -P 16` for APKs containing native libraries;
+- verifies APK alignment after writing;
+- inspects ELF `PT_LOAD` alignment with NDK `llvm-readelf`;
+- reports 16 KB ELF risk but cannot repair a prebuilt misaligned `.so`;
+- supports `-FailOn16KbRisk` when the pipeline must fail closed.
+
+After install, verify launch, process survival, the modified branch, signature
+impact, and network/native regressions. Rebuild success alone is not runtime
+success.
+
+## Delivery and review gate
+
+Use the reverse-coordinator templates as the only schema. Do not invent a
+second APK-specific `findings.json` shape.
+
+Before final delivery, read `references/verification-checklist.md` and verify:
+
+- every claim points to a file/line/class/method/address/runtime log;
+- each finding has evidence, confidence, redaction, and rebuild status;
+- `triage.md` separates blockers from untested assumptions;
+- `workspace.json.artifacts` points to the actual three deliverables;
+- tokens, cookies, credentials, private keys, and proxy secrets are masked or
+  omitted;
+- `complete-enough` DEX output is not called complete unpacking;
+- L4 targets remain `triage-only` unless independently proven.
+
+## References
+
+| Reference | Read when |
+|---|---|
+| `references/packing-and-unpacking.md` | Protector, panda, method extraction, CDEX, VMP/Dex2C, anti-dump |
+| `references/verification-checklist.md` | Before delivery or after any dump/rebuild |
+| `references/frida-best-practices.md` | Java/native hooks, loader timing, Frida 17 APIs |
+| `references/kotlin-name-recovery.md` | Reading authoritative mappings and low-confidence candidates |
+| `references/api-extraction-patterns.md` | Promoting endpoint candidates into evidence |
+| `references/call-flow-analysis.md` | Activity/ViewModel/Repository/request call-chain recovery |
+| `references/unity-il2cpp-dump.md` | Unity IL2CPP metadata/native route |
+| `references/third_party_hosts.txt` | URL third-party bucketing rules |
+
+## Hard stops
+
+- Do not skip fingerprinting and manifest triage to start blind hooks.
+- Do not treat one framework marker as proof that DEX is irrelevant.
+- Do not call `dex-dump.js` a dumper.
+- Do not delete device dump evidence after invalid/no-DEX output.
+- Do not use panda repeatedly against method extraction, CDEX, VMP, or Dex2C.
+- Do not keep analyzing Java when evidence places the core in native code.
+- Do not claim universal enterprise-shell support from one partial sample.

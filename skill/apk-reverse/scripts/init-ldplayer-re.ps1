@@ -1,34 +1,49 @@
+#requires -Version 5.1
+
 <#
 .SYNOPSIS
-  LDPlayer RE 模拟器环境初始化脚本
-  一键配置: Frida server + 可选 Magisk 引导
+  Prepare one explicit LDPlayer ADB device for APK reverse engineering.
+
+.DESCRIPTION
+  Verifies ADB/root/ABI, checks the device frida-server version against the
+  project Frida CLI, pushes the project server when missing (or when
+  -ReplaceServer is explicitly supplied), starts it, and reports readiness.
 
 .PARAMETER Instance
-  已废弃。不要用实例名猜测 ADB serial；请使用 -DeviceSerial。
+  Deprecated compatibility parameter. It is accepted only when it already is
+  an ADB serial; LDPlayer names are resolved by ldplayer-control, not here.
+
 .PARAMETER DeviceSerial
-  ADB serial，例如 127.0.0.1:7555。未指定时只允许当前恰好一个 device。
+  ADB serial such as emulator-5560. Required when multiple devices are online.
+
 .PARAMETER FridaServerPath
-  frida-server 本地路径 (默认从 tools 自动匹配)
+  Local Android frida-server binary. Defaults to D:\reverse_ENV\tools\frida-server.
 
-.EXAMPLE
-  # 初始化默认 RE 实例
-  init-ldplayer-re.ps1
-
-  # 指定实例
-  init-ldplayer-re.ps1 -DeviceSerial "127.0.0.1:7555"
+.PARAMETER ReplaceServer
+  Replace an existing device server when its version differs. Without this
+  switch, version mismatch is reported and the script stops.
 #>
 
+[CmdletBinding()]
 param(
-    [string]$Instance = "",
-    [string]$DeviceSerial = "",
-    [string]$FridaServerPath = ""
+    [string]$Instance = '',
+    [string]$DeviceSerial = '',
+    [string]$FridaServerPath = 'D:\reverse_ENV\tools\frida-server',
+    [switch]$ReplaceServer
 )
 
-$ErrorActionPreference = "Stop"
-$ADB = "D:\reverse_ENV\tools\adb\adb.exe"
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+[Console]::InputEncoding = [System.Text.UTF8Encoding]::new($false)
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+
+$adb = 'D:\reverse_ENV\tools\adb\adb.exe'
+$fridaCli = 'D:\reverse_ENV\.venv\Scripts\frida.exe'
+$python = 'D:\reverse_ENV\.venv\Scripts\python.exe'
 
 function Get-AdbDevices {
-    $lines = & $ADB devices 2>&1
+    $lines = & $adb devices 2>&1
     if ($LASTEXITCODE -ne 0) {
         throw "adb devices failed: $($lines -join "`n")"
     }
@@ -50,15 +65,15 @@ function Resolve-AdbSerial {
 
     $devices = @(Get-AdbDevices)
     if ($devices.Count -eq 0) {
-        throw "No ADB device found. Start LDPlayer first."
+        throw 'No ADB device found. Start the LDPlayer project instance first.'
     }
 
     if (-not [string]::IsNullOrWhiteSpace($RequestedInstance) -and [string]::IsNullOrWhiteSpace($RequestedSerial)) {
         if ($devices -contains $RequestedInstance) {
-            Write-Warning "-Instance matched an ADB serial. Prefer -DeviceSerial for clarity."
+            Write-Warning '-Instance matched an ADB serial. Prefer -DeviceSerial.'
             return $RequestedInstance
         }
-        throw "-Instance '$RequestedInstance' is not an ADB serial and this script does not map LDPlayer names to serials. Pass -DeviceSerial explicitly. Connected serials: $($devices -join ', ')"
+        throw "-Instance '$RequestedInstance' is not an ADB serial. Resolve the instance with ldplayer-control/re-list.ps1 and pass -DeviceSerial."
     }
 
     if (-not [string]::IsNullOrWhiteSpace($RequestedSerial)) {
@@ -69,104 +84,133 @@ function Resolve-AdbSerial {
     }
 
     if ($devices.Count -ne 1) {
-        throw "Multiple ADB devices connected; pass -DeviceSerial explicitly. Connected serials: $($devices -join ', ')"
+        throw "Multiple ADB devices connected; pass -DeviceSerial. Connected serials: $($devices -join ', ')"
     }
-
     return $devices[0]
 }
 
 function Invoke-Adb {
     param([Parameter(ValueFromRemainingArguments = $true)][string[]]$AdbArgs)
 
-    & $ADB -s $DeviceSerial @AdbArgs
+    & $adb -s $DeviceSerial @AdbArgs
 }
 
-# ------------------------------------------------------------------
-# 1. 确认模拟器连接
-# ------------------------------------------------------------------
-Write-Host "=== Step 1: Check ADB connection ==="
+if (-not (Test-Path -LiteralPath $adb)) {
+    throw "adb not found: $adb"
+}
+if (-not (Test-Path -LiteralPath $fridaCli)) {
+    throw "Frida CLI not found: $fridaCli"
+}
+if (-not (Test-Path -LiteralPath $python)) {
+    throw "Project Python not found: $python"
+}
+
+Write-Host '=== Step 1: ADB ==='
 $DeviceSerial = Resolve-AdbSerial -RequestedSerial $DeviceSerial -RequestedInstance $Instance
 Write-Host "[OK] Device connected: $DeviceSerial"
 
-# ------------------------------------------------------------------
-# 2. 确认 root 权限
-# ------------------------------------------------------------------
-Write-Host "`n=== Step 2: Verify root ==="
-$rootCheck = Invoke-Adb shell "su -c 'echo ROOT_OK'" 2>&1
-if ($rootCheck -match "ROOT_OK") {
-    Write-Host "[OK] Root access confirmed"
-} else {
-    Write-Error "Root not available. Enable root in LDPlayer settings."
-    exit 1
+Write-Host "`n=== Step 2: Root ==="
+$rootCheck = Invoke-Adb shell su -c id 2>&1
+if ($LASTEXITCODE -ne 0 -or ($rootCheck -join "`n") -notmatch 'uid=0') {
+    throw 'Root is unavailable. Use an RE template with Root enabled.'
 }
+Write-Host '[OK] Root access confirmed'
 
-# ------------------------------------------------------------------
-# 3. 确认系统可写
-# ------------------------------------------------------------------
-Write-Host "`n=== Step 3: Verify writable system ==="
-$rwCheck = Invoke-Adb shell "su -c 'mount | grep /system'" 2>&1 | Select-String "rw,"
-if ($rwCheck) {
-    Write-Host "[OK] System partition is writable"
-} else {
-    Write-Warning "System might not be writable. Magisk direct install may fail."
-}
+Write-Host "`n=== Step 3: Device profile ==="
+$primaryAbi = (Invoke-Adb shell getprop ro.product.cpu.abi 2>&1 | Select-Object -First 1).Trim()
+$abiList = (Invoke-Adb shell getprop ro.product.cpu.abilist 2>&1 | Select-Object -First 1).Trim()
+$nativeBridge = (Invoke-Adb shell getprop ro.dalvik.vm.native.bridge 2>&1 | Select-Object -First 1).Trim()
+$androidVersion = (Invoke-Adb shell getprop ro.build.version.release 2>&1 | Select-Object -First 1).Trim()
+Write-Host "  Android:       $androidVersion"
+Write-Host "  Primary ABI:   $primaryAbi"
+Write-Host "  ABI list:      $abiList"
+Write-Host "  Native bridge: $nativeBridge"
 
-# ------------------------------------------------------------------
-# 4. 推送并启动 Frida server
-# ------------------------------------------------------------------
 Write-Host "`n=== Step 4: Frida server ==="
-
-# Remount system rw (needed for some tools)
-Write-Host "Remounting system as rw..."
-Invoke-Adb shell "su -c 'mount -o rw,remount /'" 2>&1 | Out-Null
-
-# Stop existing frida-server. "No such process" is expected on a fresh boot.
-$previousErrorActionPreference = $ErrorActionPreference
-$ErrorActionPreference = "Continue"
-& $ADB -s $DeviceSerial shell "su -c 'killall frida-server'" 2>$null | Out-Null
-$ErrorActionPreference = $previousErrorActionPreference
-Start-Sleep -Seconds 1
-
-# Push frida-server if not already on device
-$fridaExists = Invoke-Adb shell "test -f /data/local/tmp/frida-server && echo EXISTS" 2>&1
-if ($fridaExists -notmatch "EXISTS") {
-    if (-not $FridaServerPath) {
-        $FridaServerPath = "D:\reverse_ENV\temp\ldplayer-setup\frida-server"
-    }
-    if (-not (Test-Path $FridaServerPath)) {
-        # Try to find matching version from GitHub
-        $fridaVer = & D:\reverse_ENV\.venv\Scripts\frida.exe --version 2>&1
-        Write-Error "Frida server not found at $FridaServerPath. Download frida-server-$fridaVer-android-x86_64.xz from GitHub releases."
-        exit 1
-    }
-    Write-Host "Pushing frida-server..."
-    Invoke-Adb push $FridaServerPath /data/local/tmp/frida-server 2>&1
-    Invoke-Adb shell "su -c 'chmod 755 /data/local/tmp/frida-server'" 2>&1
+$hostVersion = (& $fridaCli --version 2>&1 | Select-Object -First 1).Trim()
+$remotePath = '/data/local/tmp/frida-server'
+$remoteExists = (Invoke-Adb shell "test -f $remotePath && echo EXISTS" 2>&1 | Out-String) -match 'EXISTS'
+$remoteVersion = ''
+if ($remoteExists) {
+    $remoteVersion = (Invoke-Adb shell su -c "$remotePath --version" 2>&1 | Select-Object -First 1).Trim()
 }
 
-# Start frida-server in background
-Write-Host "Starting frida-server..."
-Invoke-Adb shell "su -c 'nohup /data/local/tmp/frida-server -D &'" 2>&1
+$needsPush = -not $remoteExists
+if ($remoteExists -and $remoteVersion -ne $hostVersion) {
+    if (-not $ReplaceServer) {
+        throw "Frida version mismatch: host=$hostVersion device=$remoteVersion. Pass a matching -FridaServerPath and -ReplaceServer to replace it explicitly."
+    }
+    $needsPush = $true
+}
+
+if ($needsPush) {
+    if (-not (Test-Path -LiteralPath $FridaServerPath)) {
+        throw "Frida server not found: $FridaServerPath (required version: $hostVersion)"
+    }
+
+    $previousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    Invoke-Adb shell su -c 'killall frida-server' 2>$null | Out-Null
+    $ErrorActionPreference = $previousPreference
+    Start-Sleep -Milliseconds 500
+
+    Write-Host "Pushing frida-server from: $FridaServerPath"
+    Invoke-Adb push $FridaServerPath $remotePath 2>&1 | Out-Host
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Failed to push frida-server.'
+    }
+    Invoke-Adb shell su -c "chmod 755 $remotePath" 2>&1 | Out-Null
+    $remoteVersion = (Invoke-Adb shell su -c "$remotePath --version" 2>&1 | Select-Object -First 1).Trim()
+    if ($remoteVersion -ne $hostVersion) {
+        throw "Pushed server version still mismatches: host=$hostVersion device=$remoteVersion"
+    }
+}
+else {
+    Write-Host "[OK] Existing server version matches host: $hostVersion"
+}
+
+$previousPreference = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
+Invoke-Adb shell su -c 'killall frida-server' 2>$null | Out-Null
+$ErrorActionPreference = $previousPreference
+Start-Sleep -Milliseconds 500
+
+Invoke-Adb shell su -c "nohup $remotePath -D >/dev/null 2>&1 &" 2>&1 | Out-Null
 Start-Sleep -Seconds 2
-
-# Verify
-$fridaProc = Invoke-Adb shell "su -c 'ps -A | grep frida-server'" 2>&1
-if ($fridaProc -match "frida-server") {
-    Write-Host "[OK] Frida server running"
-} else {
-    Write-Error "Frida server failed to start"
-    exit 1
+$fridaPid = (Invoke-Adb shell su -c 'pidof frida-server' 2>&1 | Out-String).Trim()
+if ([string]::IsNullOrWhiteSpace($fridaPid)) {
+    throw 'frida-server failed to start.'
 }
 
-# ------------------------------------------------------------------
-# 5. 报告状态
-# ------------------------------------------------------------------
+Write-Host "[OK] frida-server running: pid=$fridaPid version=$hostVersion"
+
+Write-Host "`n=== Step 5: Host-to-device Frida handshake ==="
+try {
+    $env:APK_REVERSE_FRIDA_DEVICE = $DeviceSerial
+    $handshakeCode = "import os,frida; d=frida.get_device_manager().get_device(os.environ['APK_REVERSE_FRIDA_DEVICE'], timeout=10); print(len(d.enumerate_processes()))"
+    $previousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $handshakeOutput = @(& $python -c $handshakeCode 2>&1)
+    $handshakeExitCode = $LASTEXITCODE
+    $ErrorActionPreference = $previousPreference
+    $processCount = if ($handshakeOutput.Count -gt 0) { ([string]$handshakeOutput[-1]).Trim() } else { '' }
+    if ($handshakeExitCode -ne 0 -or $processCount -notmatch '^\d+$') {
+        throw "Frida handshake failed for device '$DeviceSerial': $($handshakeOutput -join ' ')"
+    }
+}
+finally {
+    Remove-Item Env:APK_REVERSE_FRIDA_DEVICE -ErrorAction SilentlyContinue
+}
+Write-Host "[OK] Host Frida enumerated $processCount processes"
+
 Write-Host "`n=== Environment Ready ==="
-Write-Host "  Frida:  running"
-Write-Host "  Root:   available (su)"
-Write-Host "  System: writable (rw)"
-Write-Host ""
-Write-Host "Next steps:"
-Write-Host "  - DEX dump:  frida -U -f <pkg> -l D:\reverse_ENV\skill\apk-reverse\scripts\dex-dump.js"
-Write-Host "  - Magisk:    Launch Magisk app on emulator -> Install -> Direct Install"
-Write-Host "  - SSL bypass: D:\reverse_ENV\tools\adb\adb.exe -s $DeviceSerial shell su -c ' ... '"
+Write-Host "  Device:        $DeviceSerial"
+Write-Host "  Root:          available"
+Write-Host "  Frida:         $hostVersion"
+Write-Host "  Primary ABI:   $primaryAbi"
+Write-Host "  Native bridge: $nativeBridge"
+Write-Host ''
+Write-Host 'Next steps:'
+Write-Host '  - DEX dump:  dump-dex.ps1 (panda-dex-dumper wrapper)'
+Write-Host '  - Frida:    frida-run.ps1 -DeviceId <id> -Spawn -Package <pkg> -ScriptPath <script>'
+Write-Host '  - HTTPS:    ldplayer-control/re-proxy.ps1 -Project <project> -Action on'

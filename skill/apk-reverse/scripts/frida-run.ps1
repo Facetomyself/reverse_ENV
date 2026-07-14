@@ -6,6 +6,10 @@ param(
 
     [string]$Process,
 
+    [int]$ProcessId,
+
+    [string]$DeviceId,
+
     [string]$RemoteHost = '127.0.0.1:27042',
 
     [string]$ScriptPath,
@@ -18,7 +22,11 @@ param(
 
     [switch]$ListDevices,
 
-    [switch]$ListProcesses
+    [switch]$ListProcesses,
+
+    [switch]$ListApplications,
+
+    [switch]$DryRun
 )
 
 Set-StrictMode -Version Latest
@@ -30,81 +38,133 @@ $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 function Get-ToolPath {
     param([Parameter(Mandatory = $true)][string]$Name)
 
-    $cmd = Get-Command $Name -ErrorAction SilentlyContinue
-    if (-not $cmd) {
-        $fallbacks = @{
-            'frida-ls-devices' = @(
-                'D:\reverse_ENV\.venv\Scripts\frida-ls-devices.exe'
-            )
-            'frida-ps' = @(
-                'D:\reverse_ENV\.venv\Scripts\frida-ps.exe'
-            )
-            'frida' = @(
-                'D:\reverse_ENV\.venv\Scripts\frida.exe'
-            )
-        }
-
-        if ($fallbacks.Contains($Name)) {
-            foreach ($candidate in $fallbacks[$Name]) {
-                if (Test-Path -LiteralPath $candidate) {
-                    return $candidate
-                }
-            }
-        }
-
-        throw "Missing required CLI tool: $Name"
+    $fallbacks = @{
+        'frida-ls-devices' = 'D:\reverse_ENV\.venv\Scripts\frida-ls-devices.exe'
+        'frida-ps' = 'D:\reverse_ENV\.venv\Scripts\frida-ps.exe'
+        'frida' = 'D:\reverse_ENV\.venv\Scripts\frida.exe'
+        'python' = 'D:\reverse_ENV\.venv\Scripts\python.exe'
     }
-    return $cmd.Source
+
+    if ($fallbacks.ContainsKey($Name) -and (Test-Path -LiteralPath $fallbacks[$Name])) {
+        return $fallbacks[$Name]
+    }
+
+    $cmd = Get-Command $Name -ErrorAction SilentlyContinue
+    if ($cmd) {
+        return $cmd.Source
+    }
+
+    throw "Missing required CLI tool: $Name"
 }
 
-$fridaLsDevices = Get-ToolPath -Name 'frida-ls-devices'
-$fridaPs = Get-ToolPath -Name 'frida-ps'
-$frida = Get-ToolPath -Name 'frida'
-$python = Get-Command python -ErrorAction SilentlyContinue
+function Get-DeviceArgs {
+    if ($Usb -and -not [string]::IsNullOrWhiteSpace($DeviceId)) {
+        throw 'Use either -Usb or -DeviceId, not both.'
+    }
 
-if (-not $python) {
-    throw 'Missing required CLI tool: python'
+    if (-not [string]::IsNullOrWhiteSpace($DeviceId)) {
+        return @('-D', $DeviceId)
+    }
+    if ($Usb) {
+        return @('-U')
+    }
+    return @('-H', $RemoteHost)
 }
 
-$pythonExe = $python.Source
+function Format-CommandLine {
+    param(
+        [Parameter(Mandatory = $true)][string]$Executable,
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][string[]]$Arguments
+    )
+
+    $formatted = @($Executable)
+    foreach ($arg in $Arguments) {
+        if ($arg -match '[\s"]') {
+            $formatted += ('"' + ($arg -replace '"', '\"') + '"')
+        }
+        else {
+            $formatted += $arg
+        }
+    }
+    return ($formatted -join ' ')
+}
+
+$deviceArgs = @(Get-DeviceArgs)
 
 if ($ListDevices) {
-    & $pythonExe -c "import frida; [print(f'{d.id}`t{d.type}`t{d.name}') for d in frida.enumerate_devices()]"
+    # frida-ls-devices uses a console renderer that can fail in redirected
+    # Codex/CI sessions. The Python API produces stable non-TUI output.
+    $tool = Get-ToolPath -Name 'python'
+    $listCode = "import frida; print('ID\tTYPE\tNAME'); [print(f'{d.id}\t{d.type}\t{d.name}') for d in frida.get_device_manager().enumerate_devices()]"
+    if ($DryRun) {
+        "command=$(Format-CommandLine -Executable $tool -Arguments @('-c', $listCode))"
+        exit 0
+    }
+    & $tool -c $listCode
     exit $LASTEXITCODE
 }
 
-$target = if ($Package) { $Package } elseif ($Process) { $Process } else { '' }
-if ([string]::IsNullOrWhiteSpace($target) -and -not $ListProcesses) {
-    throw 'Provide -Package or -Process, or use -ListProcesses.'
-}
-
-$deviceFlag = if ($Usb) { '-U' } else { '-H' }
-
-if ($ListProcesses) {
-    $escapedRemoteHost = $RemoteHost.Replace("'", "''")
-    $pythonFlag = if ($Usb) { 'usb' } else { 'remote-host' }
-    & $pythonExe -c "import frida; manager = frida.get_device_manager(); device = frida.get_usb_device() if '$pythonFlag' == 'usb' else manager.add_remote_device('$escapedRemoteHost'); [print(f'{p.pid}`t{p.name}') for p in device.enumerate_processes()]"
+if ($ListProcesses -or $ListApplications) {
+    $tool = Get-ToolPath -Name 'frida-ps'
+    $args = @($deviceArgs)
+    if ($ListApplications) {
+        $args += '-a'
+    }
+    if ($DryRun) {
+        "command=$(Format-CommandLine -Executable $tool -Arguments $args)"
+        exit 0
+    }
+    & $tool @args
     exit $LASTEXITCODE
 }
 
+$targetModes = @(
+    -not [string]::IsNullOrWhiteSpace($Package),
+    -not [string]::IsNullOrWhiteSpace($Process),
+    $ProcessId -gt 0
+).Where({ $_ }).Count
+
+if ($targetModes -ne 1) {
+    throw 'Provide exactly one target: -Package, -Process, or -ProcessId.'
+}
+if ($Spawn -and [string]::IsNullOrWhiteSpace($Package)) {
+    throw '-Spawn requires -Package.'
+}
+if ($Pause -and -not $Spawn) {
+    throw '-Pause is only valid with -Spawn.'
+}
+if ([string]::IsNullOrWhiteSpace($ScriptPath)) {
+    throw 'Provide -ScriptPath for injection.'
+}
 if (-not (Test-Path -LiteralPath $ScriptPath)) {
     throw "Frida script not found: $ScriptPath"
 }
 
-$args = @($deviceFlag)
-if (-not $Usb) {
-    $args += $RemoteHost
-}
+$resolvedScript = (Resolve-Path -LiteralPath $ScriptPath).Path
+$frida = Get-ToolPath -Name 'frida'
+$args = @($deviceArgs)
+
 if ($Spawn) {
-    $args += '-f'
-} else {
-    $args += '-n'
+    $args += @('-f', $Package)
 }
-$args += $target
-$args += '-l'
-$args += $ScriptPath
-if (-not $Pause) {
-    $args += '--no-pause'
+elseif ($ProcessId -gt 0) {
+    $args += @('-p', [string]$ProcessId)
+}
+elseif (-not [string]::IsNullOrWhiteSpace($Package)) {
+    $args += @('-N', $Package)
+}
+else {
+    $args += @('-n', $Process)
+}
+
+$args += @('-l', $resolvedScript)
+if ($Pause) {
+    $args += '--pause'
+}
+
+if ($DryRun) {
+    "command=$(Format-CommandLine -Executable $frida -Arguments $args)"
+    exit 0
 }
 
 & $frida @args

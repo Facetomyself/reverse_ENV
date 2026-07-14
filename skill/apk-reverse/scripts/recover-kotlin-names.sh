@@ -13,9 +13,10 @@
 #   * @Metadata(... d2 = {"...L<pkg/Class>;..."} ...) listing internal
 #     class refs of the file.
 #
-# Typical recovery on a real-world app: 30-50 % of classes regain their real
-# names — usually 100 % of the *Repository / *ViewModel / *UseCase / *Impl
-# classes you actually want to read.
+# Coverage is sample-dependent. DebugMetadata and jadx rename comments are
+# authoritative enough for the main map; Metadata.d2 references are emitted as
+# low-confidence candidates because they may name a dependency instead of the
+# declaring class.
 
 set -euo pipefail
 
@@ -26,8 +27,9 @@ Usage: recover-kotlin-names.sh <decompiled-sources-dir> [output-dir]
 Walks every *.java under <decompiled-sources-dir>, mines @DebugMetadata
 and @Metadata annotations, and writes:
 
-  <output-dir>/mapping.tsv   tab-separated  obf_fqn <TAB> real_fqn <TAB> file
+  <output-dir>/mapping.tsv   authoritative high-confidence mappings
   <output-dir>/mapping.json  same data as JSON  { obf_fqn: real_fqn, ... }
+  <output-dir>/candidates.tsv low-confidence @Metadata.d2 candidates
   <output-dir>/by_package/   one file per real package, listing
                              real_fqn <TAB> obf_fqn <TAB> file
 
@@ -44,10 +46,10 @@ OUT="${2:-$(dirname "$SRC")/mapping}"
 PYTHON_EXE="${PYTHON_EXE:-D:/reverse_ENV/.venv/Scripts/python.exe}"
 [[ ! -x "$PYTHON_EXE" ]] && { echo "Python not found or not executable: $PYTHON_EXE (set PYTHON_EXE)" >&2; exit 1; }
 
-mkdir -p "$OUT/by_package"
+mkdir -p "$OUT"
 
 "$PYTHON_EXE" - "$SRC" "$OUT" <<'PY'
-import os, re, sys, json
+import os, re, sys, json, shutil
 from collections import defaultdict
 
 SRC, OUT = sys.argv[1], sys.argv[2]
@@ -74,7 +76,14 @@ SKIP_PREFIXES = (
 
 mapping = {}
 file_real = {}
+details = {}
+d2_candidates = []
 counts = defaultdict(int)
+
+by_package_dir = os.path.join(OUT, "by_package")
+if os.path.isdir(by_package_dir):
+    shutil.rmtree(by_package_dir)
+os.makedirs(by_package_dir, exist_ok=True)
 
 for dp, _, files in os.walk(SRC):
     for f in files:
@@ -91,40 +100,63 @@ for dp, _, files in os.walk(SRC):
         except OSError:
             continue
         real = None
+        source = None
 
         m = RE_DEBUG.search(text)
         if m:
             real = m.group(1).split("$", 1)[0]
+            source = "DebugMetadata.c"
             counts["debug_meta"] += 1
-
-        if not real:
-            m = RE_DTWO.search(text)
-            if m:
-                for lm in RE_LCLASS.finditer(m.group(1)):
-                    cand = lm.group(1).replace("/", ".").split("$", 1)[0]
-                    if "." in cand and not cand.startswith(("kotlin.", "java.", "android")):
-                        real = cand
-                        counts["d2"] += 1
-                        break
 
         if not real:
             m = RE_RENAMED.search(text)
             if m:
                 real = m.group(1)
+                source = "jadx-renamed-comment"
                 counts["renamed"] += 1
 
         if real:
             mapping[obf] = real
             file_real[obf] = path
+            details[obf] = {
+                "real_fqn": real,
+                "source": source,
+                "confidence": "high",
+                "file": path,
+            }
+
+        # d2 contains referenced types, not necessarily the declaring class.
+        # Preserve candidates as low-confidence evidence, but never insert them
+        # into the authoritative map without an independent correlation.
+        m = RE_DTWO.search(text)
+        if m:
+            seen = set()
+            for lm in RE_LCLASS.finditer(m.group(1)):
+                cand = lm.group(1).replace("/", ".").split("$", 1)[0]
+                if "." not in cand or cand.startswith(("kotlin.", "java.", "android")) or cand in seen:
+                    continue
+                seen.add(cand)
+                d2_candidates.append((obf, cand, path))
+                counts["d2_candidates"] += 1
 
 with open(os.path.join(OUT, "mapping.tsv"), "w", encoding="utf-8", newline="\n") as f:
-    f.write("obf_fqn\treal_fqn\tfile\n")
+    f.write("obf_fqn\treal_fqn\tsource\tconfidence\tfile\n")
     for k in sorted(mapping):
-        f.write(f"{k}\t{mapping[k]}\t{file_real[k]}\n")
+        item = details[k]
+        f.write(f"{k}\t{mapping[k]}\t{item['source']}\t{item['confidence']}\t{file_real[k]}\n")
 
 with open(os.path.join(OUT, "mapping.json"), "w", encoding="utf-8", newline="\n") as f:
     json.dump(mapping, f, indent=2, sort_keys=True, ensure_ascii=False)
     f.write("\n")
+
+with open(os.path.join(OUT, "mapping-details.json"), "w", encoding="utf-8", newline="\n") as f:
+    json.dump(details, f, indent=2, sort_keys=True, ensure_ascii=False)
+    f.write("\n")
+
+with open(os.path.join(OUT, "candidates.tsv"), "w", encoding="utf-8", newline="\n") as f:
+    f.write("obf_fqn\tcandidate_real_fqn\tsource\tconfidence\tfile\n")
+    for obf, cand, path in sorted(d2_candidates):
+        f.write(f"{obf}\t{cand}\tMetadata.d2-reference\tlow\t{path}\n")
 
 by_pkg = defaultdict(list)
 for obf, real in mapping.items():
@@ -133,13 +165,14 @@ for obf, real in mapping.items():
 
 for pkg, rows in by_pkg.items():
     safe = os.path.basename(pkg).replace(".", "_") or "default"
-    with open(os.path.join(OUT, "by_package", f"{safe}.txt"), "w", encoding="utf-8", newline="\n") as f:
+    with open(os.path.join(by_package_dir, f"{safe}.txt"), "w", encoding="utf-8", newline="\n") as f:
         for real, obf, p in sorted(rows):
             f.write(f"{real}\t{obf}\t{p}\n")
 
-print(f"Recovered {len(mapping)} class names")
+print(f"Recovered {len(mapping)} high-confidence class names")
 for k, v in counts.items():
     print(f"  via {k}: {v}")
 print(f"Real packages: {len(by_pkg)}")
-print(f"Wrote {OUT}/mapping.tsv, mapping.json, by_package/")
+print(f"Low-confidence d2 candidates: {len(d2_candidates)}")
+print(f"Wrote {OUT}/mapping.tsv, mapping.json, mapping-details.json, candidates.tsv, by_package/")
 PY

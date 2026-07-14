@@ -1,108 +1,72 @@
-# Recovering Original Class Names from Kotlin Metadata
+# Kotlin 混淆类名恢复
 
-When R8/ProGuard obfuscates a Kotlin app, JVM symbols are renamed but the
-**Kotlin metadata strings cannot be stripped** — the Kotlin runtime depends
-on them at runtime for reflection, coroutines, and `data class` features.
+## 证据等级
 
-Two annotations leak the original fully-qualified names:
+Kotlin metadata 能暴露部分原始名称，但不同字段的含义不一样，不能把
+所有 descriptor 都当成当前类名。
 
-## `@DebugMetadata`
+| 来源 | 含义 | 置信度 | 输出 |
+|---|---|---|---|
+| `@DebugMetadata(c = "...")` | coroutine 对应的原始声明类 | high | `mapping.json` |
+| jadx `/* renamed from: ... */` | jadx 从 DEX 证据恢复的原名 | high | `mapping.json` |
+| `@Metadata.d2` 中的 `Lpkg/Type;` | metadata 引用到的类型，可能只是依赖 | low | `candidates.tsv` |
 
-Generated for nearly every Kotlin coroutine `SuspendLambda` (i.e. almost
-every `suspend` function in a modern app):
+`Metadata.d2` 的第一个非 stdlib descriptor 不是可靠的“当前类”规则。
+例如某个混淆类只引用 `com.example.Dependency` 时，盲取第一个 descriptor
+会产生确定性的错误映射。因此脚本只把 d2 写入候选，不进入 authoritative
+map，除非后续通过文件名、调用链、DebugMetadata 或其他证据独立关联。
 
-```java
-@DebugMetadata(
-    c  = "com.example.feature.account.AccountRepositoryImpl$fetch$1",
-    f  = "AccountRepositoryImpl.kt",
-    l  = {42, 51},
-    m  = "invokeSuspend"
-)
-public final class a extends SuspendLambda implements Function2<...> { ... }
+## 运行
+
+```powershell
+& "C:\Program Files\Git\bin\bash.exe" `
+  "D:/reverse_ENV/skill/apk-reverse/scripts/recover-kotlin-names.sh" `
+  "D:/reverse_ENV/workspace/<project>/jadx/sources" `
+  "D:/reverse_ENV/workspace/<project>/mapping"
 ```
 
-The `c =` field carries the original outer class FQN (with a `$` suffix
-for inner / lambda scopes — strip everything after the first `$` to get the
-declaring class).
+产物：
 
-## `@Metadata.d2`
+| 文件 | 内容 |
+|---|---|
+| `mapping.json` | high-confidence `obf_fqn -> real_fqn`，供查询脚本使用 |
+| `mapping.tsv` | 同一映射，附 source/confidence/file |
+| `mapping-details.json` | 结构化证据详情 |
+| `candidates.tsv` | low-confidence d2 引用候选 |
+| `by_package/` | authoritative map 的包索引；每次运行前安全重建，避免旧结果污染 |
 
-Every Kotlin class carries a top-level `@Metadata` annotation. The `d2`
-array lists internal class refs in JVM type-descriptor format
-(`Lcom/example/Foo;`):
+查询：
 
-```java
-@Metadata(d1 = {"..."},
-          d2 = {"...","Lcom/example/feature/account/AccountRepositoryImpl;","..."})
-public final class b implements ... { ... }
+```powershell
+& "C:\Program Files\Git\bin\bash.exe" `
+  "D:/reverse_ENV/skill/apk-reverse/scripts/lookup-name.sh" `
+  "D:/reverse_ENV/workspace/<project>/mapping" -o "a.b.C"
+
+& "C:\Program Files\Git\bin\bash.exe" `
+  "D:/reverse_ENV/skill/apk-reverse/scripts/lookup-name.sh" `
+  "D:/reverse_ENV/workspace/<project>/mapping" --grep '"/api/' `
+  "D:/reverse_ENV/workspace/<project>/jadx/sources"
 ```
 
-The first non-stdlib descriptor in `d2` is usually the file's primary
-class.
+`lookup-name.sh --grep` 由项目 Python 直接遍历 `.java` / `.kt`，不再解析
+外部 grep 的 `path:line:text` 字符串，因此 Windows 盘符冒号不会截断路径。
 
-## How to mine them
+## 解读规则
 
-The skill ships two scripts:
+1. 只把 `mapping.json` 的结果当 high-confidence 类名证据。
+2. `candidates.tsv` 必须与声明文件、继承关系、方法签名、调用链或运行时类名
+   交叉验证后，才能提升为 finding。
+3. 一个真实外层类可对应多个混淆 coroutine/lambda 类；这不等于方法名、字段名
+   或所有 inner class 都已恢复。
+4. 覆盖率高度依赖编译器、R8 配置、inline 程度和 jadx 输出。不得承诺固定
+   百分比，也不得声称 Kotlin metadata 能恢复纯 Java 类。
+5. `jadx --deobf` 生成的合成名称与原始名称恢复是两回事，可以并行使用，
+   但报告中必须标明来源。
 
-```bash
-# Build a mapping from a decompiled sources directory:
-bash scripts/recover-kotlin-names.sh <output>/sources [mapping-dir]
+## 限制
 
-# Outputs:
-#   <mapping-dir>/mapping.tsv        obf_fqn  real_fqn  file
-#   <mapping-dir>/mapping.json       same data, JSON
-#   <mapping-dir>/by_package/        per-real-package index files
-
-# Query the mapping:
-bash scripts/lookup-name.sh <mapping-dir> Repository                 # search
-bash scripts/lookup-name.sh <mapping-dir> -o ab.cd                   # obf -> real
-bash scripts/lookup-name.sh <mapping-dir> -p com.example.feature     # list package
-bash scripts/lookup-name.sh <mapping-dir> --grep '"api/' <output>/sources
-   # ^ greps decompiled code and appends '// real.fqn' to each hit
-```
-
-## What you typically recover
-
-On a real-world obfuscated Kotlin app the script recovers **30 – 50 % of
-classes** — but more importantly, **almost 100 % of the classes you
-actually want to read**:
-
-| Class kind                | Recovery rate |
-|---------------------------|---------------|
-| `*Repository` / `*Impl`   | ~100 %        |
-| `*ViewModel`              | ~100 %        |
-| `*UseCase` / `*Interactor`| ~100 %        |
-| Plain `data class` DTOs   | ~80 %         |
-| Pure-Java helper classes  | low (no Kotlin metadata) |
-| Anonymous inner classes   | sometimes recovered as the parent FQN |
-
-## Why `jadx --deobf` is not enough
-
-`--deobf` renames obfuscated identifiers using internal heuristics, but the
-output is still synthetic (`p001a`, `C0123Foo`). It does **not** recover
-the *original* names. Kotlin metadata recovery is the only reliable way to
-map back to the names the developer actually wrote, and it costs essentially
-nothing — just a regex pass over the decompiled sources.
-
-Run both: `--deobf` for fields/methods that have no metadata source, plus
-the recovery script for class names.
-
-## Limitations
-
-- **Method names and field names** are not recovered. Kotlin metadata only
-  preserves class-level FQNs and a few signatures. For method names you
-  still need jadx-gui's interactive rename or pattern inference.
-- **Pure-Java classes** carry no `@Metadata`, so they remain obfuscated.
-- **Heavily inlined classes** (`@JvmInline value class`, top-level fun
-  files compiled into shared `*Kt.class` synthetic classes) sometimes show
-  up under the wrong filename — treat results as a strong hint, not gospel.
-
-## Reading flow with the mapping
-
-1. Run `recover-kotlin-names.sh` once after decompiling.
-2. Use `lookup-name.sh --grep '<pattern>' <sources>` instead of plain `grep`
-   so every hit comes annotated with the real owning class.
-3. When you hit an obfuscated FQN in code (e.g. `nq.e`), resolve it with
-   `lookup-name.sh <mapping-dir> -o nq.e` — you will often see siblings
-   (`nq.d`, `nq.f`, ...) that are the same class's split lambdas/inner
-   classes, which is useful context.
+- 不恢复大多数方法名和字段名。
+- 纯 Java 类无 Kotlin metadata。
+- top-level function、inline/value class、合成 `*Kt` 文件和跨文件 metadata
+  仍需人工关联。
+- R8 可重写、合并或移除结构；“文件中出现某个 FQN”不是声明归属证明。

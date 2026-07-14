@@ -18,8 +18,9 @@
 
 ```javascript
 function hookModuleLoad(moduleName, callback) {
-    const dlopen = Module.findExportByName(null, "android_dlopen_ext")
-        || Module.findExportByName(null, "dlopen");
+    const dlopen = Module.findGlobalExportByName("android_dlopen_ext")
+        || Module.findGlobalExportByName("dlopen");
+    if (dlopen === null) throw new Error("dlopen export not found");
     const hooked = new Set();
 
     Interceptor.attach(dlopen, {
@@ -83,7 +84,7 @@ function hookNowOrOnLoad(moduleName, callback) {
 const mod = Process.getModuleByName("libssl.so");
 mod.name; mod.base; mod.size; mod.path;
 const ptr = mod.getExportByName("SSL_read");
-Module.getExportByName(null, "open");  // 全局搜索
+Module.getGlobalExportByName("open");  // Frida 17 全局搜索
 Process.enumerateModules();            // 枚举所有模块
 ```
 
