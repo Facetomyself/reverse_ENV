@@ -39,7 +39,7 @@
 - 项目仓只跟踪 README、AGENTS、三件套、原创源码、测试、脱敏 fixture 和 evidence manifest。APK/IPA/SO、IDA 数据库、HAR/PCAP/flow、Cookie、凭据、浏览器 profile、解包与反编译全集不得进入 Git。
 - 正在运行或存在归属明确脏改动的项目标记为 `deferred-active`；迁移时禁止对其执行 `checkout`、`reset`、`clean`、`stash`、`rebase`、移动目录或 `submodule absorbgitdirs`。
 - 新增、删除、重命名、建仓或变更 remote/submodule 状态时，必须同步 `docs/workspace-projects.yaml`，并运行 `tools/workspace-governance/audit_workspace.py`。
-- `article/` 是独立 Private 知识库 submodule；canonical index 位于 `article/INDEX.md`，`docs/article-index.md` 只保留主仓兼容入口。
+- `article/` 是独立 Public 知识库 submodule；canonical index 位于 `article/INDEX.md`，`docs/article-index.md` 只保留主仓兼容入口。
 
 ### AI 协作子约束
 
@@ -86,7 +86,7 @@
 | AI 协作开发规范 | `docs/AI开发规范.md` |
 | Git 操作规范 | `docs/Git与提交规范.md` |
 | **逆向知识库索引** | `article/INDEX.md` — 独立知识库 submodule 的 canonical index；`docs/article-index.md` 为兼容入口 |
-| 逆向知识库文章 | `article/` — Private submodule，包含协议分析/反检测/签名算法/加固绕过/Native分析/Web逆向 |
+| 逆向知识库文章 | `article/` — Public submodule，包含协议分析/反检测/签名算法/加固绕过/Native分析/Web逆向 |
 
 ## 任务前知识库检索（硬纪律）
 

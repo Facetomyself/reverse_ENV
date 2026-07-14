@@ -7,7 +7,7 @@
 - `submodule`：正式 spec、公共工具或被主仓/其他仓库直接消费的代码，主仓固定其 commit。
 - `registry`：目标型逆向、数据研究和证据型项目，仅在 `docs/workspace-projects.yaml` 登记，不进入主仓克隆链。
 
-知识库 `article/` 使用独立 Private 仓库并以 submodule 接回原路径。文章 canonical index 位于 `article/INDEX.md`，主仓 `docs/article-index.md` 仅提供兼容入口。
+知识库 `article/` 使用独立 Public 仓库并以 submodule 接回原路径。文章 canonical index 位于 `article/INDEX.md`，主仓 `docs/article-index.md` 仅提供兼容入口。
 
 ## 项目仓跟踪边界
 

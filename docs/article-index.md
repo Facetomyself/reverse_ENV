@@ -1,6 +1,6 @@
 # 逆向知识库索引（兼容入口）
 
-知识库已拆分为独立 Private 仓库，并以 `article/` submodule 接入本仓库。
+知识库已拆分为独立 Public 仓库，并以 `article/` submodule 接入本仓库。
 
 - Canonical index：[`article/INDEX.md`](../article/INDEX.md)
 - GitHub：`https://github.com/Facetomyself/reverse-engineering-knowledge-base`

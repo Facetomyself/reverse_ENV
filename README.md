@@ -47,7 +47,7 @@ reverse_ENV/
 │   ├── AI开发规范.md          # AI 协作开发规范
 │   ├── 脚本参考.md            # 脚本调用规范
 │   └── article-index.md      # 独立知识库索引兼容入口
-├── article/           # Private 知识库 submodule
+├── article/           # Public 知识库 submodule
 │   ├── INDEX.md              # canonical index
 │   ├── anti-detection/       # 反检测/指纹对抗
 │   ├── protocols/            # 协议分析（MMTLS 等）

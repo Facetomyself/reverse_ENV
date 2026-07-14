@@ -65,7 +65,7 @@ git status --short --branch   # 若已初始化 git
 - `resource/`：资源文件（IDA Pro 便携版 + 汉化 + 许可补丁）
 - `.venv/`：Python 虚拟环境（所有 MCP 服务和 Python 包）
 - `workspace/`：独立项目工作树容器；项目 Git 边界由 `docs/workspace-projects.yaml` 管理
-- `article/`：独立 Private 知识库 submodule，索引由子仓维护
+- `article/`：独立 Public 知识库 submodule，索引由子仓维护
 - `.mcp.json`：项目级 MCP 服务声明
 - `~/.codex/config.toml`：Codex 用户级默认启动配置
 - `AGENTS.md` / `CLAUDE.md`：Codex / Claude 仓库总纲
