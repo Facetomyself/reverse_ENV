@@ -42,6 +42,19 @@ RUYI_FIREFOX_PATH = "D:\\reverse_ENV\\tools\\ruyipage\\runtimes\\151-proxy\\fire
 # enabled = false
 # url = "http://127.0.0.1:4554/sse"
 
+# WeChat Mini Program/WMPF reverse engineering. The server cold-starts cleanly,
+# but remains on-demand until the complete real-target CDP gate is recorded.
+# [mcp_servers.wechat-miniapp-re-mcp]
+# enabled = false
+# command = "D:\\reverse_ENV\\tools\\node\\node.exe"
+# args = ["D:\\reverse_ENV\\mcp\\wechat-miniapp-re-mcp\\build\\src\\index.js"]
+#
+# [mcp_servers.wechat-miniapp-re-mcp.env]
+# REVERSE_ENV_ROOT = "D:\\reverse_ENV"
+# WXMP_WORKSPACE_ROOT = "D:\\reverse_ENV\\workspace"
+# WXMP_GWXAPKG = "D:\\reverse_ENV\\tools\\Gwxapkg-runtime\\gwxapkg.exe"
+# WXMP_LEGACY_PROFILE_DIR = "D:\\reverse_ENV\\tools\\First\\frida\\config\\win"
+
 # Reqable capture query. Requires reqable-mcp runtime/client health.
 # [mcp_servers.reqable]
 # enabled = false

@@ -94,7 +94,8 @@ description: |
 | `.exe` / `.dll` / `.sys` | Windows PE | `ida-reverse` |
 | `.so` / `.elf`（反调试/反Frida/壳化/闪退） | Android/Linux Native 检测 | `native-reverse` |
 | `.so` / `.elf` / `.macho`（纯算法/无保护） | Linux/macOS 二进制 | `ida-reverse` 或 `radare2` |
-| `.js` / 网页 URL / 小程序 | Web JS | `ruyi-reverse`（默认）/ `mcp-js-reverse-playbook`（需 CDP 调试时） |
+| `.wxapkg` / PC 微信 WMPF / 小程序或小游戏 runtime | 微信小程序逆向 | `wechat-miniapp-re-mcp`（`wxmp_*`，按需启用） |
+| `.js` / 网页 URL / 小程序内嵌 H5 | Web JS | `ruyi-reverse`（默认）/ `mcp-js-reverse-playbook`（需 CDP 调试时） |
 | 任意二进制（仅需快速侦察） | 通用二进制 | `radare2` |
 | Android Native 反检测/完整性/Root | Native 安全分析 | `native-reverse` |
 
@@ -126,6 +127,7 @@ description: |
 - **APK**: 先 `fingerprint.sh` 做 Phase 0 指纹（框架/混淆度/HTTP栈/下一步建议）；确认 Native Android 后再 `decode.ps1`
 - **二进制**: 字符串 + 导入表 + 段信息（`rabin2 -I/-z/-i` 或 IDA MCP 的 `mcp__ida_multi_mcp.survey_binary` / `survey_binary`；IDA proxied tools 调用时必须提供有效 `instance_id`）
 - **Web JS**: `ruyi_new_page`（默认）+ `ruyi_list_scripts` + `ruyi_list_network_requests` + `ruyi_search_in_sources`；需 CDP 调试时 `js-reverse_new_page`（T4 桥接）
+- **微信小程序**: `wxmp_health` → `wxmp_list_targets` / `wxmp_scan_packages` → 动态目标 `wxmp_attach`，静态包 `wxmp_decompile`；所有动态深挖显式携带 `session_id` / `context_id`
 - **网络抓包分析**: `reqable_ingest_status` → `reqable_list_requests` / `reqable_search_requests` / `reqable_get_domains`（前提：Reqable 桌面端已抓包并推送到 18765）
 
 **产出**: `workspace.json` 中记录目标类型、架构、关键字符串/类/函数名列表、复杂度 marker。

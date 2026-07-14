@@ -8,7 +8,7 @@ This directory contains project-local Codex configuration and lifecycle hooks. I
 - Codex side: project MCP belongs in `.codex/config.toml`; project lifecycle policy belongs in `.codex/hooks.json`; durable repo instructions stay in `AGENTS.md`.
 - Codex repo-scope skills are discovered from `.agents/skills`; this repo keeps thin entrypoints there and preserves the source-of-truth workflows under `D:\reverse_ENV\skill\`.
 - Project-local Codex config and hooks load only after the project `.codex` layer is trusted. If Codex prompts through `/hooks`, review and trust these commands before expecting them to run.
-- reverse_ENV MCP servers are project-scoped here: `ida-multi-mcp` and `ruyi-mcp` are enabled in `.codex/config.toml`. GUI/SSE/client-bound MCPs remain disabled/commented until their prerequisites are active.
+- reverse_ENV MCP servers are project-scoped here: `ida-multi-mcp` and `ruyi-mcp` are enabled in `.codex/config.toml`. GUI/SSE/client-bound MCPs and `wechat-miniapp-re-mcp` remain disabled/commented until their prerequisites or real-target acceptance gates are active.
 - `ruyi-mcp` is a public submodule. Before starting Codex in a fresh checkout, run `git submodule update --init mcp/ruyi-mcp`, then `tools\node\npm.cmd --prefix mcp\ruyi-mcp ci`; the project config keeps the entry at `mcp/ruyi-mcp/build/src/index.js` and injects the project Python/Firefox paths.
 - User-level `C:\Users\mengma\.codex\config.toml` should keep personal defaults, providers, features, plugins, and project trust only. Do not put `D:\reverse_ENV`-specific MCP paths there.
 - `search-layer` is a Codex skill in the user skill layer, not a project `.mcp.json` server and not the same thing as Claude's global MCP tier.
