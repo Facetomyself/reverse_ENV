@@ -9,11 +9,11 @@ projects:
 - name: 51job-web-reverse
   path: workspace/51job-web-reverse
   ownership: owned
-  last_audited: 2026-07-13
+  last_audited: 2026-07-14
   kind: web-reverse
   integration: registry
-  lifecycle: planned
-  readiness: curation-required
+  lifecycle: active
+  readiness: existing
   visibility: private
   remote: https://github.com/Facetomyself/51job-web-reverse.git
   repository_root: workspace/51job-web-reverse
@@ -23,11 +23,11 @@ projects:
 - name: airead
   path: workspace/airead
   ownership: owned
-  last_audited: 2026-07-13
+  last_audited: 2026-07-14
   kind: apk-reverse
   integration: registry
-  lifecycle: planned
-  readiness: curation-required
+  lifecycle: active
+  readiness: existing
   visibility: private
   remote: https://github.com/Facetomyself/airead.git
   repository_root: workspace/airead
@@ -37,14 +37,14 @@ projects:
 - name: bilibili
   path: workspace/bilibili
   ownership: owned
-  last_audited: 2026-07-13
+  last_audited: 2026-07-14
   kind: apk-reverse
   integration: registry
-  lifecycle: planned
-  readiness: curation-required
+  lifecycle: active
+  readiness: existing
   visibility: private
   remote: https://github.com/Facetomyself/bilibili.git
-  notes: Large decompiled tree; curate before first commit.
+  notes: Large decompiled tree remains local; the active repository contains only curated reports and original tooling.
   repository_root: workspace/bilibili
   remote_name: origin
   default_branch: main
@@ -111,11 +111,11 @@ projects:
 - name: cultist-huiji
   path: workspace/cultist-huiji
   ownership: owned
-  last_audited: 2026-07-13
+  last_audited: 2026-07-14
   kind: apk-reverse
   integration: registry
-  lifecycle: planned
-  readiness: curation-required
+  lifecycle: active
+  readiness: existing
   visibility: private
   remote: https://github.com/Facetomyself/cultist-huiji.git
   repository_root: workspace/cultist-huiji
@@ -183,11 +183,11 @@ projects:
 - name: honghusaas
   path: workspace/honghusaas
   ownership: owned
-  last_audited: 2026-07-13
+  last_audited: 2026-07-14
   kind: web-reverse
   integration: registry
-  lifecycle: planned
-  readiness: curation-required
+  lifecycle: active
+  readiness: existing
   visibility: private
   remote: https://github.com/Facetomyself/honghusaas.git
   repository_root: workspace/honghusaas
@@ -197,11 +197,11 @@ projects:
 - name: jd-command-longlink-research
   path: workspace/jd-command-longlink-research
   ownership: owned
-  last_audited: 2026-07-13
+  last_audited: 2026-07-14
   kind: protocol-research
   integration: registry
-  lifecycle: planned
-  readiness: curation-required
+  lifecycle: active
+  readiness: existing
   visibility: private
   remote: https://github.com/Facetomyself/jd-command-longlink-research.git
   repository_root: workspace/jd-command-longlink-research
@@ -225,11 +225,11 @@ projects:
 - name: mes_app
   path: workspace/mes_app
   ownership: owned
-  last_audited: 2026-07-13
+  last_audited: 2026-07-14
   kind: apk-reverse
   integration: registry
-  lifecycle: planned
-  readiness: curation-required
+  lifecycle: active
+  readiness: existing
   visibility: private
   remote: https://github.com/Facetomyself/mes_app.git
   repository_root: workspace/mes_app
@@ -267,11 +267,11 @@ projects:
 - name: openrice-restaurant-review-study
   path: workspace/openrice-restaurant-review-study
   ownership: owned
-  last_audited: 2026-07-13
+  last_audited: 2026-07-14
   kind: data-research
   integration: registry
-  lifecycle: planned
-  readiness: curation-required
+  lifecycle: active
+  readiness: existing
   visibility: private
   remote: https://github.com/Facetomyself/openrice-restaurant-review-study.git
   repository_root: workspace/openrice-restaurant-review-study
@@ -281,11 +281,11 @@ projects:
 - name: pxb7
   path: workspace/pxb7
   ownership: owned
-  last_audited: 2026-07-13
+  last_audited: 2026-07-14
   kind: reverse-research
   integration: registry
-  lifecycle: planned
-  readiness: curation-required
+  lifecycle: active
+  readiness: existing
   visibility: private
   remote: https://github.com/Facetomyself/pxb7.git
   notes: Very large evidence tree; commit only curated reports and original tooling.
@@ -412,11 +412,11 @@ projects:
 - name: wechat-mp-history-hook
   path: workspace/wechat-mp-history-hook
   ownership: owned
-  last_audited: 2026-07-13
+  last_audited: 2026-07-14
   kind: web-reverse
   integration: registry
-  lifecycle: planned
-  readiness: curation-required
+  lifecycle: active
+  readiness: existing
   visibility: private
   remote: https://github.com/Facetomyself/wechat-mp-history-hook.git
   repository_root: workspace/wechat-mp-history-hook
@@ -426,11 +426,11 @@ projects:
 - name: weidian
   path: workspace/weidian
   ownership: owned
-  last_audited: 2026-07-13
+  last_audited: 2026-07-14
   kind: apk-reverse
   integration: registry
-  lifecycle: planned
-  readiness: curation-required
+  lifecycle: active
+  readiness: existing
   visibility: private
   remote: https://github.com/Facetomyself/weidian.git
   repository_root: workspace/weidian
@@ -440,11 +440,11 @@ projects:
 - name: weixin_download
   path: workspace/weixin_download
   ownership: owned
-  last_audited: 2026-07-13
+  last_audited: 2026-07-14
   kind: application-and-reverse
   integration: registry
-  lifecycle: planned
-  readiness: curation-required
+  lifecycle: active
+  readiness: existing
   visibility: private
   remote: https://github.com/Facetomyself/weixin_download.git
   repository_root: workspace/weixin_download
