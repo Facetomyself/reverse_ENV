@@ -109,6 +109,7 @@ tools/web-env/runtimes/
 tools/stealth-hook-engine/
 tools/Gwxapkg-runtime/
 tools/codex-session-patcher/
+tools/tmp/
 
 # 代理凭证 (敏感信息)
 **/proxy-usage/.env
