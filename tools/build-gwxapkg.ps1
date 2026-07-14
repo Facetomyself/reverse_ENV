@@ -24,7 +24,7 @@ if (-not (Test-Path -LiteralPath $GoExe)) {
 New-Item -ItemType Directory -Path $RuntimeDir -Force | Out-Null
 Push-Location $SourceDir
 try {
-    & $GoExe build -trimpath -ldflags '-s -w' -o $OutputExe .
+    & $GoExe build -buildvcs=false -trimpath -ldflags '-s -w' -o $OutputExe .
     if ($LASTEXITCODE -ne 0) {
         throw "Gwxapkg build failed with exit code $LASTEXITCODE"
     }
