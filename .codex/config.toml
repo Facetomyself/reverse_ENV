@@ -25,7 +25,7 @@ command = "D:\\reverse_ENV\\tools\\node22\\node.exe"
 args = ["D:\\reverse_ENV\\mcp\\dbx-mcp\\node_modules\\@dbx-app\\mcp-server\\dist\\index.js"]
 
 [mcp_servers.dbx.env]
-DBX_MCP_ALLOW_WRITES = "0"
+DBX_MCP_ALLOW_WRITES = "1"
 DBX_MCP_ALLOW_DANGEROUS_SQL = "0"
 
 # On-demand MCPs stay disabled by default. Enable only when the prerequisite GUI,

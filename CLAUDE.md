@@ -218,9 +218,9 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 
 1. Claude Code 通过项目 `.mcp.json` 使用 `dbx`，Codex 通过 `.codex/config.toml` 使用同一份隔离安装；不得再用系统 Node、全局 npm 包或 `npx` 启动第二套 DBX MCP。
 2. 本项目数据库查询固定使用 DBX 连接 `nas-re-db-postgres`，默认数据库为 `re_db`。连接参数和凭据由 NAS / DBX 本地连接存储维护，不复制到提示词、文档、日志或仓库文件。
-3. 默认只读：Claude/Codex 配置必须同时设置 `DBX_MCP_ALLOW_WRITES=0` 与 `DBX_MCP_ALLOW_DANGEROUS_SQL=0`。不得执行 `INSERT`、`UPDATE`、`DELETE`、DDL、危险 SQL 或 Redis 写命令。
+3. 允许常规写 SQL：Claude/Codex 配置设置 `DBX_MCP_ALLOW_WRITES=1`，可执行 `INSERT`、带明确 `WHERE` 的 `UPDATE` / `DELETE`；`DBX_MCP_ALLOW_DANGEROUS_SQL=0` 保持关闭，`DROP`、`TRUNCATE`、`ALTER` 等危险 SQL 继续拦截。
 4. 禁止通过 MCP 增删连接：Claude 项目权限拒绝 `dbx_add_connection`、`dbx_remove_connection` 和 `dbx_execute_redis_command`；连接变更统一在 DBX / NAS 维护侧完成。
-5. 查询顺序：`dbx_list_connections` 确认目标 → `dbx_get_schema_context` / `dbx_list_tables` / `dbx_describe_table` 获取结构 → `dbx_execute_query` 执行最小只读 SQL。优先聚合与明确列名，明细查询显式加 `LIMIT`，不得无目的 `SELECT *`。
+5. SQL 顺序：`dbx_list_connections` 确认目标 → `dbx_get_schema_context` / `dbx_list_tables` / `dbx_describe_table` 获取结构 → `dbx_execute_query`。写入前先查询目标范围；`UPDATE` / `DELETE` 使用明确 `WHERE`，执行后复核影响结果；读取优先明确列名，明细查询显式加 `LIMIT`，不得无目的 `SELECT *`。
 6. `dbx_open_table` / `dbx_execute_and_show` 只在用户要求 UI 展示时使用，且需 DBX 桌面端运行；普通 PostgreSQL 查询无需启动 DBX UI。
 
 ### Claude → Codex MCP 迁移规则
