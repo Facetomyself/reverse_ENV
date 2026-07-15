@@ -440,7 +440,7 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | ruyiTrace DOMTrace | `tools\ruyitrace\ruyitrace.ps1`（专用 `tools\ruyitrace\firefox\`） |
 | ruyi-mcp 0.1.1 (Web 增强 MCP) | `tools\node\node.exe D:\reverse_ENV\mcp\ruyi-mcp\build\src\index.js` |
 | reqable-mcp (抓包数据查询) | `.venv\Scripts\reqable-mcp.exe mcp`（源: `mcp\reqable-mcp\`） |
-| wechat-miniapp-re-mcp | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js`（stdio 可冷握手；v0.3.0 已补 capability/context 语义探测、clean-room profile/AOB 默认链路、XHR hook、evidence 事件/字节容量治理与 schema validation，完整真实动态语义门禁前按需启用。环境变量: `WXMP_PROFILE_DIR`, `WXMP_LEGACY_PROFILE_DIR`, `WXMP_SIGNATURE_DB`, `WXMP_WORKSPACE_ROOT`, `WXMP_GWXAPKG`, `WXMP_EVENT_LIMIT`, `WXMP_MAX_EVIDENCE_EVENTS`, `WXMP_MAX_EVIDENCE_BYTES`, `REVERSE_ENV_ROOT`） |
+| wechat-miniapp-re-mcp | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js`（stdio 可冷握手；v0.3.1 已通过 WMPF v19977 真实语义门禁，覆盖 nested `wx` runtime、breakpoint、727 trace wrappers、`wx.request`/fetch/XHR hook、Network body/replay、同 session reconnect 与 evidence export；第二 WMPF 版本 profile/AOB 交叉验证仍待补齐，继续按需启用。环境变量: `WXMP_PROFILE_DIR`, `WXMP_LEGACY_PROFILE_DIR`, `WXMP_SIGNATURE_DB`, `WXMP_WORKSPACE_ROOT`, `WXMP_GWXAPKG`, `WXMP_EVENT_LIMIT`, `WXMP_MAX_EVIDENCE_EVENTS`, `WXMP_MAX_EVIDENCE_BYTES`, `REVERSE_ENV_ROOT`） |
 | Gwxapkg 2.7.4 | `tools\Gwxapkg-runtime\gwxapkg.exe`（源码 submodule: `tools\Gwxapkg\`） |
 | JDK 21 | `tools\jdk\` |
 | Node.js 20.20.2 | `tools\node\node.exe`（现有 MCP 主运行时） |

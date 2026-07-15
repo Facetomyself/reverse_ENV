@@ -365,7 +365,7 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | ruyi-mcp 0.1.1 | `tools\node\node.exe mcp\ruyi-mcp\build\src\index.js` |
 | dbx MCP 0.4.29 | `tools\node22\node.exe mcp\dbx-mcp\node_modules\@dbx-app\mcp-server\dist\index.js` |
 | reqable-mcp | `.venv\Scripts\reqable-mcp.exe mcp` |
-| wechat-miniapp-re-mcp | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js`（stdio 可冷握手；v0.3.0 已补 capability/context 语义探测、clean-room profile/AOB 默认链路、XHR hook、evidence 事件/字节容量治理与 schema validation，完整真实动态语义门禁前按需启用） |
+| wechat-miniapp-re-mcp | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js`（stdio 可冷握手；v0.3.1 已通过 WMPF v19977 真实语义门禁，覆盖 nested `wx` runtime、breakpoint、727 trace wrappers、`wx.request`/fetch/XHR hook、Network body/replay、同 session reconnect 与 evidence export；第二 WMPF 版本 profile/AOB 交叉验证仍待补齐，继续按需启用） |
 | Gwxapkg 2.7.4 | `tools\Gwxapkg-runtime\gwxapkg.exe`（源码 submodule: `tools\Gwxapkg\`） |
 | First (微信小程序 Legacy) | `powershell -File tools\First\first-gui.ps1` |
 | Google Chrome | `C:\Program Files\Google\Chrome\Application\chrome.exe` |
