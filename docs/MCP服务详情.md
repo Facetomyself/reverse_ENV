@@ -18,7 +18,7 @@
    - `jadx-ai-mcp`：依赖 `jadx-gui` + 已加载 APK
    - `js-reverse-mcp`：依赖浏览器调试端口或包装脚本拉起浏览器
    - `reqable`：依赖 Reqable 桌面端与本地上报链
-   - `wechat-miniapp-re-mcp`：stdio 可冷握手；真实 WMPF 动态语义门禁完成前按需启用
+   - `wechat-miniapp-re-mcp`：stdio 可冷握手；WMPF v19977 真实动态语义门禁已完成，因依赖目标 runtime 继续按需启用
    - `first-mcp`：依赖 First GUI 与本地 SSE
 4. **规范名统一**
    - Web CDP 调试 MCP 的项目规范名为 `js-reverse-mcp`
@@ -38,7 +38,7 @@
 | `ruyi-mcp` | 0.1.1 | `ruyi_*` | Node.js 便携版 + Python venv (`ruyiPage==1.2.46`) | 已初始化公开 submodule；Firefox runtime 按 BiDi / DOMTrace 分层 |
 | `dbx` | 0.4.29 | `dbx_*` | Node.js 22.23.1 + native addons | DBX 已安装并存在本地连接数据库；默认冷启动 |
 | `reqable` | 0.3.2 | `reqable_*` | Python venv (stdio) | Reqable ≥2.20 桌面端；按需手动启用，默认不自动初始化 |
-| `wechat-miniapp-re-mcp` | 0.3.0 | `wxmp_*` | Node.js 便携版 + lazy Frida + Gwxapkg adapter | stdio 可冷握手；真实 WMPF 动态语义门禁完成前按需启用 |
+| `wechat-miniapp-re-mcp` | 0.3.1 | `wxmp_*` | Node.js 便携版 + lazy Frida + Gwxapkg adapter | stdio 可冷握手；WMPF v19977 真实语义门禁已通过；按需启用 |
 | `first-mcp` | 1.0.9 | — | SSE (127.0.0.1:4554) | First GUI 运行中；按需手动启用，默认不自动初始化 |
 
 ## ida-multi-mcp
@@ -212,7 +212,7 @@ Claude Code ← stdio ← FastMCP ← reqable_* 工具查询
 - **Workspace**: `workspace\<项目名>\wechat-miniapp\`
 - **静态后端**: `tools\Gwxapkg-runtime\gwxapkg.exe`
 - **Profile**: clean-room schema；generated candidate 必须匹配目标 WMPF version/module hash，并通过 `wxmp_profile_promote` 记录 review evidence 后才可注入；本地兼容测试可通过 `WXMP_LEGACY_PROFILE_DIR` 读取外部 profile，不复制进子仓
-- **状态**: PR #6 已合入且 Node 20/22 CI 绿色；cold-start / 53-tool contract / mock bridge / WMPF 19977 Frida attach 与 runtime CDP/reconnect 证据已验证；v0.3.0 已补 capability 语义探测、context probe、context-scoped request/script、XHR hook、clean-room profile/AOB 默认接入、evidence 事件/字节容量治理和 schema validation，breakpoint hit、非零 trace/hook event、replay 与第二版本 profile 仍待真实门禁
+- **状态**: PR #7 已合入且 Node 20/22 CI 绿色；cold-start / 53-tool contract / 80 tests / production audit 均通过；v0.3.1 已在 WMPF v19977 验证 nested `wx` runtime、AppService 选择、evaluate、真实 breakpoint location、727 trace wrappers、`wx.request`/fetch/XHR hook、hook event/API inventory、Network body/replay、同 session reconnect、detach 与 evidence export；剩余门禁为第二 WMPF 版本的 profile/AOB/hash-binding 交叉验证，以及可分发静态 backend subprocess fixture
 
 按需 Codex 配置见 `.codex/config.toml` 注释段。完整 Plan 与完成度见子仓 `docs/plan.md`、`docs/progress.md`。
 
