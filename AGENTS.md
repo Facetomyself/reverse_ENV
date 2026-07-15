@@ -25,7 +25,7 @@
 - 项目 skill 源目录: `skill\<name>\`；Codex repo-scope 发现入口: `.agents\skills\<name>\` 薄封装。
 - `.agents\skills\` 只保留 frontmatter 与源 skill 路由说明，不复制脚本/参考资料/流程正文；真实维护仍在 `skill\<name>\`。
 - `.agents\skills\<name>\SKILL.md` 必须与 `skill\<name>\SKILL.md` 一一对应，只允许指向源 skill；新增/删除/重命名 skill 时两侧同步。
-- venv: `.venv\` ｜ JDK: `tools\jdk\` ｜ Node: `tools\node\`
+- venv: `.venv\` ｜ JDK: `tools\jdk\` ｜ Node: `tools\node\` (20.20.2) / `tools\node22\` (22.23.1，DBX MCP 专用)
 - NDK r29: `tools\android-ndk\` ｜ Rust: `%USERPROFILE%\.cargo\`
 - IDA Pro 9.3: `resource\portable_win\` ｜ MCP 配置: `.mcp.json` + `.codex\config.toml`（Codex 项目层）+ `~/.codex/config.toml`（Codex 用户默认）
 - **所有逆向项目在 `workspace\<项目名>\` 下起新文件夹**。产出物均落地到对应项目目录。
@@ -208,6 +208,7 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 | `jadx_*` | jadx-ai-mcp | APK 类/方法搜索/反编译/xref |
 | `js-reverse_*` | js-reverse-mcp | JS 逆向调试 — 断点/脚本/网络/运行时 (~22 tools) |
 | `ruyi_*` | ruyi-mcp | Firefox/BiDi 全链路增强 — 反检测/指纹/人类模拟/BiDi JSON Trace/JS逆向 (56 tools) |
+| `dbx_*` | dbx | 读取 DBX 已配置连接并执行数据库查询、schema/context 与 UI 打开操作 (10 tools) |
 | `reqable_*` | reqable-mcp | Reqable 抓包数据查询 — HTTP/WebSocket 流量搜索/分析/代码生成 (~17 tools) |
 | `wxmp_*` | wechat-miniapp-re-mcp | PC 微信 WMPF / wxapkg 专用逆向 — 会话、CDP、Hook、网络、静态还原、Profile 与证据导出 |
 
@@ -225,6 +226,7 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 | 独立子仓 | `mcp/ruyi-mcp/` 是 Public Git submodule，`mcp/wechat-miniapp-re-mcp/` 是 Private Git submodule；修改时先在子仓验证、commit、push，再更新主仓 gitlink。fresh clone 必须先初始化对应 submodule 并安装锁定依赖 |
 | 配置同步 | 新增/变更项目 MCP 时，同步更新 `.mcp.json` + `.codex/config.toml` + `CLAUDE.md` + `AGENTS.md` + `mcp/README.md` + `docs/MCP服务详情.md`；只有全局 MCP 才同步 `~/.codex/config.toml` |
 | pip 管理标注 | pip 安装的 MCP 在 `mcp/README.md` 中标注包名和 venv 位置 |
+| npm 隔离 | `dbx` 固定安装在 `mcp/dbx-mcp/`，锁文件纳入 Git，`node_modules` 与 npm cache 排除 Git；安装和运行统一使用 `tools/node22/node.exe` |
 | 硬编码路径 | MCP 启动脚本中的路径必须使用 `mcp/` 前缀 |
 
 ### Web RE 双 MCP 约束
@@ -309,6 +311,7 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 8. **Rust 交叉编译** → 需 `rustup target add aarch64-linux-android x86_64-linux-android`
 9. **PowerShell UTF-8 BOM** → SKILL.md 必须无 BOM，否则 frontmatter 识别失败
 10. **ruyi Trace 不是 DOMTrace** → `ruyi_trace_*` 是 BiDi JSON Trace；C++ DOMTrace 必须使用 `tools\ruyitrace\ruyitrace.ps1` 和专用 Firefox，不能拿 `151-proxy` 顶替。
+11. **DBX MCP Node ABI** → `@dbx-app/mcp-server` 要求 Node.js >=22.13.0；安装与启动统一使用 `tools\node22\node.exe`，避免 `better-sqlite3` / `keytar` ABI 漂移。原生预编译缓存位于 `mcp\dbx-mcp\.npm-cache\_prebuilds\`。
 
 ## 脚本速查
 
@@ -347,7 +350,8 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | zipalign / apksigner | `tools\adb\` |
 | LDPlayer 9 | `tools\ldplayer\ldplayer.ps1` |
 | Android 模块资产 | `tools\android-modules\` |
-| Node.js | `tools\node\node.exe` |
+| Node.js 20.20.2 | `tools\node\node.exe`（现有 MCP 主运行时） |
+| Node.js 22.23.1 | `tools\node22\node.exe`（DBX MCP 隔离运行时） |
 | Web Env | `tools\web-env\` |
 | JDK 21 | `tools\jdk\` |
 | MinGW-w64 14.2.0 | `tools\mingw64\mingw64\bin\gcc.exe` |
@@ -359,6 +363,7 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | ruyipage 1.2.46 / 151-proxy | `tools\ruyipage\runtimes\151-proxy\firefox\firefox.exe`（项目 BiDi runtime） |
 | ruyiTrace DOMTrace | `tools\ruyitrace\ruyitrace.ps1`（专用 `tools\ruyitrace\firefox\`） |
 | ruyi-mcp 0.1.1 | `tools\node\node.exe mcp\ruyi-mcp\build\src\index.js` |
+| dbx MCP 0.4.29 | `tools\node22\node.exe mcp\dbx-mcp\node_modules\@dbx-app\mcp-server\dist\index.js` |
 | reqable-mcp | `.venv\Scripts\reqable-mcp.exe mcp` |
 | wechat-miniapp-re-mcp | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js`（stdio 可冷握手；v0.3.0 已补 capability/context 语义探测、clean-room profile/AOB 默认链路、XHR hook、evidence 事件/字节容量治理与 schema validation，完整真实动态语义门禁前按需启用） |
 | Gwxapkg 2.7.4 | `tools\Gwxapkg-runtime\gwxapkg.exe`（源码 submodule: `tools\Gwxapkg\`） |
@@ -368,7 +373,7 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 ## Claude → Codex MCP 迁移规则
 
 1. **先区分配置语义**：`.mcp.json` 是项目级可用声明；`.codex/config.toml` 是 Codex 项目级启动配置；`~/.codex/config.toml` 是 Codex 用户级个人默认。三者可以共享命令模板，但不能混成一个全局冷启动清单。
-2. **项目冷启动只保留稳定项**：仅保留无额外前置条件、可在进入项目时立即握手成功的 MCP。当前 reverse_ENV 项目冷启动清单为 `ida-multi-mcp`、`ruyi-mcp`，配置在 `.codex/config.toml`。
+2. **项目冷启动只保留稳定项**：仅保留无额外前置条件、可在进入项目时立即握手成功的 MCP。当前 reverse_ENV 项目冷启动清单为 `ida-multi-mcp`、`ruyi-mcp`、`dbx`，配置在 `.codex/config.toml`。
 3. **有前置条件的一律按需启用**：依赖 GUI、浏览器调试端口、本地 SSE、桌面客户端上报链的 MCP，迁移到 Codex 时默认注释，不放入自动初始化清单。
 4. **项目规范名优先**：项目文档、`.mcp.json`、`AGENTS.md`、`CLAUDE.md` 统一使用仓库规范名。Web CDP 调试 MCP 的规范名是 `js-reverse-mcp`，不得再混用 `jsreverser-mcp` 作为项目侧别名。
 5. **迁移后必须做能力验证**：至少验证一项默认冷启动 MCP 的真实工具调用成功；按需 MCP 需在满足前置条件后单独验证，不能只看“启动不报错”。

@@ -13,6 +13,7 @@ mcp/**/.pytest_cache/
 mcp/**/.mypy_cache/
 mcp/**/.ruff_cache/
 mcp/**/.cache/
+mcp/**/.npm-cache/
 mcp/**/coverage/
 mcp/**/.nyc_output/
 mcp/**/*.pyc
@@ -58,6 +59,7 @@ resource/misc/
 resource/ida93.torrent
 tools/jdk/
 tools/node/
+tools/node22/
 tools/jadx/
 tools/radare2/
 tools/go/

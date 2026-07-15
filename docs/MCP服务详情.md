@@ -13,7 +13,7 @@
    - Codex `search-layer`：本地 skill 副本位于 `~/.codex/skills/search-layer`，已通过 `search.py --mode deep --intent resource` 三源 smoke test（Exa + Tavily + Grok）
 2. **默认冷启动只放稳定项**
    - 进入项目时必须能立即握手成功、无 GUI/浏览器/外部服务前置条件
-   - 当前默认冷启动建议仅保留 `ida-multi-mcp`、`ruyi-mcp`
+   - 当前默认冷启动为 `ida-multi-mcp`、`ruyi-mcp`、`dbx`
 3. **有前置条件的一律按需启用**
    - `jadx-ai-mcp`：依赖 `jadx-gui` + 已加载 APK
    - `js-reverse-mcp`：依赖浏览器调试端口或包装脚本拉起浏览器
@@ -36,6 +36,7 @@
 | `jadx-ai-mcp` | 6.4.0 | `jadx_*` | Python venv | **先启动 jadx-gui 并加载 APK**；按需手动启用，默认不自动初始化 |
 | `js-reverse-mcp` | 3.0.0 | `js-reverse_*` | Node.js 便携版 | Chrome 浏览器；按需手动启用，默认不自动初始化 |
 | `ruyi-mcp` | 0.1.1 | `ruyi_*` | Node.js 便携版 + Python venv (`ruyiPage==1.2.46`) | 已初始化公开 submodule；Firefox runtime 按 BiDi / DOMTrace 分层 |
+| `dbx` | 0.4.29 | `dbx_*` | Node.js 22.23.1 + native addons | DBX 已安装并存在本地连接数据库；默认冷启动 |
 | `reqable` | 0.3.2 | `reqable_*` | Python venv (stdio) | Reqable ≥2.20 桌面端；按需手动启用，默认不自动初始化 |
 | `wechat-miniapp-re-mcp` | 0.3.0 | `wxmp_*` | Node.js 便携版 + lazy Frida + Gwxapkg adapter | stdio 可冷握手；真实 WMPF 动态语义门禁完成前按需启用 |
 | `first-mcp` | 1.0.9 | — | SSE (127.0.0.1:4554) | First GUI 运行中；按需手动启用，默认不自动初始化 |
@@ -147,6 +148,22 @@ Web RE 目标 → 按需求能力选择
 
 两者**工具接口对齐、工作流对等**（Observe → Capture → Rebuild → Patch → DeepDive），但底层浏览器/协议不同。**同一任务中不得混用两个前缀的工具**，除非通过 `ruyi_export_session` 显式桥接。
 
+## dbx
+
+- **官方仓库**: https://github.com/t8y2/dbx
+- **npm 包**: `@dbx-app/mcp-server@0.4.29`
+- **本地目录**: `mcp\dbx-mcp\`
+- **入口**: `tools\node22\node.exe mcp\dbx-mcp\node_modules\@dbx-app\mcp-server\dist\index.js`
+- **运行时**: Node.js 22.23.1 / ABI 127；与 `tools\node\` 的 Node.js 20.20.2 隔离
+- **原生依赖**: `better-sqlite3 12.11.1`、`keytar 7.9.0`
+- **数据位置**: 普通 Windows 安装读取 `%APPDATA%\com.dbx.app\dbx.db`；便携版通过 `DBX_DATA_DIR` 指向包含 `dbx.db` 的 data 目录
+- **安装**: `powershell -NoProfile -ExecutionPolicy Bypass -File D:\reverse_ENV\mcp\dbx-mcp\install.ps1`
+- **验证**: `tools\node22\node.exe mcp\dbx-mcp\smoke-test.mjs`
+
+固定版本提供 10 个工具：`dbx_list_connections`、`dbx_list_tables`、`dbx_describe_table`、`dbx_execute_query`、`dbx_execute_redis_command`、`dbx_get_schema_context`、`dbx_add_connection`、`dbx_remove_connection`、`dbx_open_table`、`dbx_execute_and_show`。
+
+`install.ps1` 从 `package-lock.json` 读取 native addon 版本，优先通过 GitHub CLI 下载 Windows x64 prebuild 到 `.npm-cache\_prebuilds\`，再执行 `npm ci`。安装进程会把 `tools\node22\` 放到 PATH 首位，确保 npm lifecycle 与 MCP 启动都使用 ABI 127。
+
 ## reqable (reqable-mcp)
 
 - **入口**: `.venv\Scripts\reqable-mcp.exe mcp`
@@ -228,6 +245,10 @@ Claude Code ← stdio ← FastMCP ← reqable_* 工具查询
         "RUYI_MCP_PYTHON": "D:\\reverse_ENV\\.venv\\Scripts\\python.exe",
         "RUYI_FIREFOX_PATH": "D:\\reverse_ENV\\tools\\ruyipage\\runtimes\\151-proxy\\firefox\\firefox.exe"
       }
+    },
+    "dbx": {
+      "command": "D:\\reverse_ENV\\tools\\node22\\node.exe",
+      "args": ["D:\\reverse_ENV\\mcp\\dbx-mcp\\node_modules\\@dbx-app\\mcp-server\\dist\\index.js"]
     }
   }
 }
@@ -251,6 +272,10 @@ args = ["D:\\reverse_ENV\\mcp\\ruyi-mcp\\build\\src\\index.js"]
 RUYI_MCP_PYTHON = "D:\\reverse_ENV\\.venv\\Scripts\\python.exe"
 RUYI_FIREFOX_PATH = "D:\\reverse_ENV\\tools\\ruyipage\\runtimes\\151-proxy\\firefox\\firefox.exe"
 
+[mcp_servers.dbx]
+command = "D:\\reverse_ENV\\tools\\node22\\node.exe"
+args = ["D:\\reverse_ENV\\mcp\\dbx-mcp\\node_modules\\@dbx-app\\mcp-server\\dist\\index.js"]
+
 # On-demand examples:
 # [mcp_servers.jadx-ai-mcp]
 # command = "D:\\reverse_ENV\\.venv\\Scripts\\python.exe"
@@ -267,6 +292,7 @@ RUYI_FIREFOX_PATH = "D:\\reverse_ENV\\tools\\ruyipage\\runtimes\\151-proxy\\fire
 2. 验证项目冷启动 MCP：
    - `ida-multi-mcp`：至少完成一次 `idalib_open` + `survey_binary` 或同等级真实调用
    - `ruyi-mcp`：至少完成一次 `ruyi_new_page` 或同等级真实调用
+   - `dbx`：完成 `initialize` + `tools/list`，并真实调用一次 `dbx_list_connections`
 3. 验证按需 MCP：
    - 先满足前置条件，再临时加入配置并单独测试
 4. 若只做到“启动不报错”，不能算迁移完成。

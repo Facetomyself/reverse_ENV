@@ -15,6 +15,10 @@
         "RUYI_FIREFOX_PATH": "D:\\reverse_ENV\\tools\\ruyipage\\runtimes\\151-proxy\\firefox\\firefox.exe"
       }
     },
+    "dbx": {
+      "command": "D:\\reverse_ENV\\tools\\node22\\node.exe",
+      "args": ["D:\\reverse_ENV\\mcp\\dbx-mcp\\node_modules\\@dbx-app\\mcp-server\\dist\\index.js"]
+    },
     "wechat-miniapp-re-mcp": {
       "command": "D:\\reverse_ENV\\tools\\node\\node.exe",
       "args": ["D:\\reverse_ENV\\mcp\\wechat-miniapp-re-mcp\\build\\src\\index.js"],

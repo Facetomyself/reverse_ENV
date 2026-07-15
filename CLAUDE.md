@@ -22,7 +22,7 @@
 - 项目 skill 源目录: `skill\<name>\`；Codex repo-scope 发现入口: `.agents\skills\<name>\` 薄封装。
 - `.agents\skills\` 只保留 frontmatter 与源 skill 路由说明，不复制脚本/参考资料/流程正文；真实维护仍在 `skill\<name>\`。
 - `.agents\skills\<name>\SKILL.md` 必须与 `skill\<name>\SKILL.md` 一一对应，只允许指向源 skill；新增/删除/重命名 skill 时两侧同步。
-- venv: `.venv\` ｜ JDK: `tools\jdk\` ｜ Node: `tools\node\`
+- venv: `.venv\` ｜ JDK: `tools\jdk\` ｜ Node: `tools\node\` (20.20.2) / `tools\node22\` (22.23.1，DBX MCP 专用)
 - NDK r29: `tools\android-ndk\` ｜ Rust: `%USERPROFILE%\.cargo\`
 - IDA Pro 9.3: `resource\portable_win\` ｜ MCP 配置: `.mcp.json` + `.codex\config.toml`（Codex 项目层）+ `~/.codex/config.toml`（Codex 用户默认）+ `~/.claude.json`（Claude 全局）
 - **所有逆向项目在 `workspace\<项目名>\` 下起新文件夹**。产出物均落地到对应项目目录。
@@ -204,6 +204,7 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 | `jadx_*` | jadx-ai-mcp | APK 类/方法搜索/反编译/xref |
 | `js-reverse_*` | js-reverse-mcp | Chrome/CDP 调试优先 — 断点/脚本/网络/运行时 (~22 tools) |
 | `ruyi_*` | ruyi-mcp | Firefox/BiDi 全链路增强 — 反检测/指纹/人类模拟/BiDi JSON Trace/JS逆向 (56 tools) |
+| `dbx_*` | dbx | 读取 DBX 已配置连接并执行数据库查询、schema/context 与 UI 打开操作 (10 tools) |
 | `reqable_*` | reqable-mcp | Reqable 抓包数据查询 — HTTP/WebSocket 流量搜索/分析/代码生成 (~17 tools) |
 | `wxmp_*` | wechat-miniapp-re-mcp | PC 微信 WMPF / wxapkg 专用逆向 — 会话、CDP、Hook、网络、静态还原、Profile 与证据导出 |
 | `serena_*` | serena (user) | 代码符号搜索/引用追踪/语义搜索/项目导航 |
@@ -216,7 +217,7 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 ### Claude → Codex MCP 迁移规则
 
 1. `.mcp.json` 是**项目级可用声明**，`.codex/config.toml` 是 **Codex 项目级启动配置**，`~/.codex/config.toml` 是 **Codex 用户级个人默认**。迁移时不得把项目级可用清单直接提升为 Codex 全局冷启动清单。
-2. 项目冷启动只保留无额外前置条件、可在进入项目时立即握手成功的 MCP；依赖 GUI、浏览器调试端口、本地 SSE、桌面客户端上报链的 MCP 一律改为按需启用。
+2. 项目冷启动只保留无额外前置条件、可在进入项目时立即握手成功的 MCP；当前清单为 `ida-multi-mcp`、`ruyi-mcp`、`dbx`。依赖 GUI、浏览器调试端口、本地 SSE、桌面客户端上报链的 MCP 一律改为按需启用。
 3. 项目规范名优先。Web CDP 调试 MCP 的规范名统一为 `js-reverse-mcp`；如 Codex 侧实验过其他包名，也不得反向污染项目文档与项目配置。
 4. 迁移完成的判定标准不是“配置能被加载”，而是“默认冷启动无噪音 + 至少一个默认 MCP 能真实调用成功 + 按需 MCP 的前置条件和验证步骤已写清楚”。
 
@@ -230,6 +231,7 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 | 独立子仓 | `mcp/ruyi-mcp/` 是 Public Git submodule，`mcp/wechat-miniapp-re-mcp/` 是 Private Git submodule；修改时先在子仓验证、commit、push，再更新主仓 gitlink。fresh clone 必须先初始化对应 submodule 并安装锁定依赖 |
 | 配置同步 | 新增/变更项目 MCP 路径时，同步更新 `.mcp.json` + `.codex/config.toml` + `CLAUDE.md` + `AGENTS.md` + `mcp/README.md` + `docs/MCP服务详情.md`；只有全局 MCP 才同步 `~/.codex/config.toml` |
 | pip 管理标注 | pip 安装的 MCP 在 `mcp/README.md` 中标注包名和 venv 位置 |
+| npm 隔离 | `dbx` 固定安装在 `mcp/dbx-mcp/`，锁文件纳入 Git，`node_modules` 与 npm cache 排除 Git；安装和运行统一使用 `tools/node22/node.exe` |
 | 硬编码路径 | MCP 启动脚本（如 `start-js-reverse.ps1`）中的路径必须使用 `mcp/` 前缀 |
 
 ### 全局 MCP 使用约束
@@ -373,6 +375,7 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 12. **Rust 交叉编译** → 需 `rustup target add aarch64-linux-android x86_64-linux-android`。`.cargo/config.toml` 的 NDK 路径已通过 `tools\android-ndk\` 重定位。
 13. **Shadow Hook Frida JS agent 能力边界** → 仅做公开 API 过滤（dl_iterate_phdr / maps read），无法从 linker 内部 solist 摘除 soinfo。如需完整摘除，编译 `tools\hide-soinfo\`。
 14. **ruyi Trace 不是 DOMTrace** → `151-proxy` 无 `RUYI_DOMTRACE.txt` 且不产出 DOMTrace；C++ DOMTrace 必须继续使用 `tools\ruyitrace\firefox\`。
+15. **DBX MCP Node ABI** → `@dbx-app/mcp-server` 要求 Node.js >=22.13.0；安装与启动统一使用 `tools\node22\node.exe`，避免 `better-sqlite3` / `keytar` ABI 漂移。原生预编译缓存位于 `mcp\dbx-mcp\.npm-cache\_prebuilds\`。
 
 ## Git约束
 
@@ -440,7 +443,9 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | wechat-miniapp-re-mcp | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js`（stdio 可冷握手；v0.3.0 已补 capability/context 语义探测、clean-room profile/AOB 默认链路、XHR hook、evidence 事件/字节容量治理与 schema validation，完整真实动态语义门禁前按需启用。环境变量: `WXMP_PROFILE_DIR`, `WXMP_LEGACY_PROFILE_DIR`, `WXMP_SIGNATURE_DB`, `WXMP_WORKSPACE_ROOT`, `WXMP_GWXAPKG`, `WXMP_EVENT_LIMIT`, `WXMP_MAX_EVIDENCE_EVENTS`, `WXMP_MAX_EVIDENCE_BYTES`, `REVERSE_ENV_ROOT`） |
 | Gwxapkg 2.7.4 | `tools\Gwxapkg-runtime\gwxapkg.exe`（源码 submodule: `tools\Gwxapkg\`） |
 | JDK 21 | `tools\jdk\` |
-| Node.js 20.20.2 | `tools\node\node.exe` |
+| Node.js 20.20.2 | `tools\node\node.exe`（现有 MCP 主运行时） |
+| Node.js 22.23.1 | `tools\node22\node.exe`（DBX MCP 隔离运行时） |
+| dbx MCP 0.4.29 | `tools\node22\node.exe mcp\dbx-mcp\node_modules\@dbx-app\mcp-server\dist\index.js` |
 | Web Env | `tools\web-env\` |
 | MinGW-w64 14.2.0 (C/GCC) | `tools\mingw64\mingw64\bin\gcc.exe` |
 | QuickJS (qjs_min) | `tools\quickjs\qjs_min.exe` |

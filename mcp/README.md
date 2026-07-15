@@ -18,6 +18,7 @@
 | `jadx-ai-mcp` | `mcp\jadx-mcp-server\` | `.venv\Scripts\python.exe jadx_mcp_server.py` | 本地源 | 按需，默认不自动初始化 |
 | `js-reverse-mcp` | `mcp\js-reverse-mcp\` | `powershell tools\chromium\start-js-reverse.ps1` | npm | 按需，默认不自动初始化 |
 | `ruyi-mcp` | `mcp\ruyi-mcp\` | `tools\node\node.exe mcp\ruyi-mcp\build\src\index.js` | [公开 Git submodule](https://github.com/Facetomyself/ruyi-mcp) + npm | 活跃 |
+| `dbx` | `mcp\dbx-mcp\` | `tools\node22\node.exe mcp\dbx-mcp\node_modules\@dbx-app\mcp-server\dist\index.js` | npm lock + 隔离 Node.js 22 | 活跃；默认冷启动 |
 | `reqable` | `mcp\reqable-mcp\` (源) | `.venv\Scripts\reqable-mcp.exe mcp` | pip (venv) | 按需，默认不自动初始化 |
 | `wechat-miniapp-re-mcp` | `mcp\wechat-miniapp-re-mcp\` | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js` | [Private Git submodule](https://github.com/Facetomyself/wechat-miniapp-re-mcp) + npm | v0.3.0；PR #6 已合入；按需启用 |
 | `first-mcp` | — (远程) | `http://127.0.0.1:4554/sse` | 外部 SSE | 按需，默认不自动初始化 |
@@ -31,7 +32,27 @@
 
 `jadx-ai-mcp`、`js-reverse-mcp`、`reqable`、`wechat-miniapp-re-mcp`、`first-mcp` 默认不放进自动初始化清单；需要时再临时启用。`wechat-miniapp-re-mcp` 本身可冷握手，但完整真实 CDP 门禁尚未完成，暂按需管理。
 
+当前 Codex 项目默认冷启动为 `ida-multi-mcp`、`ruyi-mcp`、`dbx`。
+
 `search-layer` 是全局搜索分级策略（client-native search + Exa + Tavily + Grok 并行），不属于本仓库 `mcp/` 目录，也不写入项目 `.mcp.json`。Claude 全局环境已配置；Codex 侧已迁移本地 skill 副本到 `~/.codex/skills/search-layer`，并完成 `search.py --mode fast` smoke test。
+
+## dbx MCP
+
+- 官方包：`@dbx-app/mcp-server@0.4.29`
+- 本地目录：`mcp\dbx-mcp\`
+- 运行时：`tools\node22\node.exe` (Node.js 22.23.1 / ABI 127)
+- 锁定安装：`package.json` + `package-lock.json`
+- 原生依赖：`better-sqlite3 12.11.1`、`keytar 7.9.0`
+- 默认数据：`%APPDATA%\com.dbx.app\dbx.db`；便携版才设置 `DBX_DATA_DIR`
+
+安装与验证：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File "D:\reverse_ENV\mcp\dbx-mcp\install.ps1"
+& "D:\reverse_ENV\tools\node22\node.exe" "D:\reverse_ENV\mcp\dbx-mcp\smoke-test.mjs"
+```
+
+安装脚本优先通过 GitHub CLI 拉取 Windows x64 prebuild，写入本地 `.npm-cache\_prebuilds\` 后执行 `npm ci`，避免 GitHub Release 断流触发 `node-gyp` 回退。
 
 ## ruyi-mcp submodule
 

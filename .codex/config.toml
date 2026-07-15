@@ -19,6 +19,11 @@ args = ["D:\\reverse_ENV\\mcp\\ruyi-mcp\\build\\src\\index.js"]
 RUYI_MCP_PYTHON = "D:\\reverse_ENV\\.venv\\Scripts\\python.exe"
 RUYI_FIREFOX_PATH = "D:\\reverse_ENV\\tools\\ruyipage\\runtimes\\151-proxy\\firefox\\firefox.exe"
 
+# DBX database MCP through the isolated Node.js 22 runtime.
+[mcp_servers.dbx]
+command = "D:\\reverse_ENV\\tools\\node22\\node.exe"
+args = ["D:\\reverse_ENV\\mcp\\dbx-mcp\\node_modules\\@dbx-app\\mcp-server\\dist\\index.js"]
+
 # On-demand MCPs stay disabled by default. Enable only when the prerequisite GUI,
 # browser debugging port, SSE endpoint, or desktop client is already running.
 

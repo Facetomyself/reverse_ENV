@@ -10,7 +10,8 @@
 | apktool | 3.0.2 | `apktool\apktool.bat` | APK 解包/重打包 |
 | JDK | 21 | `jdk\` | Java 运行时 |
 | radare2 | 6.1.8 | `radare2\bin\radare2.exe` | 通用二进制快速分析 |
-| Node.js | 20.20.2 | `node\node.exe` | JS 运行时（MCP 服务） |
+| Node.js | 20.20.2 | `node\node.exe` | 现有 MCP 主运行时 |
+| Node.js | 22.23.1 | `node22\node.exe` | DBX MCP 隔离运行时（ABI 127） |
 | adb | 1.0.41 | `adb\adb.exe` | Android 调试桥 |
 | zipalign | — | `adb\zipalign.exe` | APK 对齐 |
 | apksigner | 0.9 | `adb\apksigner.bat` | APK 签名 |
@@ -40,9 +41,9 @@
 ## 约束
 
 - **所有工具不依赖系统 PATH**，通过绝对路径调用
-- **补环境 runtime 隔离**：`tools\node\node.exe` 是项目主 Node，不得为 addon / isolated-vm 切换或覆盖；Node 25/26、xbs addon、TLS 指纹客户端只能放 `tools\web-env\runtimes\` 或 `workspace\<项目名>\.runtime\`
+- **补环境 runtime 隔离**：`tools\node\node.exe` 是项目主 Node，不得为 addon / isolated-vm 切换或覆盖；`tools\node22\node.exe` 仅供 DBX MCP；Node 25/26、xbs addon、TLS 指纹客户端只能放 `tools\web-env\runtimes\` 或 `workspace\<项目名>\.runtime\`
 - **ruyipage runtime 隔离**：浏览器二进制放入 `tools\ruyipage\runtimes\` 并排除 Git；`tools\ruyitrace\firefox\` 继续作为 DOMTrace 专用 runtime，不得被普通 BiDi runtime 覆盖
-- 大文件不纳入 Git（`jadx/`, `jdk/`, `node/`, `android-ndk/`, `mingw64/`, `chromium/` 等已在 `.gitignore`）
+- 大文件不纳入 Git（`jadx/`, `jdk/`, `node/`, `node22/`, `android-ndk/`, `mingw64/`, `chromium/` 等已在 `.gitignore`）
 - 新增工具后同步更新本 README + `CLAUDE.md` 工具速查表 + `docs/工具与环境.md`
 - MCP 服务源码不放在此目录，统一在 `mcp/` 下
 - Gwxapkg 构建：`powershell -NoProfile -ExecutionPolicy Bypass -File "D:\reverse_ENV\tools\build-gwxapkg.ps1"`
