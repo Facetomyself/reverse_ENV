@@ -217,7 +217,7 @@ Claude Code ← stdio ← FastMCP ← reqable_* 工具查询
 - **Workspace**: `workspace\<项目名>\wechat-miniapp\`
 - **静态后端**: `tools\Gwxapkg-runtime\gwxapkg.exe`
 - **Profile**: clean-room schema；generated candidate 必须匹配目标 WMPF version/module hash，并通过 `wxmp_profile_promote` 记录 review evidence 后才可注入；本地兼容测试可通过 `WXMP_LEGACY_PROFILE_DIR` 读取外部 profile，不复制进子仓
-- **状态**: PR #7 已合入且 Node 20/22 CI 绿色；cold-start / 53-tool contract / 80 tests / production audit 均通过；v0.3.1 已在 WMPF v19977 验证 nested `wx` runtime、AppService 选择、evaluate、真实 breakpoint location、727 trace wrappers、`wx.request`/fetch/XHR hook、hook event/API inventory、Network body/replay、同 session reconnect、detach 与 evidence export；剩余门禁为第二 WMPF 版本的 profile/AOB/hash-binding 交叉验证，以及可分发静态 backend subprocess fixture
+- **状态**: PR #10 已合入且 Node 20/22 CI 绿色；cold-start / 53-tool contract / 84 tests / production audit 均通过；v0.3.1 已在 WMPF v19977 验证 nested `wx` runtime、AppService 选择、evaluate、真实 breakpoint location、727 trace wrappers、`wx.request`/fetch/XHR hook、hook event/API inventory、Network body/replay、同 session reconnect、detach 与 evidence export；静态链已通过受控 Node backend 的真实 subprocess decompile/search/index/repack、失败映射与 no-output 门禁，剩余门禁为第二 WMPF 版本的 profile/AOB/hash-binding 交叉验证
 
 按需 Codex 配置见 `.codex/config.toml` 注释段。完整 Plan 与完成度见子仓 `docs/plan.md`、`docs/progress.md`。
 
