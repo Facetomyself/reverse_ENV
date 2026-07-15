@@ -20,7 +20,7 @@
 | `ruyi-mcp` | `mcp\ruyi-mcp\` | `tools\node\node.exe mcp\ruyi-mcp\build\src\index.js` | [公开 Git submodule](https://github.com/Facetomyself/ruyi-mcp) + npm | 活跃 |
 | `dbx` | `mcp\dbx-mcp\` | `tools\node22\node.exe mcp\dbx-mcp\node_modules\@dbx-app\mcp-server\dist\index.js` | npm lock + 隔离 Node.js 22 | 活跃；默认冷启动 |
 | `reqable` | `mcp\reqable-mcp\` (源) | `.venv\Scripts\reqable-mcp.exe mcp` | pip (venv) | 按需，默认不自动初始化 |
-| `wechat-miniapp-re-mcp` | `mcp\wechat-miniapp-re-mcp\` | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js` | [Private Git submodule](https://github.com/Facetomyself/wechat-miniapp-re-mcp) + npm | v0.3.1；PR #7 已合入；WMPF v19977 真实语义门禁已通过；按需启用 |
+| `wechat-miniapp-re-mcp` | `mcp\wechat-miniapp-re-mcp\` | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js` | [Private Git submodule](https://github.com/Facetomyself/wechat-miniapp-re-mcp) + npm | v0.3.1；PR #10 已合入静态 subprocess CI fixture；WMPF v19977 真实语义门禁已通过；按需启用 |
 | `first-mcp` | — (远程) | `http://127.0.0.1:4554/sse` | 外部 SSE | 按需，默认不自动初始化 |
 
 ## 配置入口
@@ -99,7 +99,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "D:\reverse_ENV\tools\build-
 & "D:\reverse_ENV\tools\node\npm.cmd" --prefix "D:\reverse_ENV\mcp\wechat-miniapp-re-mcp" run check
 ```
 
-当前仍按需启用。v0.3.1 在既有 capability 语义探测、context-scoped request/script、clean-room profile/AOB、evidence 容量治理和 schema validation 基础上，统一解析嵌套 WMPF `wx` runtime，并已在 v19977 通过 AppService 选择、evaluate、真实 breakpoint、727 trace wrappers、`wx.request`/fetch/XHR hook、Network body/replay、同 session reconnect、detach 与 evidence export。剩余第二 WMPF 版本 profile/AOB 交叉验证和静态 backend CI fixture 见 `mcp\wechat-miniapp-re-mcp\docs\progress.md`。
+当前仍按需启用。v0.3.1 在既有 capability 语义探测、context-scoped request/script、clean-room profile/AOB、evidence 容量治理和 schema validation 基础上，统一解析嵌套 WMPF `wx` runtime，并已在 v19977 通过 AppService 选择、evaluate、真实 breakpoint、727 trace wrappers、`wx.request`/fetch/XHR hook、Network body/replay、同 session reconnect、detach 与 evidence export。PR #10 又补齐受控 Node backend 的真实 subprocess decompile/search/index/repack、失败映射和 no-output CI 门禁；当前主要剩余项是第二 WMPF 版本的 profile/AOB 交叉验证，详见 `mcp\wechat-miniapp-re-mcp\docs\progress.md`。
 
 ## Claude → Codex 迁移约束
 
