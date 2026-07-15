@@ -24,7 +24,7 @@
 - `.agents\skills\<name>\SKILL.md` 必须与 `skill\<name>\SKILL.md` 一一对应，只允许指向源 skill；新增/删除/重命名 skill 时两侧同步。
 - venv: `.venv\` ｜ JDK: `tools\jdk\` ｜ Node: `tools\node\` (20.20.2) / `tools\node22\` (22.23.1，DBX MCP 专用)
 - NDK r29: `tools\android-ndk\` ｜ Rust: `%USERPROFILE%\.cargo\`
-- IDA Pro 9.3: `resource\portable_win\` ｜ MCP 配置: `.mcp.json` + `.codex\config.toml`（Codex 项目层）+ `~/.codex/config.toml`（Codex 用户默认）+ `~/.claude.json`（Claude 全局）
+- IDA Pro 9.3: `resource\portable_win\` ｜ MCP 配置: `.mcp.json`（Claude 项目 MCP）+ `.claude\settings.json`（Claude 项目权限）+ `.codex\config.toml`（Codex 项目层）+ `~/.codex/config.toml`（Codex 用户默认）+ `~/.claude.json`（Claude 全局）
 - **所有逆向项目在 `workspace\<项目名>\` 下起新文件夹**。产出物均落地到对应项目目录。
 - **待分析二进制文件**（`.dll`, `.so`, `.exe`, `.bin` 等）**必须先放入 `workspace\<项目名>\`**，再打开 IDA/radare2。禁止将二进制文件直接放在 `workspace\` 根目录。
 - **IDA 数据库文件**（`.id0`, `.id1`, `.id2`, `.nam`, `.til`, `.i64`）由 IDA 在二进制文件所在目录自动生成。确保二进制文件在项目子目录内，即可避免 IDA 产物污染根目录。
@@ -213,6 +213,15 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 > **Web RE 双 MCP**: `js-reverse-mcp` (Chrome/CDP) 调试优先；`ruyi-mcp` (Firefox/BiDi) 增强全能 — 反检测/指纹/trace/人类模拟。按需求能力选择，可互补协作。详见 `docs/Web逆向架构分析.md`。
 
 > MCP 服务详情见 `docs/MCP服务详情.md`
+
+### DBX MCP 使用约束
+
+1. Claude Code 通过项目 `.mcp.json` 使用 `dbx`，Codex 通过 `.codex/config.toml` 使用同一份隔离安装；不得再用系统 Node、全局 npm 包或 `npx` 启动第二套 DBX MCP。
+2. 本项目数据库查询固定使用 DBX 连接 `nas-re-db-postgres`，默认数据库为 `re_db`。连接参数和凭据由 NAS / DBX 本地连接存储维护，不复制到提示词、文档、日志或仓库文件。
+3. 默认只读：Claude/Codex 配置必须同时设置 `DBX_MCP_ALLOW_WRITES=0` 与 `DBX_MCP_ALLOW_DANGEROUS_SQL=0`。不得执行 `INSERT`、`UPDATE`、`DELETE`、DDL、危险 SQL 或 Redis 写命令。
+4. 禁止通过 MCP 增删连接：Claude 项目权限拒绝 `dbx_add_connection`、`dbx_remove_connection` 和 `dbx_execute_redis_command`；连接变更统一在 DBX / NAS 维护侧完成。
+5. 查询顺序：`dbx_list_connections` 确认目标 → `dbx_get_schema_context` / `dbx_list_tables` / `dbx_describe_table` 获取结构 → `dbx_execute_query` 执行最小只读 SQL。优先聚合与明确列名，明细查询显式加 `LIMIT`，不得无目的 `SELECT *`。
+6. `dbx_open_table` / `dbx_execute_and_show` 只在用户要求 UI 展示时使用，且需 DBX 桌面端运行；普通 PostgreSQL 查询无需启动 DBX UI。
 
 ### Claude → Codex MCP 迁移规则
 

@@ -157,10 +157,15 @@ Web RE 目标 → 按需求能力选择
 - **运行时**: Node.js 22.23.1 / ABI 127；与 `tools\node\` 的 Node.js 20.20.2 隔离
 - **原生依赖**: `better-sqlite3 12.11.1`、`keytar 7.9.0`
 - **数据位置**: 普通 Windows 安装读取 `%APPDATA%\com.dbx.app\dbx.db`；便携版通过 `DBX_DATA_DIR` 指向包含 `dbx.db` 的 data 目录
+- **项目连接**: `nas-re-db-postgres`；默认数据库 `re_db`；连接参数和凭据由 NAS / DBX 本地连接存储维护
+- **Claude 配置**: `.mcp.json` 启动服务，`.claude/settings.json` 拒绝增删连接和 Redis 命令
+- **查询边界**: Claude / Codex 均设置 `DBX_MCP_ALLOW_WRITES=0`、`DBX_MCP_ALLOW_DANGEROUS_SQL=0`，默认仅执行 schema 检索与只读 SQL
 - **安装**: `powershell -NoProfile -ExecutionPolicy Bypass -File D:\reverse_ENV\mcp\dbx-mcp\install.ps1`
 - **验证**: `tools\node22\node.exe mcp\dbx-mcp\smoke-test.mjs`
 
 固定版本提供 10 个工具：`dbx_list_connections`、`dbx_list_tables`、`dbx_describe_table`、`dbx_execute_query`、`dbx_execute_redis_command`、`dbx_get_schema_context`、`dbx_add_connection`、`dbx_remove_connection`、`dbx_open_table`、`dbx_execute_and_show`。
+
+项目查询顺序固定为 `dbx_list_connections` → `dbx_get_schema_context` / `dbx_list_tables` / `dbx_describe_table` → `dbx_execute_query`。明细查询使用明确列名与 `LIMIT`；`dbx_open_table` / `dbx_execute_and_show` 只在用户要求 UI 展示且 DBX 桌面端运行时调用。连接凭据不得进入提示词、日志、测试 fixture 或 Git。
 
 `install.ps1` 从 `package-lock.json` 读取 native addon 版本，优先通过 GitHub CLI 下载 Windows x64 prebuild 到 `.npm-cache\_prebuilds\`，再执行 `npm ci`。安装进程会把 `tools\node22\` 放到 PATH 首位，确保 npm lifecycle 与 MCP 启动都使用 ABI 127。
 
@@ -248,8 +253,26 @@ Claude Code ← stdio ← FastMCP ← reqable_* 工具查询
     },
     "dbx": {
       "command": "D:\\reverse_ENV\\tools\\node22\\node.exe",
-      "args": ["D:\\reverse_ENV\\mcp\\dbx-mcp\\node_modules\\@dbx-app\\mcp-server\\dist\\index.js"]
+      "args": ["D:\\reverse_ENV\\mcp\\dbx-mcp\\node_modules\\@dbx-app\\mcp-server\\dist\\index.js"],
+      "env": {
+        "DBX_MCP_ALLOW_WRITES": "0",
+        "DBX_MCP_ALLOW_DANGEROUS_SQL": "0"
+      }
     }
+  }
+}
+```
+
+Claude 项目权限在 `.claude/settings.json` 中额外拒绝以下工具：
+
+```json
+{
+  "permissions": {
+    "deny": [
+      "mcp__dbx__dbx_add_connection",
+      "mcp__dbx__dbx_remove_connection",
+      "mcp__dbx__dbx_execute_redis_command"
+    ]
   }
 }
 ```
@@ -276,6 +299,10 @@ RUYI_FIREFOX_PATH = "D:\\reverse_ENV\\tools\\ruyipage\\runtimes\\151-proxy\\fire
 command = "D:\\reverse_ENV\\tools\\node22\\node.exe"
 args = ["D:\\reverse_ENV\\mcp\\dbx-mcp\\node_modules\\@dbx-app\\mcp-server\\dist\\index.js"]
 
+[mcp_servers.dbx.env]
+DBX_MCP_ALLOW_WRITES = "0"
+DBX_MCP_ALLOW_DANGEROUS_SQL = "0"
+
 # On-demand examples:
 # [mcp_servers.jadx-ai-mcp]
 # command = "D:\\reverse_ENV\\.venv\\Scripts\\python.exe"
@@ -288,21 +315,24 @@ args = ["D:\\reverse_ENV\\mcp\\dbx-mcp\\node_modules\\@dbx-app\\mcp-server\\dist
 
 ## 迁移后验证
 
-1. 在 `D:\reverse_ENV` 启动 Codex，确认项目 MCP 无握手报错。
-2. 验证项目冷启动 MCP：
+1. 在 `D:\reverse_ENV` 执行 `claude mcp get dbx`，确认 Claude 项目 DBX 显示 `Connected`；执行 `claude doctor` 验证项目 settings。
+2. 启动 Codex，确认项目 MCP 无握手报错。
+3. 验证项目冷启动 MCP：
    - `ida-multi-mcp`：至少完成一次 `idalib_open` + `survey_binary` 或同等级真实调用
    - `ruyi-mcp`：至少完成一次 `ruyi_new_page` 或同等级真实调用
    - `dbx`：完成 `initialize` + `tools/list`，并真实调用一次 `dbx_list_connections`
-3. 验证按需 MCP：
+4. 对 `nas-re-db-postgres` / `re_db` 执行一次只读查询，并确认写 SQL 被 `DBX_MCP_ALLOW_WRITES=0` 拦截。
+5. 验证按需 MCP：
    - 先满足前置条件，再临时加入配置并单独测试
-4. 若只做到“启动不报错”，不能算迁移完成。
+6. 若只做到“启动不报错”，不能算迁移完成。
 
 ## 新增 MCP 服务时
 
 必须同步：
 1. 更新 `.mcp.json`
-2. 如需 Codex 在 reverse_ENV 项目冷启动，更新 `.codex/config.toml`
-3. 如属 Claude 全局 MCP，更新 `~/.claude.json` 并在项目文档标明“全局分层，不进项目 `.mcp.json`”
-4. 更新 `mcp/README.md` 服务清单
-5. 更新本文档，写清前置条件、启用方式、验证方式
-6. 更新 `AGENTS.md` / `CLAUDE.md` 的 MCP 前缀速查表 + 工具速查表
+2. 如需 Claude 工具级限制，更新 `.claude/settings.json`
+3. 如需 Codex 在 reverse_ENV 项目冷启动，更新 `.codex/config.toml`
+4. 如属 Claude 全局 MCP，更新 `~/.claude.json` 并在项目文档标明“全局分层，不进项目 `.mcp.json`”
+5. 更新 `mcp/README.md` 服务清单
+6. 更新本文档，写清前置条件、启用方式、验证方式
+7. 更新 `AGENTS.md` / `CLAUDE.md` 的 MCP 前缀速查表 + 工具速查表

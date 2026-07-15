@@ -44,6 +44,9 @@
 - 锁定安装：`package.json` + `package-lock.json`
 - 原生依赖：`better-sqlite3 12.11.1`、`keytar 7.9.0`
 - 默认数据：`%APPDATA%\com.dbx.app\dbx.db`；便携版才设置 `DBX_DATA_DIR`
+- 项目连接：`nas-re-db-postgres`，默认数据库 `re_db`；凭据由 NAS / DBX 本地连接存储维护
+- 运行边界：`.mcp.json` 与 `.codex/config.toml` 均设置 `DBX_MCP_ALLOW_WRITES=0`、`DBX_MCP_ALLOW_DANGEROUS_SQL=0`
+- Claude 权限：`.claude/settings.json` 拒绝增删连接和 Redis 命令，保留 schema、只读 SQL 与按需 UI 展示
 
 安装与验证：
 
@@ -53,6 +56,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "D:\reverse_ENV\mcp\dbx-mcp\
 ```
 
 安装脚本优先通过 GitHub CLI 拉取 Windows x64 prebuild，写入本地 `.npm-cache\_prebuilds\` 后执行 `npm ci`，避免 GitHub Release 断流触发 `node-gyp` 回退。
+
+查询固定按 `dbx_list_connections` → schema/table 描述 → `dbx_execute_query` 执行；明细 SQL 使用明确列名与 `LIMIT`。不得把 NAS 连接凭据写入提示词、日志或仓库。
 
 ## ruyi-mcp submodule
 
