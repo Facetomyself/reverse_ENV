@@ -1,5 +1,5 @@
 version: 1
-updated: 2026-07-14
+updated: 2026-07-15
 defaults:
   owner: Facetomyself
   visibility: private
@@ -208,6 +208,21 @@ projects:
   remote_name: origin
   default_branch: main
   deliverables: reverse-three-piece
+- name: live-verification
+  path: workspace/live-verification
+  ownership: owned
+  last_audited: 2026-07-15
+  kind: disposable-runtime-evidence
+  integration: excluded
+  lifecycle: excluded
+  readiness: excluded
+  visibility: private
+  remote: null
+  notes: Local WMPF dynamic/static acceptance evidence; contains generated sessions and restored package output that stay outside Git.
+  repository_root: workspace/live-verification
+  remote_name: origin
+  default_branch: main
+  deliverables: none
 - name: mengdingyuan
   path: workspace/mengdingyuan
   ownership: owned
@@ -409,6 +424,21 @@ projects:
   remote_name: origin
   default_branch: main
   deliverables: reverse-three-piece
+- name: wechat-miniapp-re-mcp-code-review
+  path: workspace/wechat-miniapp-re-mcp-code-review
+  ownership: owned
+  last_audited: 2026-07-15
+  kind: disposable-review-evidence
+  integration: excluded
+  lifecycle: excluded
+  readiness: excluded
+  visibility: private
+  remote: null
+  notes: Local MCP review probe evidence; no standalone deliverable and no Git publication.
+  repository_root: workspace/wechat-miniapp-re-mcp-code-review
+  remote_name: origin
+  default_branch: main
+  deliverables: none
 - name: wechat-mp-history-hook
   path: workspace/wechat-mp-history-hook
   ownership: owned
