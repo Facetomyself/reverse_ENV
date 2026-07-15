@@ -44,9 +44,9 @@
 - 锁定安装：`package.json` + `package-lock.json`
 - 原生依赖：`better-sqlite3 12.11.1`、`keytar 7.9.0`
 - 默认数据：`%APPDATA%\com.dbx.app\dbx.db`；便携版才设置 `DBX_DATA_DIR`
-- 项目连接：`nas-re-db-postgres`，默认数据库 `re_db`；凭据由 NAS / DBX 本地连接存储维护
+- 项目连接：`nas-re-db-postgres`、`nas-re-db-redis`、`nas-re-db-mongodb`、`nas-re-db-mariadb`、`nas-re-db-elasticsearch`；凭据由 NAS / DBX 本地连接存储维护
 - 运行边界：`.mcp.json` 与 `.codex/config.toml` 均设置 `DBX_MCP_ALLOW_WRITES=1`、`DBX_MCP_ALLOW_DANGEROUS_SQL=0`
-- Claude 权限：`.claude/settings.json` 拒绝增删连接和 Redis 命令，保留 schema、查询、常规写 SQL 与按需 UI 展示
+- Claude 权限：`.claude/settings.json` 只拒绝增删连接；Redis 命令、schema、查询、常规写 SQL 与按需 UI 展示正常开放
 
 安装与验证：
 

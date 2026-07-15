@@ -4,8 +4,7 @@
   "permissions": {
     "deny": [
       "mcp__dbx__dbx_add_connection",
-      "mcp__dbx__dbx_remove_connection",
-      "mcp__dbx__dbx_execute_redis_command"
+      "mcp__dbx__dbx_remove_connection"
     ]
   },
   "hooks": {

@@ -181,7 +181,7 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 
 - Claude 路径：`%USERPROFILE%\.claude\skills\nas\`；Codex 路径：`%USERPROFILE%\.codex\skills\nas\`
 - NAS 登录凭据只存 `%USERPROFILE%\.nas\credentials.json`；数据库服务凭据以 NAS 上 `/volume1/docker/re-db/.env` 为准，本地可选副本为 `%USERPROFILE%\.nas\re-db.env`
-- NAS 部署清单与 DBX 连接登记是两层事实：NAS 维护多个服务，DBX 当前只登记 `nas-re-db-postgres` / `re_db`
+- NAS 部署清单与 DBX 连接登记是两层事实：NAS 维护六个服务，DBX 已登记 PostgreSQL、Redis、MongoDB、MariaDB、Elasticsearch；MinIO 不走 DBX
 - 容器启停、重启、恢复、删除和数据库备份前先查状态；破坏性 NAS 操作仍需用户精确确认
 
 ## 全局设计拷问 skill 使用约束
@@ -229,11 +229,11 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 ### DBX MCP 使用约束
 
 1. Claude Code 通过项目 `.mcp.json` 使用 `dbx`，Codex 通过 `.codex/config.toml` 使用同一份隔离安装；不得再用系统 Node、全局 npm 包或 `npx` 启动第二套 DBX MCP。
-2. 本项目数据库查询固定使用 DBX 连接 `nas-re-db-postgres`，默认数据库为 `re_db`；NAS 完整数据库栈见 `docs/NAS数据库服务.md`。连接参数和凭据由 NAS / DBX 本地连接存储维护，不复制到提示词、文档、日志或仓库文件。
+2. 按服务使用 DBX 连接：`nas-re-db-postgres`、`nas-re-db-redis`、`nas-re-db-mongodb`、`nas-re-db-mariadb`、`nas-re-db-elasticsearch`；PostgreSQL / MariaDB 默认数据库为 `re_db`，MongoDB 认证库为 `admin`，Redis DB 为 `0`。完整状态见 `docs/NAS数据库服务.md`。
 3. 允许常规写 SQL：Claude/Codex 配置设置 `DBX_MCP_ALLOW_WRITES=1`，可执行 `INSERT`、带明确 `WHERE` 的 `UPDATE` / `DELETE`；`DBX_MCP_ALLOW_DANGEROUS_SQL=0` 保持关闭，`DROP`、`TRUNCATE`、`ALTER` 等危险 SQL 继续拦截。
-4. 禁止通过 MCP 增删连接：Claude 项目权限拒绝 `dbx_add_connection`、`dbx_remove_connection` 和 `dbx_execute_redis_command`；连接变更统一在 DBX / NAS 维护侧完成。
+4. Claude 项目权限只拒绝 `dbx_add_connection`、`dbx_remove_connection`；Redis 命令正常开放并遵循 `DBX_MCP_ALLOW_WRITES` / `DBX_MCP_ALLOW_DANGEROUS_SQL`。连接变更仅在用户明确要求的维护任务中执行。
 5. SQL 顺序：`dbx_list_connections` 确认目标 → `dbx_get_schema_context` / `dbx_list_tables` / `dbx_describe_table` 获取结构 → `dbx_execute_query`。写入前先查询目标范围；`UPDATE` / `DELETE` 使用明确 `WHERE`，执行后复核影响结果；读取优先明确列名，明细查询显式加 `LIMIT`，不得无目的 `SELECT *`。
-6. `dbx_open_table` / `dbx_execute_and_show` 只在用户要求 UI 展示时使用，且需 DBX 桌面端运行；普通 PostgreSQL 查询无需启动 DBX UI。
+6. PostgreSQL、MariaDB/MySQL、Redis 可由 MCP 直接连接；MongoDB、Elasticsearch 走 DBX desktop bridge，需 DBX 桌面端运行。本次新增 bridge 型连接后热刷新未加载新 ID，需完整重启 DBX desktop。`dbx_open_table` / `dbx_execute_and_show` 只在用户要求 UI 展示时使用。
 
 ### MCP 服务组织约束
 

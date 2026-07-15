@@ -18,9 +18,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "D:\reverse_ENV\mcp\dbx-mcp\
 ## 项目使用约束
 
 - Claude 从项目 `.mcp.json` 启动，Codex 从 `.codex/config.toml` 启动；二者统一使用本目录依赖和 `tools\node22\node.exe`。
-- 固定查询连接 `nas-re-db-postgres`，默认数据库 `re_db`；连接参数和凭据由 NAS / DBX 本地连接存储维护。
+- 已登记 `nas-re-db-postgres`、`nas-re-db-redis`、`nas-re-db-mongodb`、`nas-re-db-mariadb`、`nas-re-db-elasticsearch`；连接参数和凭据由 NAS / DBX 本地连接存储维护。
 - 两端设置 `DBX_MCP_ALLOW_WRITES=1` 和 `DBX_MCP_ALLOW_DANGEROUS_SQL=0`，允许常规 `INSERT`、带明确 `WHERE` 的 `UPDATE` / `DELETE`，继续拦截危险 SQL。
-- Claude 项目权限拒绝 `dbx_add_connection`、`dbx_remove_connection`、`dbx_execute_redis_command`；连接变更不经 MCP 完成。
+- Claude 项目权限只拒绝 `dbx_add_connection`、`dbx_remove_connection`；`dbx_execute_redis_command` 正常开放并遵循写入/危险命令开关。
 - SQL 执行前先确认连接与 schema；写入前查询目标范围，执行后复核影响结果；明细查询使用明确列名和 `LIMIT`，UI 工具只在用户要求时调用。
 
 ## 验证

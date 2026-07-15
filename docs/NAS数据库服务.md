@@ -18,11 +18,11 @@
 | 服务 | 镜像 | Profile | NAS 端口 | 2026-07-15 状态 | DBX 登记 |
 |---|---|---|---:|---|---|
 | PostgreSQL | `postgres:16-alpine` | `core` / `full` | 5433 | `re-postgres` running | `nas-re-db-postgres` / `re_db` |
-| Redis | `redis:7-alpine` | `core` / `full` | 6379 | `re-redis` running | 未登记 |
+| Redis | `redis:7-alpine` | `core` / `full` | 6379 | `re-redis` running；DBX `PING` 通过 | `nas-re-db-redis` / DB `0` |
 | MinIO | `minio/minio:latest` | `core` / `full` | 9000 / 9001 | `re-minio` running | 对象存储，不走 DBX 数据库连接 |
-| Elasticsearch | `elasticsearch:8.17.4` | `search` / `full` | 9200 | 当前未运行 | 未登记 |
-| MongoDB | `mongo:4.4` | `doc` / `full` | 27017 | `re-mongodb` running | 未登记 |
-| MariaDB | `mariadb:11` | `sql` / `full` | 3306 | 当前未运行 | 未登记 |
+| Elasticsearch | `elasticsearch:8.17.4` | `search` / `full` | 9200 | 当前未运行 | `nas-re-db-elasticsearch` |
+| MongoDB | `mongo:4.4` | `doc` / `full` | 27017 | `re-mongodb` running；容器原生 `ping` 通过；DBX bridge 待桌面端完整重启 | `nas-re-db-mongodb` / auth DB `admin` |
+| MariaDB | `mariadb:11` | `sql` / `full` | 3306 | 当前未运行 | `nas-re-db-mariadb` / `re_db` |
 
 > DS920+ 的 Intel J4125 不支持 MongoDB 5.0+ 所需 AVX，部署固定使用 MongoDB 4.4。
 
@@ -36,11 +36,13 @@
 
 ## DBX 与 NAS 的边界
 
-- NAS 当前维护六个服务；DBX 当前只有一个 PostgreSQL 连接。
-- DBX 查询固定使用 `nas-re-db-postgres`，默认数据库 `re_db`。
+- NAS 当前维护六个服务；DBX 已登记除 MinIO 外的五个数据库/数据服务。
+- DBX 连接名固定为 `nas-re-db-postgres`、`nas-re-db-redis`、`nas-re-db-mongodb`、`nas-re-db-mariadb`、`nas-re-db-elasticsearch`。
 - Claude / Codex 的 DBX MCP 均允许常规写 SQL：`DBX_MCP_ALLOW_WRITES=1`。
 - 危险 SQL 保持关闭：`DBX_MCP_ALLOW_DANGEROUS_SQL=0`。
-- Redis、MongoDB、MariaDB 若需通过 DBX 使用，必须单独在 DBX 中登记；不得把 NAS `.env` 值写入项目配置。
+- PostgreSQL、MariaDB/MySQL、Redis 可由 MCP 直接连接；MongoDB、Elasticsearch 使用 DBX desktop bridge。本次热刷新未加载新 connection ID，需完整重启 DBX 桌面端。
+- MariaDB、Elasticsearch 的连接已登记，但对应 NAS profile 当前未启动；使用前先通过 `nas` skill 启动并复核状态。
+- NAS `.env` 值不得写入项目配置、skill、提示词或日志。
 
 ## 同步与验证
 
