@@ -19,7 +19,7 @@
 | `js-reverse-mcp` | `mcp\js-reverse-mcp\` | `powershell tools\chromium\start-js-reverse.ps1` | npm | 按需，默认不自动初始化 |
 | `ruyi-mcp` | `mcp\ruyi-mcp\` | `tools\node\node.exe mcp\ruyi-mcp\build\src\index.js` | [公开 Git submodule](https://github.com/Facetomyself/ruyi-mcp) + npm | 活跃 |
 | `reqable` | `mcp\reqable-mcp\` (源) | `.venv\Scripts\reqable-mcp.exe mcp` | pip (venv) | 按需，默认不自动初始化 |
-| `wechat-miniapp-re-mcp` | `mcp\wechat-miniapp-re-mcp\` | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js` | [Private Git submodule](https://github.com/Facetomyself/wechat-miniapp-re-mcp) + npm | 建设中；按需启用 |
+| `wechat-miniapp-re-mcp` | `mcp\wechat-miniapp-re-mcp\` | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js` | [Private Git submodule](https://github.com/Facetomyself/wechat-miniapp-re-mcp) + npm | v0.3.0；PR #6 已合入；按需启用 |
 | `first-mcp` | — (远程) | `http://127.0.0.1:4554/sse` | 外部 SSE | 按需，默认不自动初始化 |
 
 ## 配置入口
@@ -73,7 +73,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "D:\reverse_ENV\tools\build-
 & "D:\reverse_ENV\tools\node\npm.cmd" --prefix "D:\reverse_ENV\mcp\wechat-miniapp-re-mcp" run check
 ```
 
-当前仍按需启用。进度、真实门禁和剩余项见 `mcp\wechat-miniapp-re-mcp\docs\progress.md`。
+当前仍按需启用。v0.3.0 已补 capability 语义探测、AppService context probe、context-scoped request/script、wx.request/fetch/XHR hook、clean-room profile/AOB 默认接入、evidence 事件/字节容量治理、proxy ID/context 隔离和 tool schema validation；完整真实动态语义门禁及剩余项见 `mcp\wechat-miniapp-re-mcp\docs\progress.md`。
 
 ## Claude → Codex 迁移约束
 

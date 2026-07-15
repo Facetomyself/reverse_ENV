@@ -358,7 +358,7 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | ruyiTrace DOMTrace | `tools\ruyitrace\ruyitrace.ps1`（专用 `tools\ruyitrace\firefox\`） |
 | ruyi-mcp 0.1.1 | `tools\node\node.exe mcp\ruyi-mcp\build\src\index.js` |
 | reqable-mcp | `.venv\Scripts\reqable-mcp.exe mcp` |
-| wechat-miniapp-re-mcp | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js`（stdio 懒 attach，完整真实 CDP 门禁前按需启用） |
+| wechat-miniapp-re-mcp | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js`（stdio 可冷握手；v0.3.0 已补 capability/context 语义探测、clean-room profile/AOB 默认链路、XHR hook、evidence 事件/字节容量治理与 schema validation，完整真实动态语义门禁前按需启用） |
 | Gwxapkg 2.7.4 | `tools\Gwxapkg-runtime\gwxapkg.exe`（源码 submodule: `tools\Gwxapkg\`） |
 | First (微信小程序 Legacy) | `powershell -File tools\First\first-gui.ps1` |
 | Google Chrome | `C:\Program Files\Google\Chrome\Application\chrome.exe` |
