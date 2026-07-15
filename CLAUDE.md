@@ -13,6 +13,8 @@
 
 > WebFetch 硬封禁：即使 URL 看起来可访问，也不得直接调用 WebFetch。优先用全局 `search-layer` (WebSearch+Exa+Tavily+Grok 并行)、`content-extract` (国内文章/Markdown)、`github-solution-research` (GitHub)、浏览器 MCP (需登录/JS 渲染)。这些搜索/提取能力属于 Claude 全局 MCP 分级策略，不放入项目 `.mcp.json`。**此规则优先于所有其他工具选择逻辑。**
 
+> Bash 命令额外经过 `.claude/settings.json` 注册的 `PreToolUse` hook：`.claude/hooks/pre-tool-policy.ps1`。该 hook 拦截 `reset --hard`、强制清理、强推和受保护根目录递归删除，并对普通 push / 宽泛进程终止给出提醒；它只是一道前置护栏，不能替代 branch/upstream、工作树归属和提交前检查。
+
 ## 核心约束
 
 **所有 skill、MCP、Python venv、工具依赖均安装在 `D:\reverse_ENV\` 内，不得污染系统全局。**
