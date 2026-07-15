@@ -20,7 +20,7 @@
 | `ruyi-mcp` | `mcp\ruyi-mcp\` | `tools\node\node.exe mcp\ruyi-mcp\build\src\index.js` | [公开 Git submodule](https://github.com/Facetomyself/ruyi-mcp) + npm | 活跃 |
 | `dbx` | `mcp\dbx-mcp\` | `tools\node22\node.exe mcp\dbx-mcp\node_modules\@dbx-app\mcp-server\dist\index.js` | npm lock + 隔离 Node.js 22 | 活跃；默认冷启动 |
 | `reqable` | `mcp\reqable-mcp\` (源) | `.venv\Scripts\reqable-mcp.exe mcp` | pip (venv) | 按需，默认不自动初始化 |
-| `wechat-miniapp-re-mcp` | `mcp\wechat-miniapp-re-mcp\` | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js` | [Private Git submodule](https://github.com/Facetomyself/wechat-miniapp-re-mcp) + npm | v0.3.1；PR #10 已合入静态 subprocess CI fixture；WMPF v19977 真实语义门禁已通过；按需启用 |
+| `wechat-miniapp-re-mcp` | `mcp\wechat-miniapp-re-mcp\` | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js` | [Public Git submodule](https://github.com/Facetomyself/wechat-miniapp-re-mcp) + npm | v0.3.1；PR #11 已合入 WMPF v20079 profile/AOB/hash-binding 交叉验证；按需启用 |
 | `first-mcp` | — (远程) | `http://127.0.0.1:4554/sse` | 外部 SSE | 按需，默认不自动初始化 |
 
 ## 配置入口
@@ -30,7 +30,7 @@
 - Codex 项目 MCP: `.codex/config.toml` (reverse_ENV 项目启动配置)
 - Codex 用户配置: `~/.codex/config.toml` (provider、features、plugins、trust 等个人默认；不放 `D:\reverse_ENV` 专属 MCP)
 
-`jadx-ai-mcp`、`js-reverse-mcp`、`reqable`、`wechat-miniapp-re-mcp`、`first-mcp` 默认不放进自动初始化清单；需要时再临时启用。`wechat-miniapp-re-mcp` 本身可冷握手，WMPF v19977 的完整真实 CDP/semantic gate 已通过；由于动态能力依赖目标 runtime，且第二 WMPF 版本交叉验证仍待补齐，继续按需管理。
+`jadx-ai-mcp`、`js-reverse-mcp`、`reqable`、`wechat-miniapp-re-mcp`、`first-mcp` 默认不放进自动初始化清单；需要时再临时启用。`wechat-miniapp-re-mcp` 本身可冷握手，WMPF v19977 的完整真实 CDP/semantic gate 已通过，WMPF v20079 的 profile/AOB/hash-binding 与生产 hook attach/detach 也已闭环；动态能力仍依赖目标 runtime，因此继续按需管理。
 
 当前 Codex 项目默认冷启动为 `ida-multi-mcp`、`ruyi-mcp`、`dbx`。
 
@@ -88,7 +88,7 @@ Firefox runtime 分层如下：
 
 ## wechat-miniapp-re-mcp submodule
 
-Private 子仓提供 `wxmp_*` 工具，用于 PC 微信 WMPF 与 wxapkg 专用逆向。服务采用 stdio + lazy attach，启动时不要求微信、Frida target、GUI 或 SSE。
+Public 子仓提供 `wxmp_*` 工具，用于 PC 微信 WMPF 与 wxapkg 专用逆向。服务采用 stdio + lazy attach，启动时不要求微信、Frida target、GUI 或 SSE。
 
 首次初始化与验证：
 
@@ -99,7 +99,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "D:\reverse_ENV\tools\build-
 & "D:\reverse_ENV\tools\node\npm.cmd" --prefix "D:\reverse_ENV\mcp\wechat-miniapp-re-mcp" run check
 ```
 
-当前仍按需启用。v0.3.1 在既有 capability 语义探测、context-scoped request/script、clean-room profile/AOB、evidence 容量治理和 schema validation 基础上，统一解析嵌套 WMPF `wx` runtime，并已在 v19977 通过 AppService 选择、evaluate、真实 breakpoint、727 trace wrappers、`wx.request`/fetch/XHR hook、Network body/replay、同 session reconnect、detach 与 evidence export。PR #10 又补齐受控 Node backend 的真实 subprocess decompile/search/index/repack、失败映射和 no-output CI 门禁；当前主要剩余项是第二 WMPF 版本的 profile/AOB 交叉验证，详见 `mcp\wechat-miniapp-re-mcp\docs\progress.md`。
+当前仍按需启用。v0.3.1 在既有 capability 语义探测、context-scoped request/script、clean-room profile/AOB、evidence 容量治理和 schema validation 基础上，统一解析嵌套 WMPF `wx` runtime，并已在 v19977 通过 AppService 选择、evaluate、真实 breakpoint、727 trace wrappers、`wx.request`/fetch/XHR hook、Network body/replay、同 session reconnect、detach 与 evidence export。PR #10 补齐受控 Node backend 的真实 subprocess decompile/search/index/repack、失败映射和 no-output CI 门禁；PR #11 又在官方 WMPF v20079 上闭环跨版本 AOB 唯一性、module SHA-256、reviewed profile、生产 hook attach/ready/detach。剩余项收敛为第二版本完整 mini-program semantic gate，详见 `mcp\wechat-miniapp-re-mcp\docs\progress.md`。
 
 ## Claude → Codex 迁移约束
 

@@ -247,7 +247,7 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 | 规则 | 说明 |
 |------|------|
 | 源码归属 | MCP 源码/项目必须在 `mcp/` 下，不得散落根目录或 `tools/` |
-| 独立子仓 | `mcp/ruyi-mcp/` 是 Public Git submodule，`mcp/wechat-miniapp-re-mcp/` 是 Private Git submodule；修改时先在子仓验证、commit、push，再更新主仓 gitlink。fresh clone 必须先初始化对应 submodule 并安装锁定依赖 |
+| 独立子仓 | `mcp/ruyi-mcp/` 与 `mcp/wechat-miniapp-re-mcp/` 均为 Public Git submodule；修改时先在子仓验证、commit、push，再更新主仓 gitlink。fresh clone 必须先初始化对应 submodule 并安装锁定依赖 |
 | 配置同步 | 新增/变更项目 MCP 路径时，同步更新 `.mcp.json` + `.codex/config.toml` + `CLAUDE.md` + `AGENTS.md` + `mcp/README.md` + `docs/MCP服务详情.md`；只有全局 MCP 才同步 `~/.codex/config.toml` |
 | pip 管理标注 | pip 安装的 MCP 在 `mcp/README.md` 中标注包名和 venv 位置 |
 | npm 隔离 | `dbx` 固定安装在 `mcp/dbx-mcp/`，锁文件纳入 Git，`node_modules` 与 npm cache 排除 Git；安装和运行统一使用 `tools/node22/node.exe` |
@@ -459,7 +459,7 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | ruyiTrace DOMTrace | `tools\ruyitrace\ruyitrace.ps1`（专用 `tools\ruyitrace\firefox\`） |
 | ruyi-mcp 0.1.1 (Web 增强 MCP) | `tools\node\node.exe D:\reverse_ENV\mcp\ruyi-mcp\build\src\index.js` |
 | reqable-mcp (抓包数据查询) | `.venv\Scripts\reqable-mcp.exe mcp`（源: `mcp\reqable-mcp\`） |
-| wechat-miniapp-re-mcp | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js`（stdio 可冷握手；v0.3.1 已通过 WMPF v19977 真实语义门禁，覆盖 nested `wx` runtime、breakpoint、727 trace wrappers、`wx.request`/fetch/XHR hook、Network body/replay、同 session reconnect 与 evidence export；第二 WMPF 版本 profile/AOB 交叉验证仍待补齐，继续按需启用。环境变量: `WXMP_PROFILE_DIR`, `WXMP_LEGACY_PROFILE_DIR`, `WXMP_SIGNATURE_DB`, `WXMP_WORKSPACE_ROOT`, `WXMP_GWXAPKG`, `WXMP_EVENT_LIMIT`, `WXMP_MAX_EVIDENCE_EVENTS`, `WXMP_MAX_EVIDENCE_BYTES`, `REVERSE_ENV_ROOT`） |
+| wechat-miniapp-re-mcp | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js`（Public submodule；stdio 可冷握手；v0.3.1 已通过 WMPF v19977 完整真实语义门禁；WMPF v20079 已完成 profile/AOB/hash-binding、生产 hook attach/ready/detach 交叉验证；第二版本完整 mini-program semantic gate 继续列为后续项，服务仍按需启用。环境变量: `WXMP_PROFILE_DIR`, `WXMP_LEGACY_PROFILE_DIR`, `WXMP_SIGNATURE_DB`, `WXMP_WORKSPACE_ROOT`, `WXMP_GWXAPKG`, `WXMP_EVENT_LIMIT`, `WXMP_MAX_EVIDENCE_EVENTS`, `WXMP_MAX_EVIDENCE_BYTES`, `REVERSE_ENV_ROOT`） |
 | Gwxapkg 2.7.4 | `tools\Gwxapkg-runtime\gwxapkg.exe`（源码 submodule: `tools\Gwxapkg\`） |
 | JDK 21 | `tools\jdk\` |
 | Node.js 20.20.2 | `tools\node\node.exe`（现有 MCP 主运行时） |

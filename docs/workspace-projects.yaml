@@ -481,6 +481,21 @@ projects:
   remote_name: origin
   default_branch: main
   deliverables: reverse-three-piece
+- name: wmpf-cross-version-validation
+  path: workspace/wmpf-cross-version-validation
+  ownership: owned
+  last_audited: 2026-07-15
+  kind: wmpf-runtime-validation
+  integration: registry
+  lifecycle: active
+  readiness: ready
+  visibility: private
+  remote: https://github.com/Facetomyself/wmpf-cross-version-validation.git
+  notes: Official WMPF 19977/20079 profile, AOB, module hash, production attach/detach validation; raw packages, PE files, runtime state, logs, and raw evidence remain local and ignored.
+  repository_root: workspace/wmpf-cross-version-validation
+  remote_name: origin
+  default_branch: main
+  deliverables: reverse-three-piece
 - name: xe.com
   path: workspace/xe.com
   ownership: owned
