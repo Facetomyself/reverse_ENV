@@ -61,7 +61,8 @@ SQL 固定按 `dbx_list_connections` → schema/table 描述 → `dbx_execute_qu
 
 ## ruyi-mcp submodule
 
-当前公开子仓版本为 `0.1.1`，Python 依赖固定为 `ruyiPage==1.2.46`。
+当前公开子仓版本为 `0.1.2`，Python 依赖固定为 `ruyiPage==1.2.50`。
+本版暴露 57 tools，新增原子 `ruyi_human_drag` 与 `ruyi_set_fingerprint.windowSize` 同步窗口尺寸能力。
 
 首次克隆或 submodule 未初始化时：
 

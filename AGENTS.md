@@ -217,7 +217,7 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 | `idalib_*` | ida-multi-mcp | headless 会话管理 (open/close/list/status) |
 | `jadx_*` | jadx-ai-mcp | APK 类/方法搜索/反编译/xref |
 | `js-reverse_*` | js-reverse-mcp | JS 逆向调试 — 断点/脚本/网络/运行时 (~22 tools) |
-| `ruyi_*` | ruyi-mcp | Firefox/BiDi 全链路增强 — 反检测/指纹/人类模拟/BiDi JSON Trace/JS逆向 (56 tools) |
+| `ruyi_*` | ruyi-mcp | Firefox/BiDi 全链路增强 — 反检测/指纹/人类模拟/BiDi JSON Trace/JS逆向 (57 tools) |
 | `dbx_*` | dbx | 读取 DBX 已配置连接并执行数据库查询、schema/context 与 UI 打开操作 (10 tools) |
 | `reqable_*` | reqable-mcp | Reqable 抓包数据查询 — HTTP/WebSocket 流量搜索/分析/代码生成 (~17 tools) |
 | `wxmp_*` | wechat-miniapp-re-mcp | PC 微信 WMPF / wxapkg 专用逆向 — 会话、CDP、Hook、网络、静态还原、Profile 与证据导出 |
@@ -264,7 +264,8 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 
 ### ruyi Trace 与 Firefox runtime 分层
 
-- `ruyi-mcp 0.1.1` 固定 `ruyiPage==1.2.46`；`ruyi_trace_*` 产出 RuyiPage/WebDriver BiDi JSON Trace，不是 C++ DOMTrace。
+- `ruyi-mcp 0.1.2` 固定 `ruyiPage==1.2.50`；`ruyi_trace_*` 产出 RuyiPage/WebDriver BiDi JSON Trace，不是 C++ DOMTrace。
+- `ruyi_human_drag` 使用单次 BiDi `input.performActions` 保持拖拽按下态；`ruyi_set_fingerprint.windowSize` 运行时同步 outer/viewport/screen/DPR，且与 `viewport` 互斥。
 - 项目 BiDi runtime 放在 `tools\ruyipage\runtimes\`，浏览器二进制不进 Git；当前 `151-proxy` 固定在 `tools\ruyipage\runtimes\151-proxy\firefox\firefox.exe`。
 - `tools\ruyitrace\firefox\` 只用于 C++ DOMTrace。`ruyitrace.ps1` 设置 `MOZ_DISABLE_LAUNCHER_PROCESS=1`，将 `<output>_<PID>.ndjson` 分片合并到 `-Output`；`-Limit` 可选。
 - `.mcp.json` / `.codex/config.toml` 已切到 `151-proxy`；真实 HTTP 与 percent-encoded 凭据已通过。SOCKS5 只完成 offline contract，待有可用供应商时补真实出口门禁。
@@ -379,9 +380,9 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | uv | `.venv\Scripts\uv.exe` |
 | Python | `.venv\Scripts\python.exe` |
 | js-reverse-mcp | `powershell -File tools\chromium\start-js-reverse.ps1` |
-| ruyipage 1.2.46 / 151-proxy | `tools\ruyipage\runtimes\151-proxy\firefox\firefox.exe`（项目 BiDi runtime） |
+| ruyipage 1.2.50 / 151-proxy | `tools\ruyipage\runtimes\151-proxy\firefox\firefox.exe`（项目 BiDi runtime） |
 | ruyiTrace DOMTrace | `tools\ruyitrace\ruyitrace.ps1`（专用 `tools\ruyitrace\firefox\`） |
-| ruyi-mcp 0.1.1 | `tools\node\node.exe mcp\ruyi-mcp\build\src\index.js` |
+| ruyi-mcp 0.1.2 | `tools\node\node.exe mcp\ruyi-mcp\build\src\index.js` |
 | dbx MCP 0.4.29 | `tools\node22\node.exe mcp\dbx-mcp\node_modules\@dbx-app\mcp-server\dist\index.js` |
 | reqable-mcp | `.venv\Scripts\reqable-mcp.exe mcp` |
 | wechat-miniapp-re-mcp | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js`（Public submodule；stdio 可冷握手；v0.3.1 已通过 WMPF v19977 完整真实语义门禁；WMPF v20079 已完成 profile/AOB/hash-binding、生产 hook attach/ready/detach 交叉验证；第二版本完整 mini-program semantic gate 继续列为后续项，服务仍按需启用） |

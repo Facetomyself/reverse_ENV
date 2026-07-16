@@ -7,8 +7,8 @@
 
 | 项目 | 值 |
 |------|-----|
-| Python 包 | `ruyipage` 1.2.43（`D:\reverse_ENV\.venv\Lib\site-packages\ruyipage\`） |
-| 浏览器 | Firefox 151.0a1（`C:\Users\mengma\AppData\Local\ruyipage\browsers\`） |
+| Python 包 | `ruyipage` 1.2.50（`D:\reverse_ENV\.venv\Lib\site-packages\ruyipage\`） |
+| 浏览器 | Firefox 151.0a1 `151-proxy`（`D:\reverse_ENV\tools\ruyipage\runtimes\151-proxy\firefox\firefox.exe`） |
 | 协议 | WebDriver BiDi |
 | 启动 | `"D:\reverse_ENV\.venv\Scripts\python.exe" -m ruyipage` |
 
@@ -44,7 +44,7 @@ page.quit()
 from ruyipage import FirefoxOptions, FirefoxPage
 
 opts = FirefoxOptions()
-opts.set_browser_path(r"C:\Users\mengma\AppData\Local\ruyipage\browsers\firefox-151.0a1-151-ruyi-win64\firefox\firefox.exe")
+opts.set_browser_path(r"D:\reverse_ENV\tools\ruyipage\runtimes\151-proxy\firefox\firefox.exe")
 opts.set_proxy("http://127.0.0.1:7890")
 
 ctx = opts.smart_fingerprint(
@@ -54,6 +54,7 @@ ctx = opts.smart_fingerprint(
 )
 page = FirefoxPage(opts)
 ctx.apply_emulation(page)  # geo+tz+locale+viewport+UA 一步到位
+page.set_window_size(1280, 720, device_pixel_ratio=1.25)
 page.get("https://bot.sannysoft.com")
 page.quit()
 ```
@@ -62,7 +63,7 @@ page.quit()
 
 ```python
 opts = FirefoxOptions()
-opts.set_browser_path(r"C:\Users\mengma\AppData\Local\ruyipage\browsers\firefox-151.0a1-151-ruyi-win64\firefox\firefox.exe")
+opts.set_browser_path(r"D:\reverse_ENV\tools\ruyipage\runtimes\151-proxy\firefox\firefox.exe")
 
 # 每标签独立 SOCKS5
 opts.set_per_tab_proxies(
@@ -88,7 +89,7 @@ page.intercept.start_requests(handler)
 
 ```python
 opts = FirefoxOptions()
-opts.set_browser_path(r"C:\Users\mengma\AppData\Local\ruyipage\browsers\firefox-151.0a1-151-ruyi-win64\firefox\firefox.exe")
+opts.set_browser_path(r"D:\reverse_ENV\tools\ruyipage\runtimes\151-proxy\firefox\firefox.exe")
 opts.enable_action_visual(True)
 opts.private_mode(True)
 
@@ -98,6 +99,9 @@ page.get("https://target.com")
 btn = page.ele("#submit")
 page.actions.human_move(btn, algorithm="bezier", style="arc").perform()
 page.actions.human_click(btn, algorithm="windmouse").perform()
+page.actions.move_to(btn).hold().wait(0.12).human_move(
+    page.ele("#drop-target"), algorithm="windmouse"
+).wait(0.08).release().perform()
 # 触摸: page.touch.tap(page.ele("#mobile-btn"))
 ```
 

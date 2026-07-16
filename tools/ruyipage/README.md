@@ -10,10 +10,10 @@
 | 可执行文件 | `D:\reverse_ENV\tools\ruyipage\runtimes\151-proxy\firefox\firefox.exe` |
 | Windows release asset SHA256 | `f82151f9f197b528b36fb461cf106bc6825c0f752efb5c5d762c34f7529055f6` |
 | Firefox BuildID | `20260702113527` |
-| 配套依赖 | `ruyiPage==1.2.46`、`ruyi-mcp 0.1.1` |
+| 配套依赖 | `ruyiPage==1.2.50`、`ruyi-mcp 0.1.2` |
 | 当前状态 | 已完成回归并作为项目 MCP 的 BiDi runtime 启用 |
 
-该 runtime 已通过 BiDi launch/quit、UA/viewport/timezone/locale/orientation、DOM click、launch/runtime Trace entries 增长和 stop 后冻结，以及真实 HTTP 认证代理与 percent-encoded 凭据验证。3 个 headed fingerprint profile 均未复现 Issue #20 的窗口最大化/坐标偏移；SOCKS5 因当前供应商没有对应产品，只完成 offline contract，待有可用供应商时补真实出口门禁。
+该 runtime 已通过 BiDi launch/quit、UA/viewport/timezone/locale/orientation、DOM click、launch/runtime Trace entries 增长和 stop 后冻结，以及真实 HTTP 认证代理与 percent-encoded 凭据验证。v0.1.2 真实浏览器门禁进一步确认原子拖拽的可信 pressed pointer 事件与单次 `input.performActions` Trace，并确认 outer/viewport/screen/DPR 同步。3 个 headed fingerprint profile 均未复现 Issue #20 的窗口最大化/坐标偏移；SOCKS5 因当前供应商没有对应产品，只完成 offline contract，待有可用供应商时补真实出口门禁。
 
 它没有 `RUYI_DOMTRACE.txt` marker，实际验证也未生成 C++ DOMTrace 输出，因此不能替换 DOMTrace 专用内核。
 

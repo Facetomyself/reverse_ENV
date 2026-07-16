@@ -2,7 +2,7 @@
 
 ## 核心结论
 
-**当前架构状态：已进入“双 MCP 并行”阶段。** `ruyi-mcp` 已作为 Firefox/BiDi 全链路 MCP 接入并暴露 **56 tools**；`js-reverse-mcp` 保留 Chrome/CDP 的完整断点、单步、作用域优势。二者不是替代关系，而是按能力边界互补。
+**当前架构状态：已进入“双 MCP 并行”阶段。** `ruyi-mcp` 已作为 Firefox/BiDi 全链路 MCP 接入并暴露 **57 tools**；`js-reverse-mcp` 保留 Chrome/CDP 的完整断点、单步、作用域优势。二者不是替代关系，而是按能力边界互补。
 
 **执行路由：Web JS 默认走 `ruyi-reverse` / `ruyi-mcp`。** 只有明确需要 CDP 级暂停、单步、作用域枚举，且目标无强反检测需求时，才切 `mcp-js-reverse-playbook` / `js-reverse-mcp`；强反检测、指纹取证、BiDi Trace / DOMTrace、人类行为模拟一律优先 ruyi 工具链。
 
@@ -203,7 +203,7 @@ Observe ──→ Capture ──→ Rebuild ──→ Patch ──→ DeepDive
           ▼              ▼              ▼
    ruyi-mcp       js-reverse-mcp     apk-reverse
    (Firefox/BiDi   (Chrome/CDP      + ruyi-mcp
-    56 tools)       22 tools)       辅助
+    57 tools)       22 tools)       辅助
           │              │
           │     ┌────────┴────────┐
           │     │                 │
@@ -228,7 +228,7 @@ Observe ──→ Capture ──→ Rebuild ──→ Patch ──→ DeepDive
 
 ### 4.1 工具总数与分类
 
-早期设计基线为 **43 个工具**：核心 22 个对齐 js-reverse-mcp，21 个为 ruyi 独有增强。当前实现已扩展为 **56 tools**，新增 frame、cookie、请求/响应拦截、WebSocket、request initiator、preload scripts 等能力；实际清单以 `mcp/ruyi-mcp/src/tools/` 和 `docs/MCP服务详情.md` 为准。
+早期设计基线为 **43 个工具**：核心 22 个对齐 js-reverse-mcp，21 个为 ruyi 独有增强。当前实现已扩展为 **57 tools**，新增 frame、cookie、请求/响应拦截、WebSocket、request initiator、preload scripts、原子拖拽与运行时窗口尺寸同步等能力；实际清单以 `mcp/ruyi-mcp/src/tools/` 和 `docs/MCP服务详情.md` 为准。
 
 ```
 ruyi-mcp = js-reverse-mcp 等价工具 (22)
@@ -332,7 +332,7 @@ ruyi-mcp = js-reverse-mcp 等价工具 (22)
 | # | 工具 | 关键参数 | 说明 |
 |---|------|---------|------|
 | R24 | `ruyi_set_proxy` | `pageIdx`, `proxy_url`(socks5://host:port:user:pass) | 为标签设置代理 |
-| R25 | `ruyi_set_fingerprint` | `pageIdx`, `profile`{ `country`, `timezone`, `language`, `screen`, `canvas_noise`, `webgl_vendor`, `fonts`, `platform`, `hardware_concurrency`, ... } | 设置 22 维指纹 |
+| R25 | `ruyi_set_fingerprint` | `pageIdx`, `geolocation`, `timezone`, `locale`, `userAgent`, `viewport` / `windowSize` | 设置运行时指纹；`windowSize` 同步 outer/viewport/screen/DPR |
 | R26 | `ruyi_emulate_geolocation` | `pageIdx`, `latitude`, `longitude`, `accuracy` | 模拟地理位置 |
 | R27 | `ruyi_emulate_timezone` | `pageIdx`, `timezone_id`, `locale` | 模拟时区/语言 |
 
@@ -340,15 +340,16 @@ ruyi-mcp = js-reverse-mcp 等价工具 (22)
 
 ---
 
-#### 4.2.9 人类行为模拟 (Human Simulation) — 3 tools（ruyi 独有）
+#### 4.2.9 人类行为模拟 (Human Simulation) — 4 tools（ruyi 独有）
 
 | # | 工具 | 关键参数 | 说明 |
 |---|------|---------|------|
 | R28 | `ruyi_human_move` | `pageIdx`, `target`(selector), `algorithm`(bezier/windmouse), `style`(arc/linear) | 人类鼠标移动 |
 | R29 | `ruyi_human_click` | `pageIdx`, `target`, `algorithm` | 人类点击 |
+| 增量 | `ruyi_human_drag` | `pageIdx`, `source` / `sourcePoint`, `target` / `targetPoint`, `algorithm`, `holdMs`, `releaseMs` | 原子拟人拖拽，单次 BiDi action 保持 pressed state |
 | R30 | `ruyi_human_input` | `pageIdx`, `target`, `text`, `delay_ms` | 人类打字输入 |
 
-**实现基础：** ruyipage `page.actions.human_move/human_click` + `page.ele().input()`。
+**实现基础：** ruyipage `page.actions.human_move/human_click`、`hold().wait().human_move().release().perform()` 原子拖拽链 + `page.ele().input()`。
 
 ---
 
@@ -474,7 +475,7 @@ Observe ──────→ Capture ──────→ Rebuild ────
 │                                             │
 │  ┌─────────────────────────────────────┐   │
 │  │     MCP Server (stdio transport)     │   │
-│  │     → 56 tools exposed to AI clients │   │
+│  │     → 57 tools exposed to AI clients │   │
 │  └──────────────┬──────────────────────┘   │
 │                 │                            │
 │  ┌──────────────┴──────────────────────┐   │
@@ -620,7 +621,7 @@ Web JS 路由决策树：
 
 MCP 前缀表新增：
 ```markdown
-| `ruyi_*` | ruyi-mcp | Firefox/BiDi 全链路增强 — 反检测/指纹/人类模拟/trace/JS逆向 (56 tools) |
+| `ruyi_*` | ruyi-mcp | Firefox/BiDi 全链路增强 — 反检测/指纹/人类模拟/trace/JS逆向 (57 tools) |
 ```
 
 ---
@@ -633,6 +634,6 @@ MCP 前缀表新增：
 | **MCP 集成** | 两个一等 MCP 服务已并存：ruyi-mcp 默认、js-reverse-mcp 专注 CDP | 继续补齐验证与文档同步 |
 | **反检测+调试共存** | 做不到（跨浏览器 Cookie 手动搬） | 同一 Firefox session 内完成 |
 | **指纹追踪** | 独立 CLI，手动分析 | MCP 工具实时追踪+分析，嵌入工作流 |
-| **工具对齐** | ruyi-mcp 当前 56 tools，核心能力覆盖并扩展 js-reverse-mcp 工作流 | 继续维护能力边界和桥接规范 |
+| **工具对齐** | ruyi-mcp 当前 57 tools，核心能力覆盖并扩展 js-reverse-mcp 工作流 | 继续维护能力边界和桥接规范 |
 | **工作流复用** | 每个 skill 独立工作流 | Observe→Capture→Rebuild→Patch→DeepDive 五阶段统一 |
 | **Session 桥接** | 手动 | `ruyi_export_session` 自动化 |

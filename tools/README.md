@@ -32,7 +32,7 @@
 | stealth-hook-engine | — | `stealth-hook-engine\` | 隐身 Hook 引擎 |
 | protocol-recovery | — | `protocol-recovery\` | 协议恢复 CLI 工具 |
 | web-env | — | `web-env\` | Web JS Node 补环境隔离检查与 xbs 纯 JS 检查器封装 |
-| ruyipage Firefox runtime | 151-proxy | `ruyipage\runtimes\151-proxy\firefox\firefox.exe` | ruyiPage 1.2.46 / ruyi-mcp 0.1.1 项目 BiDi runtime |
+| ruyipage Firefox runtime | 151-proxy | `ruyipage\runtimes\151-proxy\firefox\firefox.exe` | ruyiPage 1.2.50 / ruyi-mcp 0.1.2 项目 BiDi runtime |
 | ruyiTrace | v1.2 | `ruyitrace\ruyitrace.ps1` | C++ DOMTrace NDJSON 采集；使用独立 Firefox trace kernel |
 | gh | — | `gh\` | GitHub CLI |
 | go | — | `go\` | Go 工具链 |

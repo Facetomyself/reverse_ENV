@@ -34,7 +34,7 @@ reverse_ENV/
 │   └── reverse-engineering/  # CTF 参考知识库
 ├── .agents/skills/    # Codex 薄封装入口 → skill/
 ├── mcp/               # MCP 服务源码
-│   ├── ruyi-mcp/             # Public submodule；Firefox/BiDi 增强逆向（56 tools）
+│   ├── ruyi-mcp/             # Public submodule；Firefox/BiDi 增强逆向（57 tools）
 │   ├── js-reverse-mcp/       # Chrome/CDP 调试
 │   ├── jadx-mcp-server/      # jadx GUI MCP 服务端
 │   └── reqable-mcp/          # Reqable 抓包数据查询
@@ -153,7 +153,7 @@ native-reverse（syscall 定位 → dump/fix → IDA 分析 → Patch → 验证
 | 服务 | 传输 | 核心能力 |
 |------|------|---------|
 | `ida-multi-mcp` | stdio | IDA Pro 反编译/反汇编/xref/patch/类型/栈帧（44 tools） |
-| `ruyi-mcp` | stdio | Firefox/BiDi 反检测/指纹/trace/人类模拟/软断点（56 tools） |
+| `ruyi-mcp` | stdio | Firefox/BiDi 反检测/指纹/trace/人类模拟/软断点（57 tools） |
 | `js-reverse-mcp` | stdio | Chrome/CDP 完整断点调试/脚本/网络/运行时（22 tools） |
 | `jadx-mcp-server` | stdio | jadx GUI APK 类/方法搜索/反编译/xref |
 
