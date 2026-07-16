@@ -22,12 +22,12 @@ ruyi_new_page { url, proxy? }
 ```
 ruyi_new_page { url, proxy, fingerprint: { requireCountry: "US" } }
 → ruyi_handle_cloudflare { timeout: 15 }
-→ ruyi_set_fingerprint { geolocation, timezone, locale, userAgent, viewport }
+→ ruyi_set_fingerprint { geolocation, timezone, locale, userAgent, viewport? | windowSize? }
 ```
 
 **API:** 上述 + `ruyi_handle_cloudflare`, `ruyi_set_fingerprint`
 
-**能做到：** 22维硬件指纹、代理出口 IP 地理匹配、Cloudflare Turnstile / 5s 盾自动辅助、组合仿真
+**能做到：** 22维硬件指纹、代理出口 IP 地理匹配、Cloudflare Turnstile / 5s 盾自动辅助、组合仿真、outer/viewport/screen/DPR 同步
 **做不到：** hCaptcha/reCAPTCHA/Akamai 自动破解、验证码图片识别（需人工或外部识别能力）
 
 ### 升级到 L2 的触发
@@ -192,10 +192,11 @@ ruyi_human_click { target }
 ```
 ruyi_human_move { target, algorithm: "bezier"|"windmouse", style: "arc"|"linear" }
 → ruyi_human_click { target, algorithm: "windmouse" }
+→ ruyi_human_drag { source, target, algorithm: "windmouse", holdMs: 120, releaseMs: 80 }
 → ruyi_human_input { target, text, delayMs }
 ```
 
-**能做到：** bezier/windmouse 轨迹、逐字输入、触摸模拟、轨迹可视化调试
+**能做到：** bezier/windmouse 轨迹、单次 BiDi action 原子拖拽、逐字输入、触摸模拟、轨迹可视化调试
 **做不到：** 验证码图片识别
 
 ### 升级到 L2 的触发
@@ -204,6 +205,7 @@ ruyi_human_move { target, algorithm: "bezier"|"windmouse", style: "arc"|"linear"
 |------|------|
 | 目标有行为检测 (鼠标轨迹分析) | windmouse + 随机延迟 |
 | 需要输入长文本不被检测 | human_input 逐字 |
+| 需要滑块/排序/drag-and-drop | `ruyi_human_drag`，优先 selector，必要时 viewport 坐标 |
 | 需要触摸事件 | → `references/ruyipage-api.md` L4 |
 | CF checkbox 需要自然轨迹 | human_move + human_click |
 
