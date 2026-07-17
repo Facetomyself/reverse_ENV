@@ -368,6 +368,21 @@ projects:
   remote_name: origin
   default_branch: main
   deliverables: reverse-three-piece
+- name: pubg-wsh-js-reverse
+  path: workspace/pubg-wsh-js-reverse
+  ownership: owned
+  last_audited: 2026-07-17
+  kind: windows-wsh-pe-reverse
+  integration: registry
+  lifecycle: active
+  readiness: ready
+  visibility: private
+  remote: https://github.com/Facetomyself/pubg-wsh-js-reverse.git
+  notes: Static-only reverse analysis of three WSH/PE polyglot macro payloads; raw archives, binaries, IDA databases, model blobs, and generated full assembly remain local and ignored.
+  repository_root: workspace/pubg-wsh-js-reverse
+  remote_name: origin
+  default_branch: main
+  deliverables: reverse-three-piece
 - name: pxb7
   path: workspace/pxb7
   ownership: owned
