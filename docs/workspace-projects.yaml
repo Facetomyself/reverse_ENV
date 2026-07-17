@@ -1,5 +1,5 @@
 version: 1
-updated: 2026-07-15
+updated: 2026-07-17
 defaults:
   owner: Facetomyself
   visibility: private
@@ -49,6 +49,21 @@ projects:
   remote_name: origin
   default_branch: main
   deliverables: reverse-three-piece
+- name: boss
+  path: workspace/boss
+  ownership: owned
+  last_audited: 2026-07-17
+  kind: web-data-collection
+  integration: registry
+  lifecycle: planned
+  readiness: curation-required
+  visibility: private
+  remote: https://github.com/Facetomyself/boss.git
+  notes: Local BOSS job-data collection workspace with crawler source plus raw CSV/DOCX materials; curate source and reports before initializing Git, and keep raw datasets and browser artifacts local.
+  repository_root: workspace/boss
+  remote_name: origin
+  default_branch: main
+  deliverables: project-native
 - name: book-dmm
   path: workspace/book-dmm
   ownership: owned
@@ -119,6 +134,21 @@ projects:
   visibility: private
   remote: https://github.com/Facetomyself/cultist-huiji.git
   repository_root: workspace/cultist-huiji
+  remote_name: origin
+  default_branch: main
+  deliverables: reverse-three-piece
+- name: delta-force-dogtag-re
+  path: workspace/delta-force-dogtag-re
+  ownership: owned
+  last_audited: 2026-07-16
+  kind: apk-ue4-asset-reverse
+  integration: registry
+  lifecycle: active
+  readiness: existing
+  visibility: private
+  remote: https://github.com/Facetomyself/delta-force-dogtag-re.git
+  notes: Delta Force CN Android asset-reverse project focused on dog-tag source textures and metadata; raw APKs, UE containers, full extracts, runtime evidence, credentials, and exported images remain local.
+  repository_root: workspace/delta-force-dogtag-re
   remote_name: origin
   default_branch: main
   deliverables: reverse-three-piece
@@ -205,6 +235,21 @@ projects:
   visibility: private
   remote: https://github.com/Facetomyself/jd-command-longlink-research.git
   repository_root: workspace/jd-command-longlink-research
+  remote_name: origin
+  default_branch: main
+  deliverables: reverse-three-piece
+- name: jjwxc
+  path: workspace/jjwxc
+  ownership: owned
+  last_audited: 2026-07-17
+  kind: web-data-sync-reverse
+  integration: registry
+  lifecycle: active
+  readiness: existing
+  visibility: private
+  remote: https://github.com/Facetomyself/jjwxc.git
+  notes: MVP v0.1 implements low-rate GB18030 discovery, detail enrichment, SQLite incremental persistence, change history, CLI scheduling, budgets, and breaker controls; raw captures and runtime databases stay local.
+  repository_root: workspace/jjwxc
   remote_name: origin
   default_branch: main
   deliverables: reverse-three-piece
@@ -350,6 +395,21 @@ projects:
   remote_name: origin
   default_branch: main
   deliverables: project-native
+- name: ruyi-mcp-practical-cases
+  path: workspace/ruyi-mcp-practical-cases
+  ownership: owned
+  last_audited: 2026-07-16
+  kind: browser-automation-research
+  integration: registry
+  lifecycle: active
+  readiness: existing
+  visibility: private
+  remote: https://github.com/Facetomyself/ruyi-mcp-practical-cases.git
+  notes: Evidence-backed ruyi-mcp showcase with three upstream case reproductions, WeChat-ready Markdown articles, curated screenshots, workflows, and redacted evidence; raw sessions, full traces, credentials, and browser profiles remain local or are omitted.
+  repository_root: workspace/ruyi-mcp-practical-cases
+  remote_name: origin
+  default_branch: main
+  deliverables: reverse-three-piece
 - name: ruyi-mcp-smoke
   path: workspace/ruyi-mcp-smoke
   ownership: owned
@@ -453,6 +513,21 @@ projects:
   remote_name: origin
   default_branch: main
   deliverables: reverse-three-piece
+- name: wechat-wxacode-decoder
+  path: workspace/wechat-wxacode-decoder
+  ownership: owned
+  last_audited: 2026-07-16
+  kind: image-code-reverse
+  integration: registry
+  lifecycle: planned
+  readiness: incomplete
+  visibility: private
+  remote: https://github.com/Facetomyself/wechat-wxacode-decoder.git
+  notes: Evidence-backed research and implementation plan for WeChat WXCode image decoding, AppBrand launch-target recovery, and Short Link materialization; raw images and native runtime assets remain local.
+  repository_root: workspace/wechat-wxacode-decoder
+  remote_name: origin
+  default_branch: main
+  deliverables: reverse-three-piece
 - name: weidian
   path: workspace/weidian
   ownership: owned
@@ -521,6 +596,21 @@ projects:
   visibility: private
   remote: https://github.com/Facetomyself/yyb.git
   repository_root: workspace/yyb
+  remote_name: origin
+  default_branch: main
+  deliverables: reverse-three-piece
+- name: ziroom-web-image-crawl
+  path: workspace/ziroom-web-image-crawl
+  ownership: owned
+  last_audited: 2026-07-15
+  kind: web-data-collection
+  integration: registry
+  lifecycle: planned
+  readiness: incomplete
+  visibility: private
+  remote: https://github.com/Facetomyself/ziroom-web-image-crawl.git
+  notes: Ruyi-backed feasibility assessment and crawl plan for Ziroom listing images; browser sessions, cookies, raw traces, downloaded images, and large datasets remain local.
+  repository_root: workspace/ziroom-web-image-crawl
   remote_name: origin
   default_branch: main
   deliverables: reverse-three-piece
