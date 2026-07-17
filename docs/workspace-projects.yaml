@@ -53,17 +53,17 @@ projects:
   path: workspace/boss
   ownership: owned
   last_audited: 2026-07-17
-  kind: web-data-collection
+  kind: web-reverse
   integration: registry
-  lifecycle: planned
-  readiness: curation-required
-  visibility: private
-  remote: https://github.com/Facetomyself/boss.git
-  notes: Local BOSS job-data collection workspace with crawler source plus raw CSV/DOCX materials; curate source and reports before initializing Git, and keep raw datasets and browser artifacts local.
+  lifecycle: active
+  readiness: existing
+  visibility: public
+  remote: https://github.com/Facetomyself/boss-f12-bypass.git
+  notes: Public BOSS F12/DevTools anti-debug and risk-control analysis with a document-start userscript, ruyi-mcp evidence summaries, reverse three-piece, and no raw browser profiles, traces, screenshots, datasets, or legacy Playwright crawler artifacts.
   repository_root: workspace/boss
   remote_name: origin
   default_branch: main
-  deliverables: project-native
+  deliverables: reverse-three-piece
 - name: book-dmm
   path: workspace/book-dmm
   ownership: owned
