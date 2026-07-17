@@ -10,6 +10,7 @@
 | **iOS IPA** | 静态分析、Mach-O 解析 | radare2 + IDA Pro |
 | **Web JS** | 反检测浏览、指纹取证、JS 逆向、签名/Token 提取、补环境 | ruyi-mcp (Firefox/BiDi) + js-reverse-mcp (Chrome/CDP) |
 | **Native 二进制** | PE/ELF/DLL/SO 深度静态分析、反汇编、反编译、Patch | IDA Pro + radare2 |
+| **易语言源码** | `*.e` / `*.ec` 纯静态源码、结构、调用与资源恢复 | SafeEplExtractor + EProjectFile |
 | **网络协议** | 抓包分析、TLS 解密、签名还原、Python 采集器 | Reqable + Frida + mitmproxy |
 | **模拟器管理** | LDPlayer 多实例模板、一键 Root+Magisk+LSPosed+CA 证书 | ldconsole + adb + Magisk/Kitsune |
 | **代理管理** | 多供应商代理提取、验证、注入浏览器/脚本 | 快代理 + Cliproxy |
@@ -58,7 +59,7 @@ reverse_ENV/
 │   ├── packing-bypass/       # 加固绕过
 │   ├── web-reverse/          # Web 逆向
 │   └── mobile-app-reverse/   # 移动应用逆向
-├── tools/             # 便携工具链（不纳入 Git，本地部署）
+├── tools/             # 便携工具链（wrapper/manifest/submodule 纳入 Git，大型 runtime 本地部署）
 ├── resource/          # 二进制资源（portable_win、kg_patch 等）
 ├── storage/           # 可复用大文件（安装包、SDK、ISO）
 ├── workspace/         # 项目工作区（每个逆向项目一个子目录）
@@ -74,6 +75,7 @@ reverse_ENV/
 | Python venv | `.venv/` | Python 3.x + frida 等工具 |
 | JDK 21 | `tools/jdk/` | jadx/apktool 运行依赖 |
 | Node.js 20 | `tools/node/` | MCP 服务运行环境 |
+| .NET SDK 10.0.302 | `tools/dotnet/` | EPL/C# 工具 portable runtime |
 | Android NDK r29 | `tools/android-ndk/` | Native 编译（Frida gadget 等） |
 | Rust 工具链 | `%USERPROFILE%/.cargo/` | 交叉编译 aarch64/x86_64-android |
 | IDA Pro 9.3 | `resource/portable_win/` | 反编译/反汇编核心工具 |
@@ -90,7 +92,7 @@ cd reverse_ENV
 git submodule update --init --recursive
 ```
 
-其中 `mcp/ruyi-mcp` 来自公开仓库 [`Facetomyself/ruyi-mcp`](https://github.com/Facetomyself/ruyi-mcp)，主仓通过 gitlink 固定已验证版本。
+其中 `mcp/ruyi-mcp`、`tools/epl-source-recovery/upstream/EProjectFile` 与 `tools/epl-source-recovery/assets/jingyi-ec` 均通过 gitlink 固定已验证版本。
 
 ### 2. 部署本地工具
 
@@ -99,6 +101,7 @@ git submodule update --init --recursive
 - `resource/portable_win/` — IDA Pro 9.3 便携版
 - `tools/jdk/` — JDK 21
 - `tools/node/` — Node.js 20
+- `tools/dotnet/` — .NET SDK 10.0.302
 - `tools/jadx/` — jadx 1.5.5
 - `tools/radare2/` — radare2 6.1.8
 - `tools/android-ndk/` — Android NDK r29
@@ -171,6 +174,7 @@ native-reverse（syscall 定位 → dump/fix → IDA 分析 → Patch → 验证
 - **WMPF flue.dll 偏移适配** → `wmpf-offset-adaptation`，脚本失配再转 `ida-reverse`
 - **Web JS** → `ruyi-reverse`（默认首选）+ `mcp-js-reverse-playbook`（需 CDP 调试时）
 - **Native 反检测** → `native-reverse`
+- **易语言 `*.e` / `*.ec`** → `tools/epl-source-recovery/run.ps1` 纯静态恢复
 - **Web 补环境** → `web-env-patcher` → `protocol-recovery`
 
 > 完整 Skill 清单与使用场景见 `skill/README.md`。

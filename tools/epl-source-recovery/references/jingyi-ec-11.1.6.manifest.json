@@ -1,0 +1,38 @@
+{
+  "schema": "reverse-env-static-source-asset-v1",
+  "name": "精易模块",
+  "version": "11.1.6",
+  "repository": "https://gitee.com/elangec/ec.git",
+  "commit": "73a7c454935541f5fb695a75474471bf8c7057d7",
+  "tag": "11.1.6",
+  "license": "Apache-2.0",
+  "selectedFile": {
+    "path": "assets/jingyi-ec/精易模块11.1.6.e",
+    "sizeBytes": 4882408,
+    "sha256": "2b6ea71d3d56031e266020fbb695b0615839461fcb19a5f3d3389f44c236f8ca"
+  },
+  "staticParse": {
+    "classes": 106,
+    "methods": 3556,
+    "forms": 0,
+    "constants": 2621,
+    "resources": 91,
+    "resourceBytes": 394971,
+    "methodParseErrors": 0,
+    "targetExecuted": false,
+    "supportLibraryLoaded": false
+  },
+  "resourceAudit": {
+    "peMagicCount": 0,
+    "elfMagicCount": 0,
+    "executableOrScriptExtensionCount": 0
+  },
+  "defender": {
+    "productVersion": "4.18.26060.3008",
+    "signatureVersion": "1.455.176.0",
+    "sourceScanExit": 0,
+    "resourceScanExit": 0,
+    "result": "no threats"
+  },
+  "usagePolicy": "read-only static source asset; do not compile, execute, or load support libraries on the host"
+}

@@ -1,0 +1,35 @@
+{
+  "schema": "reverse-env-tool-security-audit-v1",
+  "date": "2026-07-17",
+  "defender": {
+    "productVersion": "4.18.26060.3008",
+    "signatureVersion": "1.455.176.0",
+    "scans": [
+      {
+        "path": "D:/reverse_ENV/tools/epl-source-recovery",
+        "exitCode": 0,
+        "result": "no threats"
+      },
+      {
+        "path": "D:/reverse_ENV/tools/dotnet",
+        "exitCode": 0,
+        "result": "no threats"
+      },
+      {
+        "path": "D:/reverse_ENV/tools/epl-source-recovery/assets/jingyi-ec",
+        "exitCode": 0,
+        "result": "no threats"
+      }
+    ]
+  },
+  "staticChecks": {
+    "safeProjectPackageReferences": 0,
+    "compiledOpenEplELibInfoReferences": 0,
+    "compiledHelperProcessStarts": 0,
+    "jingyiSourceFilesParsed": 6,
+    "jingyiMethodParseErrors": 0,
+    "jingyiPeMagicCount": 0,
+    "jingyiElfMagicCount": 0,
+    "jingyiExecutableOrScriptExtensionCount": 0
+  }
+}

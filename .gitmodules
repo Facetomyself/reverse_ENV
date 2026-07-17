@@ -22,3 +22,11 @@
 	path = tools/Gwxapkg
 	url = https://github.com/25smoking/Gwxapkg.git
 	branch = main
+[submodule "tools/epl-source-recovery/upstream/EProjectFile"]
+	path = tools/epl-source-recovery/upstream/EProjectFile
+	url = https://github.com/OpenEpl/EProjectFile.git
+	branch = main
+[submodule "tools/epl-source-recovery/assets/jingyi-ec"]
+	path = tools/epl-source-recovery/assets/jingyi-ec
+	url = https://gitee.com/elangec/ec.git
+	branch = master

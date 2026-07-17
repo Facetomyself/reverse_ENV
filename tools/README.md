@@ -12,6 +12,7 @@
 | radare2 | 6.1.8 | `radare2\bin\radare2.exe` | 通用二进制快速分析 |
 | Node.js | 20.20.2 | `node\node.exe` | 现有 MCP 主运行时 |
 | Node.js | 22.23.1 | `node22\node.exe` | DBX MCP 隔离运行时（ABI 127） |
+| .NET SDK | 10.0.302 | `dotnet\dotnet.exe` | C# 工具 portable runtime，不依赖系统安装 |
 | adb | 1.0.41 | `adb\adb.exe` | Android 调试桥 |
 | zipalign | — | `adb\zipalign.exe` | APK 对齐 |
 | apksigner | 0.9 | `adb\apksigner.bat` | APK 签名 |
@@ -37,13 +38,15 @@
 | gh | — | `gh\` | GitHub CLI |
 | go | — | `go\` | Go 工具链 |
 | workspace-governance | — | `workspace-governance\audit_workspace.py` | Workspace registry、remote、submodule 与 Git 禁入文件只读审计 |
+| EPL Source Recovery | 1.9.4-safe.1 | `epl-source-recovery\run.ps1` | 易语言 `*.e` / `*.ec` 纯静态源码恢复；含固定版 EProjectFile 与只读精易模块源码资产 |
 
 ## 约束
 
 - **所有工具不依赖系统 PATH**，通过绝对路径调用
 - **补环境 runtime 隔离**：`tools\node\node.exe` 是项目主 Node，不得为 addon / isolated-vm 切换或覆盖；`tools\node22\node.exe` 仅供 DBX MCP；Node 25/26、xbs addon、TLS 指纹客户端只能放 `tools\web-env\runtimes\` 或 `workspace\<项目名>\.runtime\`
 - **ruyipage runtime 隔离**：浏览器二进制放入 `tools\ruyipage\runtimes\` 并排除 Git；`tools\ruyitrace\firefox\` 继续作为 DOMTrace 专用 runtime，不得被普通 BiDi runtime 覆盖
-- 大文件不纳入 Git（`jadx/`, `jdk/`, `node/`, `node22/`, `android-ndk/`, `mingw64/`, `chromium/` 等已在 `.gitignore`）
+- 大文件不纳入 Git（`jadx/`, `jdk/`, `node/`, `node22/`, `dotnet/`, `android-ndk/`, `mingw64/`, `chromium/` 等已在 `.gitignore`）
 - 新增工具后同步更新本 README + `CLAUDE.md` 工具速查表 + `docs/工具与环境.md`
 - MCP 服务源码不放在此目录，统一在 `mcp/` 下
 - Gwxapkg 构建：`powershell -NoProfile -ExecutionPolicy Bypass -File "D:\reverse_ENV\tools\build-gwxapkg.ps1"`
+- EPL 子模块初始化：`git -C "D:\reverse_ENV" submodule update --init "tools/epl-source-recovery/upstream/EProjectFile" "tools/epl-source-recovery/assets/jingyi-ec"`

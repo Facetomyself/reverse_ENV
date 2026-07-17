@@ -25,7 +25,7 @@
 - 项目 skill 源目录: `skill\<name>\`；Codex repo-scope 发现入口: `.agents\skills\<name>\`；Claude 项目级发现入口: `.claude\skills\<name>\`。
 - `.agents\skills\` / `.claude\skills\` 只保留 frontmatter 与源 skill 路由说明，不复制脚本、参考资料、模板或流程正文；真实维护仍在 `skill\<name>\`。
 - `.agents\skills\<name>\SKILL.md` 必须与 `skill\<name>\SKILL.md` 一一对应；需要 Claude 自动发现的 skill 同步建立 `.claude\skills\<name>\SKILL.md`。新增、删除、重命名或改变路由语义时同步入口与清单。
-- venv: `.venv\` ｜ JDK: `tools\jdk\` ｜ Node: `tools\node\` (20.20.2) / `tools\node22\` (22.23.1，DBX MCP 专用)
+- venv: `.venv\` ｜ JDK: `tools\jdk\` ｜ Node: `tools\node\` (20.20.2) / `tools\node22\` (22.23.1，DBX MCP 专用) ｜ .NET: `tools\dotnet\` (10.0.302)
 - NDK r29: `tools\android-ndk\` ｜ Rust: `%USERPROFILE%\.cargo\`
 - IDA Pro 9.3: `resource\portable_win\` ｜ MCP 配置: `.mcp.json`（Claude 项目 MCP）+ `.claude\settings.json`（Claude 项目权限）+ `.codex\config.toml`（Codex 项目层）+ `~/.codex/config.toml`（Codex 用户默认）
 - **所有逆向项目在 `workspace\<项目名>\` 下起新文件夹**。产出物均落地到对应项目目录。
@@ -128,6 +128,7 @@
 | `nas` | Synology NAS 运维（用户层） | NAS 状态、Docker、文件、`re-db` 数据库栈与备份操作 |
 
 **路由**: `.so`/native 反检测/绕过 → `native-reverse`；`.so` 纯静态分析 → `ida-reverse`/`radare2`；APK Java → `apk-reverse`。
+**易语言路由**: `*.e` / `*.ec` 工程 → `tools\epl-source-recovery\run.ps1` 纯静态恢复；禁止安装易语言、运行工程或加载支持库。精易模块公共源码只读归档于 `tools\epl-source-recovery\assets\jingyi-ec\`。
 **APK 逆向主链**: `fingerprint.sh`（框架/加固/ABI）→ `decode.ps1` + `manifest-summary.ps1` → Java/smali/native 主战场决策 → 按需 `dump-dex.ps1` / `frida-run.ps1` / 代理抓包 → patch/重建/API 提取 → 三件套。
 **APK 加固分流**: 整体加密、完整 DEX 已回填 → `dump-dex.ps1`（panda）；方法抽取/按需回填 → 标 `partial/triage-only`，转 FART/dexfix 类方案；VMP/Dex2C/壳化 `.so` → `native-reverse`，不得继续把 DEX dump 当完整脱壳。
 **APK framework 约束**: Flutter/RN/Unity/壳 marker 可并存；单一 runtime `.so` 不得触发“停止 Java/DEX 分析”，以业务类、bundle、metadata、壳和运行时证据决定 hybrid 主战场。
@@ -149,6 +150,23 @@
 | Node 输出已与浏览器 fixtures 对齐，需要 Python collector / final request | `protocol-recovery` |
 | WASM / JSVMP / VM opcode 是核心阻塞，补环境只能继续执行但不能解释算法 | 标 `triage-only`，必要时转 `ast-deobfuscation` / `web-reverse-algorithm` |
 
+
+## 易语言源码恢复工具约束
+
+| 项 | 约束 |
+|----|------|
+| 入口 | `D:\reverse_ENV\tools\epl-source-recovery\run.ps1` |
+| Runtime | 只用 `D:\reverse_ENV\tools\dotnet\dotnet.exe`；不得回退到系统 .NET 或其他 workspace 的 SDK |
+| Parser | `OpenEpl/EProjectFile v1.9.4` 固定 submodule + 本地 safe overlay；不依赖 `OpenEpl.ELibInfo` |
+| 精易模块 | `assets\jingyi-ec\` 是只读源码 submodule；不得在宿主机编译、执行或加载其支持库 |
+| 输出 | 所有源码、JSON、资源和失败证据写入 `workspace\<项目名>\`，不得写入 `tools\` 根目录 |
+| 结论边界 | `_Lib*` 是未解析的支持库占位符；不得把全局模块库存字符串直接当作应用调用证据 |
+
+初始化子模块：
+
+```powershell
+git -C "D:\reverse_ENV" submodule update --init "tools/epl-source-recovery/upstream/EProjectFile" "tools/epl-source-recovery/assets/jingyi-ec"
+```
 
 ## WMPF 偏移适配 skill 使用约束
 
@@ -401,6 +419,7 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | APK | `dex-dump.js` | Frida DEX 加载观察（triage-only，不写出 DEX） |
 | IDA | `start.ps1` / `open.ps1` | 环境验证 / idalib 路径预处理（不打开数据库） |
 | WMPF | `extract_wmpf_offsets.py` | `flue.dll` 的 LoadStart/CDPFilter/SceneOffsets 静态提取；失配转 IDA 复核 |
+| EPL | `tools\epl-source-recovery\run.ps1` | `*.e` / `*.ec` 纯静态源码、元数据和资源提取，不加载支持库 |
 | r2 | `recon.ps1` | 一站式侦察 |
 | LDPlayer | `re-init.ps1` / `re-proxy.ps1` / `re-list.ps1` / `re-backup.ps1` / `re-restore.ps1` / `re-destroy.ps1` | 模板复制、代理、备份、按 index 恢复并重命名、实例清理 |
 | Proxy | `proxy_check.py` / `kuaidaili_extract.py` / `cliproxy_test.py` | 代理验证/提取 |
@@ -424,6 +443,8 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | Android 模块资产 | `tools\android-modules\` |
 | Node.js 20.20.2 | `tools\node\node.exe`（现有 MCP 主运行时） |
 | Node.js 22.23.1 | `tools\node22\node.exe`（DBX MCP 隔离运行时） |
+| .NET SDK 10.0.302 | `tools\dotnet\dotnet.exe` |
+| EPL Source Recovery | `tools\epl-source-recovery\run.ps1`（EProjectFile 与精易模块源码均固定为 submodule） |
 | Web Env | `tools\web-env\` |
 | JDK 21 | `tools\jdk\` |
 | MinGW-w64 14.2.0 | `tools\mingw64\mingw64\bin\gcc.exe` |

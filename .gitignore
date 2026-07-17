@@ -60,6 +60,7 @@ resource/ida93.torrent
 tools/jdk/
 tools/node/
 tools/node22/
+tools/dotnet/
 tools/jadx/
 tools/radare2/
 tools/go/

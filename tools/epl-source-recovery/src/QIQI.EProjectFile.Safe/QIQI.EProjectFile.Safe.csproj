@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <AssemblyName>QIQI.EProjectFile.Safe</AssemblyName>
+    <RootNamespace>QIQI.EProjectFile</RootNamespace>
+    <Version>1.9.4-safe.1</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile
+      Include="..\..\upstream\EProjectFile\EProjectFile\**\*.cs"
+      Exclude="..\..\upstream\EProjectFile\EProjectFile\FormElementInfo.cs;..\..\upstream\EProjectFile\EProjectFile\IDToNameMap.cs;..\..\upstream\EProjectFile\EProjectFile\bin\**\*;..\..\upstream\EProjectFile\EProjectFile\obj\**\*" />
+    <Compile Include="Patches\FormElementInfo.cs" />
+    <Compile Include="Patches\IDToNameMap.cs" />
+  </ItemGroup>
+</Project>

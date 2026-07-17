@@ -1,0 +1,13 @@
+{
+  "schema": "reverse-env-local-runtime-v1",
+  "name": ".NET SDK",
+  "version": "10.0.302",
+  "runtimeVersion": "10.0.10",
+  "architecture": "win-x64",
+  "targetPath": "D:/reverse_ENV/tools/dotnet",
+  "copiedFrom": "D:/reverse_ENV/workspace/delta-force-dogtag-re/tools/dotnet",
+  "fileCount": 5611,
+  "totalBytes": 798277746,
+  "dotnetExeSha256": "4377f10c78400f0370b88156773de9843c07f14e65b3232005ec3179ef38d463",
+  "copyVerification": "source and target dotnet.exe SHA-256 matched"
+}

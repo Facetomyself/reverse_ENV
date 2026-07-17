@@ -1,0 +1,25 @@
+{
+  "schema": "reverse-env-tool-provenance-v1",
+  "name": "OpenEpl/EProjectFile",
+  "version": "1.9.4",
+  "repository": "https://github.com/OpenEpl/EProjectFile.git",
+  "commit": "aee36ceea0b63eb5cf83780631dd4d776608cd1e",
+  "license": "Unlicense",
+  "observed": {
+    "date": "2026-07-17",
+    "stars": 31,
+    "forks": 10,
+    "language": "C#"
+  },
+  "localAdaptation": {
+    "targetFramework": "net10.0",
+    "packageReferences": 0,
+    "supportLibraryMetadataLoading": false,
+    "externalHelperExecution": false,
+    "patchedFiles": [
+      "FormElementInfo.cs",
+      "IDToNameMap.cs"
+    ],
+    "unknownLibraryNamePolicy": "preserve _Lib* placeholders"
+  }
+}
