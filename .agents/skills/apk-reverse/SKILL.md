@@ -1,6 +1,6 @@
 ---
 name: apk-reverse
-description: Use for Android APK reverse engineering in D:\reverse_ENV, including unpacking, jadx/apktool analysis, smali edits, rebuild/sign/install, Frida hooks, API extraction, fingerprinting, and routing native .so work to native/IDA skills.
+description: Use for Android APK/XAPK/APKS/JAR/AAR reverse engineering in D:\reverse_ENV, including fingerprinting, jadx/apktool analysis, optional Vineflower comparison, smali edits, rebuild/sign/install, Frida hooks, API extraction, and routing native .so work to native/IDA skills.
 ---
 
 This is a Codex repo-scope entrypoint for the existing project skill.

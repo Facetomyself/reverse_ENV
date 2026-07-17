@@ -119,6 +119,8 @@ git status --short --branch   # 若已初始化 git
 4. 工具引用是否指向 `tools\` 内的便携版本
 5. MCP 依赖是否已在 `.mcp.json` 中注册
 6. `AGENTS.md` / `CLAUDE.md` 是否已同步更新
+7. 唯一源码是否位于 `skill/<name>/`，Codex `.agents/skills/<name>/` 与需要自动发现的 Claude `.claude/skills/<name>/` 是否只保留薄路由
+8. 新增脚本是否同步 `skill/README.md`、`docs/脚本参考.md` 和双端脚本速查
 
 ### 2.1 用户层全局协作 Skill
 

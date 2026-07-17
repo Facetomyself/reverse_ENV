@@ -1,0 +1,4 @@
+interface:
+  display_name: "HeroSMS API"
+  short_description: "查询库存、购买号码、轮询验证码并管理 HeroSMS 激活"
+  default_prompt: "Use $herosms-api to inspect HeroSMS availability and manage one SMS activation safely."

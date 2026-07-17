@@ -19,9 +19,9 @@
 
 **所有 skill、MCP、Python venv、工具依赖均安装在 `D:\reverse_ENV\` 内，不得污染系统全局。**
 
-- 项目 skill 源目录: `skill\<name>\`；Codex repo-scope 发现入口: `.agents\skills\<name>\` 薄封装。
-- `.agents\skills\` 只保留 frontmatter 与源 skill 路由说明，不复制脚本/参考资料/流程正文；真实维护仍在 `skill\<name>\`。
-- `.agents\skills\<name>\SKILL.md` 必须与 `skill\<name>\SKILL.md` 一一对应，只允许指向源 skill；新增/删除/重命名 skill 时两侧同步。
+- 项目 skill 源目录: `skill\<name>\`；Codex repo-scope 发现入口: `.agents\skills\<name>\`；Claude 项目级发现入口: `.claude\skills\<name>\`。
+- `.agents\skills\` / `.claude\skills\` 只保留 frontmatter 与源 skill 路由说明，不复制脚本、参考资料、模板或流程正文；真实维护仍在 `skill\<name>\`。
+- `.agents\skills\<name>\SKILL.md` 必须与 `skill\<name>\SKILL.md` 一一对应；需要 Claude 自动发现的 skill 同步建立 `.claude\skills\<name>\SKILL.md`。新增、删除、重命名或改变路由语义时同步入口与清单。
 - venv: `.venv\` ｜ JDK: `tools\jdk\` ｜ Node: `tools\node\` (20.20.2) / `tools\node22\` (22.23.1，DBX MCP 专用)
 - NDK r29: `tools\android-ndk\` ｜ Rust: `%USERPROFILE%\.cargo\`
 - IDA Pro 9.3: `resource\portable_win\` ｜ MCP 配置: `.mcp.json`（Claude 项目 MCP）+ `.claude\settings.json`（Claude 项目权限）+ `.codex\config.toml`（Codex 项目层）+ `~/.codex/config.toml`（Codex 用户默认）+ `~/.claude.json`（Claude 全局）
@@ -79,6 +79,7 @@
 | MCP 服务配置详情 | `mcp/README.md` + `docs/MCP服务详情.md` |
 | Skill 清单 | `skill/README.md` |
 | Codex repo-scope skill 入口 | `.agents/skills/README.md` |
+| Claude 项目级 skill 入口 | `.claude/skills/README.md` |
 | 工作流与深度等级 | `docs/逆向工作流详解.md` |
 | Web 逆向架构分析 | `docs/Web逆向架构分析.md` |
 | ruyi-mcp 引导方案 | `docs/ruyi-mcp-引导方案.md` |
@@ -106,8 +107,9 @@
 | Skill | 场景 | 何时用 |
 |-------|------|--------|
 | `reverse-coordinator` | **元 skill** | 未指定工具时优先——分类→路由→编排→交付 |
-| `apk-reverse` | Android APK | jadx/apktool/frida/adb + 指纹/脱壳/Kotlin类名恢复/API提取/Vineflower + Frida最佳实践/Unity IL2CPP |
+| `apk-reverse` | Android APK/JAR/AAR | jadx/apktool/frida/adb + 指纹/脱壳/Kotlin类名恢复/API提取/Vineflower + Frida最佳实践/Unity IL2CPP |
 | `ida-reverse` | PE/ELF/DLL/SO | IDA Pro 深度分析 + IDAPython速查/符号恢复/结构体恢复 |
+| `wmpf-offset-adaptation` | WMPF `flue.dll` 偏移适配 | 缺失 `addresses.{version}.json`、版本配置 404、LoadStart/CDPFilter/SceneOffsets 提取；脚本失配再转 IDA |
 | `mcp-js-reverse-playbook` | Web JS — CDP 调试 | js-reverse-mcp (Chrome/CDP) — 需要完整断点/单步/调用栈时首选 |
 | `ruyi-reverse` | Web JS — 统一编排器 | 7 能力模块 (Anti-Detect/Observe/Capture/Trace/Human-Sim/Debug/Export) x 深浅两级，按任务主动组合。**唯一入口** |
 | `web-env-patcher` | Web JS Node 补环境 | 接在 ruyi/js-reverse 取证后：隔离 runtime、cURL/HAR 检查、Trace API 覆盖矩阵、fixtures、TLS 门禁 |
@@ -118,12 +120,14 @@
 | `ldplayer-control` | 雷电模拟器 RE 实例管理 | re-init(-Template 创建/复制) / re-proxy / re-list / re-backup / re-restore / re-destroy — 模板实例 + 项目实例隔离 |
 | `protocol-recovery` | Web 协议恢复 | 签名→Python 采集器（接在 mcp-js-reverse-playbook 或 ruyi-reverse 之后） |
 | `article-archiver` | 文章知识库归档 | `article/pending` PDF/HTML/Markdown → 清洗 Markdown → 分类归档 → 更新 `article/INDEX.md` |
+| `herosms-api` | HeroSMS 接码 API | 查余额/库存/价格、购买号码、轮询验证码并管理激活；凭据不进入仓库 |
 | `nas` | Synology NAS 运维（用户层） | NAS 状态、Docker、文件、`re-db` 数据库栈与备份操作 |
 
 **路由**: `.so`/native 反检测/绕过 → `native-reverse`；`.so` 纯静态分析 → `ida-reverse`/`radare2`；APK Java → `apk-reverse`。
 **APK 逆向主链**: `fingerprint.sh`（框架/加固/ABI）→ `decode.ps1` + `manifest-summary.ps1` → Java/smali/native 主战场决策 → 按需 `dump-dex.ps1` / `frida-run.ps1` / 代理抓包 → patch/重建/API 提取 → 三件套。
 **APK 加固分流**: 整体加密、完整 DEX 已回填 → `dump-dex.ps1`（panda）；方法抽取/按需回填 → 标 `partial/triage-only`，转 FART/dexfix 类方案；VMP/Dex2C/壳化 `.so` → `native-reverse`，不得继续把 DEX dump 当完整脱壳。
 **APK framework 约束**: Flutter/RN/Unity/壳 marker 可并存；单一 runtime `.so` 不得触发“停止 Java/DEX 分析”，以业务类、bundle、metadata、壳和运行时证据决定 hybrid 主战场。
+**WMPF 偏移适配路由**: `flue.dll`、`addresses.{version}.json`、版本配置 404、`LoadStartHookOffset` / `CDPFilterHookOffset` / `SceneOffsets` → `wmpf-offset-adaptation`；自动提取失配或证据不足 → `ida-reverse`。
 **微信小程序路由**: PC 微信 WMPF、`.wxapkg`、小程序/小游戏运行时调试 → `wechat-miniapp-re-mcp`（`wxmp_*`）；小程序内嵌 H5 或普通网页 JS 仍按 Web JS 路由处理。
 **Web JS 路由**: **默认 -> `ruyi-reverse`（统一编排器）** — 7 模块 x 两级深度，按任务主动组合 (Anti-Detect/Observe/Capture/Trace/Human-Sim/Debug/Export)。需 CDP 完整断点调试且无反检测需求 -> `mcp-js-reverse-playbook`。两者**可互补**，通过 Export 桥接。
 **Web 补环境路由**: 浏览器取证完成后，需要把原始网页 JS 放到 Node.js 中运行、补 `window/document/navigator/storage/crypto`、生成 sign/token 或对齐 fixtures 时，切到 `web-env-patcher`；协议采集器交付再切 `protocol-recovery`。
@@ -140,6 +144,50 @@
 | 纯算法签名，无浏览器环境依赖，样本字段已确认 | 直接 `protocol-recovery` |
 | Node 输出已与浏览器 fixtures 对齐，需要 Python collector / final request | `protocol-recovery` |
 | WASM / JSVMP / VM opcode 是核心阻塞，补环境只能继续执行但不能解释算法 | 标 `triage-only`，必要时转 `ast-deobfuscation` / `web-reverse-algorithm` |
+
+
+## WMPF 偏移适配 skill 使用约束
+
+`wmpf-offset-adaptation` 的唯一源码位于 `D:\reverse_ENV\skill\wmpf-offset-adaptation\`，上游固定来源记录在 `references\upstream.md`。Codex 与 Claude 项目入口只做路由。
+
+| 项 | 约束 |
+|----|------|
+| 双端入口 | Codex：`.agents\skills\wmpf-offset-adaptation\`；Claude：`.claude\skills\wmpf-offset-adaptation\` |
+| 输入落点 | `flue.dll` 先复制到 `workspace\<project>\`，记录 WMPF 版本与 SHA-256；不得直接在原安装目录建立 IDA 数据库 |
+| Python | 只用 `D:\reverse_ENV\.venv\Scripts\python.exe`；`pefile` / `capstone` 只安装到项目 venv |
+| 默认方法 | 先运行 `extract_wmpf_offsets.py` 做 `.pdata` + 局部反汇编提取；脚本成功且结构证据完整时停止 |
+| IDA 升级 | 字符串、函数边界或 scene 链失配时转 `ida-reverse` / `ida-multi-mcp` 定向复核；禁止全量盲扫和历史值回退 |
+| 输出纪律 | `addresses.{version}.json` 默认写 workspace；两个 Hook offset 必须是 RVA，`SceneOffsets` 必须来自目标 DLL |
+| 完成门槛 | 无 `script loaded`、Hook 成功和 DevTools 连接证据时只能标 `static-verified / runtime-pending`；运行时工作转 `wechat-miniapp-re-mcp` |
+
+常用命令：
+
+```powershell
+& "D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\skill\wmpf-offset-adaptation\scripts\extract_wmpf_offsets.py" --version <version> --dll "D:\reverse_ENV\workspace\<project>\flue.dll" --output "D:\reverse_ENV\workspace\<project>\addresses.<version>.json"
+```
+
+
+## HeroSMS skill/API 使用约束
+
+`herosms-api` 的唯一源码位于 `D:\reverse_ENV\skill\herosms-api\`。Codex repo-scope 入口、Codex 用户入口和 Claude 用户入口都只做路由，不复制脚本或凭据。
+
+| 项 | 约束 |
+|----|------|
+| 双端入口 | Codex：`.agents\skills\herosms-api\` + `%USERPROFILE%\.codex\skills\herosms-api\`；Claude：`%USERPROFILE%\.claude\skills\herosms-api\` |
+| 真实凭据 | 只存 Windows 用户环境变量 `HEROSMS_API_KEY`；不得写入仓库、`.codex/config.toml`、`.claude/settings*.json`、skill、日志或回复 |
+| 读取顺序 | 当前进程环境变量 → `HKCU\Environment` 用户环境变量 → `%USERPROFILE%\.herosms\credentials.json` 兼容回退 |
+| 配置验证 | 只运行 `config show`、`health` 或 `account balance`；配置任务不得购买号码或改变 activation 状态 |
+| 购买门禁 | 先查 service/country/price/stock；`activation buy` 必须显式给出 `--max-price` 和 `--yes` |
+| 状态门禁 | `ready/resend/complete/cancel` 必须 `--yes`；收到并确认验证码后才 complete，取消必须由用户明确要求 |
+| 轮询限速 | 默认 5 秒，最低 1 秒；官方账户限额 40 RPS，禁止无界并发和高频空轮询 |
+| 输出纪律 | API key 永不回显；余额可用于健康判断，回复默认只报告验证成功，不主动披露金额 |
+
+常用只读命令：
+
+```powershell
+& "D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\skill\herosms-api\scripts\herosms.py" --pretty config show
+& "D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\skill\herosms-api\scripts\herosms.py" --pretty health
+```
 
 
 ## 临时邮箱 skill/CLI 使用约束
@@ -410,6 +458,7 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 |------|------|---------|
 | APK | `fingerprint.sh` | Phase 0 快速指纹（框架/混淆度/HTTP栈/下一步） |
 | APK | `decode.ps1` | jadx+apktool 落盘 |
+| APK | `vineflower-decompile.ps1` | 固定 Vineflower/dex2jar 对照反编译 APK/DEX/JAR/AAR/CLASS |
 | APK | `frida-run.ps1` | Frida 注入 |
 | APK | `rebuild-sign-install.ps1` | 重建→签名→安装 |
 | APK | `manifest-summary.ps1` | Manifest 摘要 |
@@ -421,6 +470,7 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | APK | `dex-dump.js` | Frida DEX 加载观察（triage-only，不写出 DEX） |
 | IDA | `start.ps1` | 环境验证 |
 | IDA | `open.ps1` | idalib 路径预处理（不打开数据库） |
+| WMPF | `extract_wmpf_offsets.py` | `flue.dll` 的 LoadStart/CDPFilter/SceneOffsets 静态提取；失配转 IDA 复核 |
 | r2 | `recon.ps1` | 一站式侦察 |
 | LDPlayer | `re-init.ps1` | RE 实例初始化（创建/从模板复制→启动） |
 | Article | `pdf_to_markdown.py` | pending PDF → Markdown 草稿（需人工清洗、分类、索引） |
@@ -433,6 +483,7 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | Proxy | `kuaidaili_extract.py` | 快代理 API 提取 + 验证 |
 | Proxy | `cliproxy_test.py` | Cliproxy SOCKS5 测试 (Rotating/Sticky) |
 | Web Env | `check-isolation.ps1` / `invoke-xbs-script.ps1` | Web 补环境隔离检查与 xbs 纯 JS 检查器封装 |
+| HeroSMS | `herosms.py` | HeroSMS 余额/目录/价格、号码购买、验证码轮询与激活生命周期管理 |
 
 > `.py` 脚本用 `python "D:\reverse_ENV\skill\<name>\scripts\<script>.py"` 调用。
 > 脚本详情见 `docs/脚本参考.md`
@@ -443,8 +494,8 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 |------|------|
 | jadx 1.5.5 | `tools\jadx\bin\jadx.bat` |
 | apktool 3.0.2 | `tools\apktool\apktool.bat` |
-| Vineflower 1.11.2 (备选) | `tools\vineflower\vineflower-1.11.2.jar` — Fernflower 社区分支，复杂 Java/lambda/泛型输出质量优于 jadx。用法: `java -jar ...vineflower.jar -dgs=1 -mpm=60 input.jar output/` |
-| dex2jar 2.4.31 (备选) | `tools\dex2jar\dex-tools-2.4.31\` — DEX→JAR 转换，Vineflower 反编译 APK 的前置依赖。用法: `d2j-dex2jar.sh -f -o app.jar app.apk` |
+| Vineflower 1.11.2 (备选) | `tools\vineflower\vineflower-1.11.2.jar` — 通过 `skill\apk-reverse\scripts\vineflower-decompile.ps1` 做 JAR/AAR 或关键类对照，不替代 jadx/apktool 主链 |
+| dex2jar 2.4.31 (备选) | `tools\dex2jar\dex-tools-2.4.31\` — 仅作为 APK/DEX → Vineflower 的中间转换；AAR 直接处理内部 JAR |
 | Kitsune Mask v27.0 | `tools\Kitsune-Mask-27.0.apk` — Magisk Delta 模拟器版 (支持「直接安装到系统分区」)，LDPlayer RE 实例 Magisk 安装用 |
 | Android 模块资产 | `tools\android-modules\` — Kitsune/LSPosed/JustTrustMe/Hide My Applist/Shamiko 本地资产清单，APK/ZIP 本体不进 Git |
 | jadx-mcp-server | `mcp\jadx-mcp-server\jadx_mcp_server.py`（jadx-ai-mcp MCP 服务端） |

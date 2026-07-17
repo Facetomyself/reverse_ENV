@@ -1,14 +1,16 @@
 ---
 name: apk-reverse
-description: Use for Android APK/XAPK/APKS reverse engineering in D:\reverse_ENV, including framework/protector fingerprinting, split-aware decode, manifest and Java/Kotlin/smali analysis, LDPlayer/Frida runtime work, validated whole-DEX dumping with panda, Kotlin name recovery, API candidate extraction, patch/rebuild/sign/install, and handoff of native .so, Unity IL2CPP, VMP, or Dex2C targets.
+description: Use for Android APK/XAPK/APKS/JAR/AAR reverse engineering in D:\reverse_ENV, including framework/protector fingerprinting, split-aware decode, jadx/apktool analysis, optional Vineflower comparison, manifest and Java/Kotlin/smali analysis, LDPlayer/Frida runtime work, validated whole-DEX dumping with panda, Kotlin name recovery, API candidate extraction, patch/rebuild/sign/install, and handoff of native .so, Unity IL2CPP, VMP, or Dex2C targets.
 ---
 
 # APK Reverse
 
-Use this skill for Android packages. Keep every target and artifact under
-`D:\reverse_ENV\workspace\<project>\`; do not place APK/DEX/SO files directly in
-the workspace root and do not commit raw targets, dumps, captures, credentials,
-or full decompilation trees.
+Use this skill for Android packages and compiled library artifacts. Keep every
+target and artifact under `D:\reverse_ENV\workspace\<project>\`; do not place
+APK/DEX/SO/JAR/AAR files directly in the workspace root and do not commit raw
+targets, dumps, captures, credentials, or full decompilation trees. For
+JAR/AAR/CLASS inputs, skip APK fingerprint/decode phases and go directly to the
+optional Vineflower comparison path below.
 
 ## Required preflight
 
@@ -111,6 +113,27 @@ Interpretation:
 - apktool output is the source of truth for manifest/resources/smali patching;
 - `<50` Java files is only a packing heuristic, not proof;
 - if both branches produce no useful artifact, the wrapper fails.
+
+### Optional Vineflower comparison
+
+Use Vineflower only for JAR/AAR/CLASS targets or when a specific jadx result has
+broken control flow, lambda/generic output, or explicit decompiler warnings.
+It is not a third default decode branch for every APK.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File `
+  "D:\reverse_ENV\skill\apk-reverse\scripts\vineflower-decompile.ps1" `
+  -InputPath "D:\reverse_ENV\workspace\<project>\input.jar" `
+  -OutputDir "D:\reverse_ENV\workspace\<project>\vineflower" -Clean
+```
+
+The wrapper uses the pinned project JDK/Vineflower/dex2jar paths, handles AAR
+as a ZIP containing JARs instead of sending the AAR itself to dex2jar, and
+writes `vineflower-summary.json`. For APK/DEX, treat the result as class-level
+comparison evidence only; jadx/apktool remain authoritative for resources,
+smali, runtime names, and rebuild work. Read
+`references/vineflower-comparison.md` before promoting a discrepancy into a
+finding.
 
 ## Phase 2: choose the business-code surface
 
@@ -288,6 +311,7 @@ Before final delivery, read `references/verification-checklist.md` and verify:
 | `references/packing-and-unpacking.md` | Protector, panda, method extraction, CDEX, VMP/Dex2C, anti-dump |
 | `references/verification-checklist.md` | Before delivery or after any dump/rebuild |
 | `references/frida-best-practices.md` | Java/native hooks, loader timing, Frida 17 APIs |
+| `references/vineflower-comparison.md` | JAR/AAR targets or class-level jadx comparison |
 | `references/kotlin-name-recovery.md` | Reading authoritative mappings and low-confidence candidates |
 | `references/api-extraction-patterns.md` | Promoting endpoint candidates into evidence |
 | `references/call-flow-analysis.md` | Activity/ViewModel/Repository/request call-chain recovery |

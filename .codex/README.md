@@ -5,6 +5,7 @@ This directory contains project-local Codex configuration and lifecycle hooks. I
 ## Layering model
 
 - Claude side: global and project layers both commonly hold MCP, skills, and hooks. The current project `.claude/settings.json` is Claude-specific and should not be copied verbatim into Codex.
+- Claude project-scope skill entrypoints live under `.claude/skills` and remain thin routes to the source workflows under `D:\reverse_ENV\skill\`.
 - Codex side: project MCP belongs in `.codex/config.toml`; project lifecycle policy belongs in `.codex/hooks.json`; durable repo instructions stay in `AGENTS.md`.
 - Codex repo-scope skills are discovered from `.agents/skills`; this repo keeps thin entrypoints there and preserves the source-of-truth workflows under `D:\reverse_ENV\skill\`.
 - Project-local Codex config and hooks load only after the project `.codex` layer is trusted. If Codex prompts through `/hooks`, review and trust these commands before expecting them to run.
