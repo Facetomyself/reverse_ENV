@@ -353,6 +353,21 @@ projects:
   remote_name: origin
   default_branch: main
   deliverables: reverse-three-piece
+- name: outlook-api-validation
+  path: workspace/outlook-api-validation
+  ownership: owned
+  last_audited: 2026-07-17
+  kind: api-validation
+  integration: registry
+  lifecycle: active
+  readiness: ready
+  visibility: private
+  remote: https://github.com/Facetomyself/outlook-api-validation.git
+  notes: Official Microsoft OAuth refresh-token and Graph mail-access validation with scrubbed response evidence; raw credentials and mailbox content are never stored.
+  repository_root: workspace/outlook-api-validation
+  remote_name: origin
+  default_branch: main
+  deliverables: reverse-three-piece
 - name: pxb7
   path: workspace/pxb7
   ownership: owned
