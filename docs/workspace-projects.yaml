@@ -166,6 +166,21 @@ projects:
   remote_name: origin
   default_branch: main
   deliverables: reverse-three-piece
+- name: douluo-web-login-e-source
+  path: workspace/douluo-web-login-e-source
+  ownership: owned
+  last_audited: 2026-07-17
+  kind: epl-source-reverse
+  integration: registry
+  lifecycle: active
+  readiness: existing
+  visibility: private
+  remote: https://github.com/Facetomyself/douluo-web-login-e-source.git
+  notes: Static-only EPL source recovery. Raw .e input, recovered source tree, vendor parser source, hard-coded protocol secrets, and generated evidence remain local and excluded from Git.
+  repository_root: workspace/douluo-web-login-e-source
+  remote_name: origin
+  default_branch: main
+  deliverables: reverse-three-piece
 - name: fanqie-auto-publisher-spec
   path: workspace/fanqie-auto-publisher-spec
   ownership: owned
