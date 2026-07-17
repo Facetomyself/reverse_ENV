@@ -95,12 +95,12 @@ projects:
 - name: ciweimao-api-reverse
   path: workspace/ciweimao-api-reverse
   ownership: owned
-  last_audited: 2026-07-13
+  last_audited: 2026-07-17
   kind: api-reverse
   integration: registry
   lifecycle: active
   readiness: existing
-  visibility: public
+  visibility: private
   remote: https://github.com/Facetomyself/ciweimao-api-reverse.git
   notes: Existing independent repository; preserve current dirty state.
   repository_root: workspace/ciweimao-api-reverse
