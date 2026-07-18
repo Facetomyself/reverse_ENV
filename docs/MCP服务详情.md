@@ -38,7 +38,7 @@
 | `ruyi-mcp` | 0.1.2 | `ruyi_*` | Node.js 便携版 + Python venv (`ruyiPage==1.2.50`) | 已初始化公开 submodule；Firefox runtime 按 BiDi / DOMTrace 分层 |
 | `dbx` | 0.4.29 | `dbx_*` | Node.js 22.23.1 + native addons | DBX 已安装并存在本地连接数据库；默认冷启动 |
 | `reqable` | 0.3.2 | `reqable_*` | Python venv (stdio) | Reqable ≥2.20 桌面端；按需手动启用，默认不自动初始化 |
-| `wechat-miniapp-re-mcp` | 0.3.1 | `wxmp_*` | Node.js 便携版 + lazy Frida + Gwxapkg adapter | Public submodule；PR #14/#15 acceptance runner 与 Review P0 修复已合入；按需启用 |
+| `wechat-miniapp-re-mcp` | 0.3.1 | `wxmp_*` | Node.js 便携版 + lazy Frida + Gwxapkg adapter | Public submodule；PR #14/#15/#16 runner、Review P0 与 post-fix live record 已合入；按需启用 |
 | `first-mcp` | 1.0.9 | — | SSE (127.0.0.1:4554) | First GUI 运行中；按需手动启用，默认不自动初始化 |
 
 ## ida-multi-mcp
@@ -218,7 +218,7 @@ Claude Code ← stdio ← FastMCP ← reqable_* 工具查询
 - **Workspace**: `workspace\<项目名>\wechat-miniapp\`
 - **静态后端**: `tools\Gwxapkg-runtime\gwxapkg.exe`
 - **Profile**: clean-room schema；generated candidate 必须匹配目标 WMPF version/module hash，并通过 `wxmp_profile_promote` 记录 review evidence 后才可注入；本地兼容测试可通过 `WXMP_LEGACY_PROFILE_DIR` 读取外部 profile，不复制进子仓
-- **状态**: PR #11/#12/#14/#15 已合入且 Node 20/22 CI 绿色；cold-start / 53-tool contract / 99 tests / 2 acceptance records / production audit 均通过；v0.3.1 已在 WMPF v19977 验证 nested `wx` runtime、AppService 选择、evaluate、真实 breakpoint location、727 trace wrappers、`wx.request`/fetch/XHR hook、hook event/API inventory、Network body/replay、同 session reconnect、detach 与 evidence export；PR #14 提供可重复 acceptance/live runner，PR #15 修复当前 xwechat 默认包发现、CDP capability 误报和 Frida/DevTools proxy 异常清理；最新 v19977 复验因 Hook 后没有新 lifecycle 停在 `runtimeBridge`，并正确保持 `capabilities.cdp=false`；WMPF v20079 已通过跨版本 AOB 唯一性、module SHA-256、reviewed profile、生产 hook attach/ready/detach，剩余门禁为第二版本完整 mini-program semantic gate
+- **状态**: PR #11/#12/#14/#15/#16 已合入且 Node 20/22 CI 绿色；cold-start / 53-tool contract / 99 tests / 2 acceptance records / production audit 均通过；v0.3.1 已在 WMPF v19977 验证 nested `wx` runtime、AppService 选择、evaluate、真实 breakpoint location、727 trace wrappers、`wx.request`/fetch/XHR hook、hook event/API inventory、Network body/replay、同 session reconnect、detach 与 evidence export；PR #14 提供可重复 acceptance/live runner，PR #15 修复当前 xwechat 默认包发现、CDP capability 误报和 Frida/DevTools proxy 异常清理，PR #16 又以 fresh lifecycle 完成 post-fix full-semantic repeat，并刷新机器可读 summary hash：所有 required gates 通过、runner 无 errors、findings resolved；WMPF v20079 已通过跨版本 AOB 唯一性、module SHA-256、reviewed profile、生产 hook attach/ready/detach，剩余门禁为第二版本完整 mini-program semantic gate
 
 按需 Codex 配置见 `.codex/config.toml` 注释段。完整 Plan 与完成度见子仓 `docs/plan.md`、`docs/progress.md`。
 
