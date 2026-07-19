@@ -211,6 +211,21 @@ projects:
   remote_name: origin
   default_branch: main
   deliverables: reverse-three-piece
+- name: flightno-web-reverse
+  path: workspace/flightno-web-reverse
+  ownership: owned
+  last_audited: 2026-07-19
+  kind: web-data-collection
+  integration: registry
+  lifecycle: active
+  readiness: ready
+  visibility: private
+  remote: https://github.com/Facetomyself/flightno-web-reverse.git
+  notes: Ruyi-backed FlightADSB and China Customs manifest protocol recovery with curl_cffi collectors; credentials, tokens, cookies, raw traces, screenshots, and generated outputs remain local.
+  repository_root: workspace/flightno-web-reverse
+  remote_name: origin
+  default_branch: main
+  deliverables: reverse-three-piece
 - name: First
   path: workspace/First
   ownership: owned
