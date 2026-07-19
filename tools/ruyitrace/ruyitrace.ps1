@@ -24,6 +24,16 @@ Firefox 用户配置文件目录（可选，默认自动创建临时目录）
 
 .PARAMETER KeepProcessFiles
 保留内核生成的 `<output>_<PID>.ndjson` 分片；默认合并后删除
+
+.PARAMETER DurationSeconds
+非交互 headless 采集时长。到时通过 WebDriver BiDi `browser.close`
+优雅退出并等待 trace flush；0 表示保持原交互模式。
+
+.PARAMETER ProcessTypes
+传给 `MOZ_DOM_TRACE_PTYPE` 的进程类型列表。默认 `parent,tab`。
+
+.PARAMETER RemoteDebuggingPort
+定时采集使用的 Remote Agent 端口；`0` 表示自动选择 loopback 空闲端口。
 #>
 
 [CmdletBinding()]
@@ -40,14 +50,39 @@ param(
     [ValidateRange(0, 2147483647)]
     [int]$Limit = 0,
 
-    [switch]$KeepProcessFiles
+    [switch]$KeepProcessFiles,
+
+    [ValidateRange(0, 86400)]
+    [int]$DurationSeconds = 0,
+
+    [string]$ProcessTypes = 'parent,tab',
+
+    [ValidateRange(0, 65535)]
+    [int]$RemoteDebuggingPort = 0
 )
 
 $FirefoxDir = 'D:\reverse_ENV\tools\ruyitrace\firefox'
 $FirefoxExe = Join-Path $FirefoxDir 'firefox.exe'
+$PythonExe = 'D:\reverse_ENV\.venv\Scripts\python.exe'
+$BidiCloseScript = 'D:\reverse_ENV\tools\ruyitrace\bidi_close.py'
+
+if ($DurationSeconds -gt 0 -and -not $Headless) {
+    throw '-DurationSeconds requires -Headless because timed capture is non-interactive.'
+}
+if ($RemoteDebuggingPort -gt 0 -and $DurationSeconds -eq 0) {
+    throw '-RemoteDebuggingPort is only valid with -DurationSeconds.'
+}
 
 if (-not (Test-Path $FirefoxExe)) {
     Write-Output "ERR: firefox.exe not found at $FirefoxExe"
+    exit 1
+}
+if ($DurationSeconds -gt 0 -and -not (Test-Path -LiteralPath $PythonExe)) {
+    Write-Output "ERR: project Python not found at $PythonExe"
+    exit 1
+}
+if ($DurationSeconds -gt 0 -and -not (Test-Path -LiteralPath $BidiCloseScript)) {
+    Write-Output "ERR: BiDi close helper not found at $BidiCloseScript"
     exit 1
 }
 
@@ -77,6 +112,70 @@ function Get-TraceCandidates {
     return @($items | Sort-Object FullName -Unique)
 }
 
+function Get-FreeLoopbackPort {
+    $Listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
+    try {
+        $Listener.Start()
+        return ([Net.IPEndPoint]$Listener.LocalEndpoint).Port
+    } finally {
+        $Listener.Stop()
+    }
+}
+
+function ConvertTo-NativeArgument {
+    param([Parameter(Mandatory = $true)][string]$Value)
+    if ($Value.Contains('"')) {
+        throw "Native argument contains an unsupported quote: $Value"
+    }
+    return '"' + $Value + '"'
+}
+
+function Get-SessionFirefoxProcesses {
+    param(
+        [Parameter(Mandatory = $true)][int]$RootPid,
+        [Parameter(Mandatory = $true)][string]$ProfilePath
+    )
+
+    $AllFirefox = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+        $_.ExecutablePath -and $_.ExecutablePath.Equals($FirefoxExe, [StringComparison]::OrdinalIgnoreCase)
+    })
+    $Ids = New-Object 'System.Collections.Generic.HashSet[int]'
+    [void]$Ids.Add($RootPid)
+    foreach ($Process in $AllFirefox) {
+        if ($Process.CommandLine -and $Process.CommandLine.IndexOf($ProfilePath, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
+            [void]$Ids.Add([int]$Process.ProcessId)
+        }
+    }
+    do {
+        $Added = $false
+        foreach ($Process in $AllFirefox) {
+            if ($Ids.Contains([int]$Process.ParentProcessId) -and -not $Ids.Contains([int]$Process.ProcessId)) {
+                [void]$Ids.Add([int]$Process.ProcessId)
+                $Added = $true
+            }
+        }
+    } while ($Added)
+    return @($AllFirefox | Where-Object { $Ids.Contains([int]$_.ProcessId) })
+}
+
+function Wait-SessionFirefoxExit {
+    param(
+        [Parameter(Mandatory = $true)][int]$RootPid,
+        [Parameter(Mandatory = $true)][string]$ProfilePath,
+        [int]$TimeoutMilliseconds = 15000
+    )
+
+    $Deadline = [DateTime]::UtcNow.AddMilliseconds($TimeoutMilliseconds)
+    do {
+        $Remaining = @(Get-SessionFirefoxProcesses -RootPid $RootPid -ProfilePath $ProfilePath)
+        if ($Remaining.Count -eq 0) {
+            return $true
+        }
+        Start-Sleep -Milliseconds 250
+    } while ([DateTime]::UtcNow -lt $Deadline)
+    return $false
+}
+
 $BeforeState = @{}
 foreach ($item in @(Get-TraceCandidates)) {
     $BeforeState[$item.FullName] = "{0}:{1}" -f $item.LastWriteTimeUtc.Ticks, $item.Length
@@ -89,6 +188,14 @@ if (-not $Profile) {
     New-Item -ItemType Directory -Path $Profile -Force | Out-Null
     Write-Output "INFO: temp profile: $Profile"
 }
+if ($DurationSeconds -gt 0 -and $AutoProfile) {
+    $UserJsPath = Join-Path $Profile 'user.js'
+    [IO.File]::WriteAllText(
+        $UserJsPath,
+        "user_pref(`"remote.prefs.recommended`", true);`n",
+        [Text.UTF8Encoding]::new($false)
+    )
+}
 
 # Set environment variables for trace kernel. The custom Firefox appends the
 # process ID to MOZ_DOM_TRACE_FILE, so one session may create multiple files.
@@ -96,6 +203,7 @@ $TraceEnvNames = @(
     'MOZ_DOM_TRACE',
     'MOZ_DOM_TRACE_FILE',
     'MOZ_DOM_TRACE_LIMIT',
+    'MOZ_DOM_TRACE_PTYPE',
     'MOZ_DISABLE_LAUNCHER_PROCESS'
 )
 $PreviousTraceEnv = @{}
@@ -111,6 +219,11 @@ if ($Limit -gt 0) {
 } else {
     Remove-Item Env:MOZ_DOM_TRACE_LIMIT -ErrorAction SilentlyContinue
 }
+if ($ProcessTypes) {
+    $env:MOZ_DOM_TRACE_PTYPE = $ProcessTypes
+} else {
+    Remove-Item Env:MOZ_DOM_TRACE_PTYPE -ErrorAction SilentlyContinue
+}
 
 Write-Output "========================================="
 Write-Output "ruyiTrace v1.2 (Firefox 151 trace kernel)"
@@ -120,17 +233,58 @@ Write-Output "Output:  $Output"
 Write-Output "Profile: $Profile"
 if ($Headless) { Write-Output "Mode:    headless" }
 if ($Limit -gt 0) { Write-Output "Limit:   $Limit lines/process" }
+if ($DurationSeconds -gt 0) { Write-Output "Duration: $DurationSeconds seconds" }
+if ($ProcessTypes) { Write-Output "Process types: $ProcessTypes" }
+$CapturePort = 0
+if ($DurationSeconds -gt 0) {
+    $CapturePort = if ($RemoteDebuggingPort -gt 0) { $RemoteDebuggingPort } else { Get-FreeLoopbackPort }
+    Write-Output "Remote Agent: 127.0.0.1:$CapturePort"
+}
 Write-Output "========================================="
 Write-Output "Starting Firefox..."
-Write-Output "Close Firefox window when done to stop tracing."
+if ($DurationSeconds -gt 0) {
+    Write-Output "Timed mode will reload after Trace initialization and close through WebDriver BiDi."
+} else {
+    Write-Output "Close Firefox window when done to stop tracing."
+}
 Write-Output ""
 
-$args = @('-profile', $Profile, '-no-remote', '-new-instance')
-if ($Headless) { $args += '--headless' }
-$args += $Url
+$FirefoxArgs = @('-profile', $Profile, '-no-remote')
+if ($DurationSeconds -eq 0) {
+    $FirefoxArgs += '-new-instance'
+}
+if ($DurationSeconds -gt 0) {
+    $FirefoxArgs = @("--remote-debugging-port=$CapturePort") + $FirefoxArgs
+}
+if ($Headless) { $FirefoxArgs += '--headless' }
+$FirefoxArgs += $Url
+$CaptureExitCode = 0
 
 try {
-    & $FirefoxExe @args
+    if ($DurationSeconds -gt 0) {
+        $ArgumentLine = @($FirefoxArgs | ForEach-Object { ConvertTo-NativeArgument ([string]$_) }) -join ' '
+        $TraceProcess = Start-Process -FilePath $FirefoxExe -ArgumentList $ArgumentLine -PassThru -WindowStyle Hidden
+        $CloseOutput = & $PythonExe $BidiCloseScript --host '127.0.0.1' --port $CapturePort --timeout 30 --reload --duration $DurationSeconds
+        $CloseExitCode = $LASTEXITCODE
+        foreach ($Line in @($CloseOutput)) {
+            Write-Output "INFO: BiDi lifecycle: $Line"
+        }
+        if ($CloseExitCode -ne 0) {
+            Write-Output "WARN: BiDi navigate/browser.close failed with exit code $CloseExitCode"
+            $CaptureExitCode = 2
+        }
+        if (-not (Wait-SessionFirefoxExit -RootPid $TraceProcess.Id -ProfilePath $Profile -TimeoutMilliseconds 15000)) {
+            $Remaining = @(Get-SessionFirefoxProcesses -RootPid $TraceProcess.Id -ProfilePath $Profile)
+            $RemainingIds = @($Remaining | Select-Object -ExpandProperty ProcessId)
+            Write-Output "WARN: graceful close timed out; stopping only launched Firefox PIDs $($RemainingIds -join ',')"
+            foreach ($ProcessId in $RemainingIds) {
+                Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+            }
+            $CaptureExitCode = 2
+        }
+    } else {
+        & $FirefoxExe @FirefoxArgs
+    }
 } finally {
     foreach ($name in $TraceEnvNames) {
         [Environment]::SetEnvironmentVariable($name, $PreviousTraceEnv[$name], 'Process')
@@ -207,8 +361,19 @@ if ($GeneratedFiles.Count -gt 0) {
     Write-Output "Analyze: python tools\ruyitrace\trace_analyzer.py `"$Output`""
 } else {
     Write-Output "WARN: no trace output file created"
+    $CaptureExitCode = 1
 }
 
 if ($AutoProfile -and (Test-Path -LiteralPath $Profile)) {
-    Remove-Item -LiteralPath $Profile -Recurse -Force -ErrorAction SilentlyContinue
+    $ResolvedTemp = [IO.Path]::GetFullPath($env:TEMP).TrimEnd('\') + '\'
+    $ResolvedProfile = [IO.Path]::GetFullPath($Profile)
+    if ($ResolvedProfile.StartsWith($ResolvedTemp, [StringComparison]::OrdinalIgnoreCase)) {
+        Remove-Item -LiteralPath $ResolvedProfile -Recurse -Force -ErrorAction SilentlyContinue
+    } else {
+        Write-Output "WARN: refusing to remove auto profile outside TEMP: $ResolvedProfile"
+    }
+}
+
+if ($CaptureExitCode -ne 0) {
+    exit $CaptureExitCode
 }

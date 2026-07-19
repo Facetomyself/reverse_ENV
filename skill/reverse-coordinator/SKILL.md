@@ -56,7 +56,7 @@ description: |
 - 每个阶段只调用一个 skill，完成后再决定是否进入下一阶段
 - 子 skill 返回"结构化摘要 + 文件路径"（大材料写文件）
 - 全局 todo 由本 skill 管理，子 skill 不修改全局计划
-- **Web RE 路由**：默认走 `ruyi-reverse`（统一编排器 T0→T4）；需 CDP 完整调试时通过 T4 桥接到 `mcp-js-reverse-playbook`
+- **Web RE 路由**：默认走 `ruyi-reverse`（统一编排器 T0→T4）；需 CDP 完整调试时通过 T4 桥接到 `mcp-js-reverse-playbook`；确认 AST/JSVMP/WASM 是核心阻塞后切 `web-deobfuscation`
 
 ### 交付产物
 
@@ -77,10 +77,10 @@ description: |
 |------|------|---------|---------|
 | **L1** | 便携提取 | 纯算法、无环境依赖、无混淆 | 完整 Python/JS 复现脚本 |
 | **L2** | 上下文感知 | 需要部分运行时值（nonce、时间戳、设备信息） | 带桩函数的复现脚本 + 环境缺口说明 |
-| **L3** | 运行时辅助 | 强依赖运行时（JNI 调用、native bridge、动态代码加载） | Hook 脚本 + 调用链文档 + 无法离线的部分清单 |
-| **L4** | Triage-only | WASM、VM 混淆、重度反调试、硬件绑定 | 分析阻滞点清单 + Hook 候选 + 建议的工具链 |
+| **L3** | 运行时辅助 | 强依赖运行时，或 JSVMP / JS-WASM 边界已有 Trace 与前向 fixture | Hook/Trace + 调用链或边界 wrapper + 无法离线的部分清单 |
+| **L4** | Triage-only | VM/WASM 语义不稳定或缺 Trace/fixture、重度反调试、硬件绑定 | 分析阻滞点清单 + 下一次有界实验 + 建议工具链 |
 
-**不得假装**：如果 L1 可达就不要标 L3；如果确实是 L4（WASM/VM/重混淆），不要声称能完整还原。
+**不得假装**：如果 L1 可达就不要标 L3；WASM/VM marker 本身不等于 L4，也不等于已恢复，必须由 `web-deobfuscation` 的 Trace/fixture 门禁决定。
 
 ## 工作流
 
@@ -108,6 +108,7 @@ description: |
   - 需 C++ trace → ruyi-reverse 内部回退 (`references/ruyitrace-cli.md`)
   - 需 CDP 断点调试 -> ruyi-reverse Export 桥接：`ruyi_export_session` -> js-reverse-mcp
 - **已知需要 CDP 完整断点调试**（且无反检测需求）→ `mcp-js-reverse-playbook` (js-reverse-mcp)
+- **源码已定位，AST 混淆 / JSVMP / WASM 成为核心阻塞** → `web-deobfuscation`（先只读 gate，再按 evidence manifest 验收）
 - **需要 HTTP/WebSocket 抓包数据分析** → `reqable_*` (reqable-mcp)：先确认 Reqable ≥2.20 已配置上报到 `127.0.0.1:18765/report`，再 `ingest_status` → `list_requests`/`search_requests`/`analyze_api`/`generate_code` 等 17 tools
 
 > ruyipage 和 ruyitrace 不再是独立 skill — 它们是 `ruyi-reverse` 内部能力模块的 L2 回退参考。
@@ -127,7 +128,7 @@ description: |
 
 - **APK**: 先 `fingerprint.sh` 做 Phase 0 指纹（框架/混淆度/HTTP栈/下一步建议）；确认 Native Android 后再 `decode.ps1`
 - **二进制**: 字符串 + 导入表 + 段信息（`rabin2 -I/-z/-i` 或 IDA MCP 的 `mcp__ida_multi_mcp.survey_binary` / `survey_binary`；IDA proxied tools 调用时必须提供有效 `instance_id`）
-- **Web JS**: `ruyi_new_page`（默认）+ `ruyi_list_scripts` + `ruyi_list_network_requests` + `ruyi_search_in_sources`；需 CDP 调试时 `js-reverse_new_page`（T4 桥接）
+- **Web JS**: `ruyi_new_page`（默认）+ `ruyi_list_scripts` + `ruyi_list_network_requests` + `ruyi_search_in_sources`；需 CDP 调试时 `js-reverse_new_page`（T4 桥接）；源码落盘后若命中 AST/JSVMP/WASM marker，再运行 `web_deobfuscation_gate.py`
 - **微信小程序**: `wxmp_health` → `wxmp_list_targets` / `wxmp_scan_packages` → 动态目标 `wxmp_attach`，静态包 `wxmp_decompile`；所有动态深挖显式携带 `session_id` / `context_id`
 - **易语言工程**: 先记录 SHA-256 与 `CNWTEPRG` / 加密标记，再用 `tools\epl-source-recovery\run.ps1` 输出源码、元数据、支持库占位符和资源清单；禁止执行工程、资源或支持库
 - **网络抓包分析**: `reqable_ingest_status` → `reqable_list_requests` / `reqable_search_requests` / `reqable_get_domains`（前提：Reqable 桌面端已抓包并推送到 18765）
@@ -143,7 +144,10 @@ description: |
 | 纯 Java/Kotlin 逻辑，无 native 调用 | L1 或 L2 |
 | 有 `System.loadLibrary()`，.so 占比 < 30% | L2，native 部分 L3 |
 | 核心签名/加密在 .so 中 | L2（Java 层）+ L3（native 层） |
-| `.wasm` / `WebAssembly.instantiate` / VM 解释器 / 控制流平坦化 | L4 |
+| 字符串数组 / 代理函数 / 控制流平坦化，parser round-trip 可保持 | L2，切 `web-deobfuscation` 的 `ast-safe` |
+| VM 解释器 + opcode Trace + 稳定请求 fixture | L3，切 `web-deobfuscation` 的 `jsvm-verifiable` |
+| `.wasm` / `WebAssembly.instantiate` + 可观察边界 Trace + wrapper fixture | L3/partial，切 `web-deobfuscation` 的 `wasm-boundary` |
+| VM/WASM 缺 Trace、fixture 或语义不稳定 | L4/triage-only |
 | 反调试、反 Hook、反模拟器 | L3（需先中和保护） |
 
 **Web JS 工具选择：** 路由到 ruyi-reverse（统一编排器），按任务组合能力模块：
@@ -163,8 +167,8 @@ description: |
 
 - **L1**: 全量反编译目标类/函数 → 提取算法 → 用 Python/JS 复现
 - **L2**: 反编译 + 定向 Hook 获取运行时值 → 带桩复现 → 标注环境缺口
-- **L3**: Hook 关键 JNI 调用 + IDA 分析 .so 导出函数 → 文档化调用链
-- **L4**: 记录阻滞点 → 列出 Hook 候选 → 不声称完整还原 → 给下一步建议
+- **L3**: Hook 关键 JNI 调用 + IDA 分析 .so，或对齐 Web opcode/boundary Trace + 前向 fixture → 文档化已验证调用链/边界
+- **L4**: 记录阻滞点 → 列出下一次有界采样 → 不声称完整还原 → 给下一步建议
 
 ### 阶段 4：产出汇总
 

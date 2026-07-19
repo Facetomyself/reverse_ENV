@@ -1,7 +1,7 @@
 ---
 name: article-archiver
 description: |
-  Use when processing the D:\reverse_ENV\article Private submodule: converting PDFs/HTML/Markdown drafts from article\pending into clean Markdown articles, classifying them under article\*, updating article\INDEX.md, clearing processed pending inputs, and validating both repositories. Trigger on requests like "归档文章", "pending PDF 转 md", "吸收归档", "更新知识库索引", or "convert article PDFs to Markdown".
+  Use when processing the D:\reverse_ENV\article Public submodule: converting PDFs/HTML/Markdown drafts from article\pending into clean Markdown articles, classifying them under article\*, updating article\INDEX.md, regenerating the detailed catalog, clearing processed pending inputs, and validating both repositories. Trigger on requests like "归档文章", "pending PDF 转 md", "吸收归档", "更新知识库索引", or "convert article PDFs to Markdown".
 ---
 
 # Article Archiver
@@ -17,6 +17,7 @@ This skill handles:
 - Manual cleanup into final article Markdown
 - Classification into `article/<category>/`
 - `article/INDEX.md` updates
+- `article/CATALOG.md` / `article/catalog.json` regeneration and linting
 - Pending queue cleanup after successful validation
 
 Do not use this skill for workspace project deliverables (`report.md`, `findings.json`, `triage.md`). Those stay under `workspace/<project>/` unless they are later distilled into reusable article knowledge.
@@ -27,7 +28,7 @@ Before editing:
 
 1. Run `git status --short --branch` in `D:\reverse_ENV\` and `git -C D:\reverse_ENV\article status --short --branch`.
 2. List `D:\reverse_ENV\article\pending\`.
-3. Confirm the submodule is initialized, then read `D:\reverse_ENV\article\INDEX.md`.
+3. Confirm the submodule is initialized, then read `D:\reverse_ENV\article\INDEX.md`; use `CATALOG.md` when the task needs individual articles inside a compilation.
 4. Read `D:\reverse_ENV\article\README.md`.
 5. Check existing article naming/category patterns with `rg --files D:\reverse_ENV\article`.
 
@@ -99,6 +100,8 @@ Preserve technical content:
 
 When extracting from a paid/public article source, archive a cleaned technical summary and structure. Do not copy irrelevant platform UI text into the knowledge base.
 
+For existing bulk archives, `article/scripts/kb_catalog.py sanitize` is dry-run by default. Add `--apply` only after reviewing the exact files and markers. Preserve honest truncation notes such as "后续内容位于知识星球" when they explain that the archived article is incomplete.
+
 ## Article Template
 
 Use `templates/article-template.md` as the starting shape for new articles when the source does not already have a strong structure.
@@ -135,6 +138,20 @@ After adding an article, update `D:\reverse_ENV\article\INDEX.md`:
 
 Do not leave a new article only in the category table. If it is not reachable by tags, the knowledge base search discipline weakens.
 
+## Catalog and Lint
+
+`INDEX.md` is the human-curated canonical/tag index. `CATALOG.md` and `catalog.json` are deterministic generated artifacts and must not be edited manually.
+
+After changing article content or `INDEX.md`:
+
+```powershell
+& "D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\article\scripts\kb_catalog.py" --root "D:\reverse_ENV\article" generate
+& "D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\article\scripts\kb_catalog.py" --root "D:\reverse_ENV\article" check
+& "D:\reverse_ENV\.venv\Scripts\python.exe" -m unittest discover -s "D:\reverse_ENV\article\tests" -v
+```
+
+The linter validates canonical index coverage, compilation child links, H1 and metadata presence, duplicate titles/content, local links, high-confidence tail noise, and generated-file drift.
+
 ## Pending Queue Handling
 
 `article/pending/` is a work queue. After successful conversion, cleanup, index update, and validation:
@@ -148,6 +165,9 @@ Do not leave a new article only in the category table. If it is not reachable by
 Before finishing:
 
 ```powershell
+& "D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\article\scripts\kb_catalog.py" --root "D:\reverse_ENV\article" generate
+& "D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\article\scripts\kb_catalog.py" --root "D:\reverse_ENV\article" check
+& "D:\reverse_ENV\.venv\Scripts\python.exe" -m unittest discover -s "D:\reverse_ENV\article\tests" -v
 git -C "D:\reverse_ENV\article" diff --check
 git -C "D:\reverse_ENV\article" status --short
 git -C "D:\reverse_ENV" diff --check
@@ -173,7 +193,7 @@ Preserve existing file encoding and line endings:
 Final response should list:
 
 - created article files
-- updated index/readme files
+- updated index/readme/catalog files
 - pending queue result
-- validation commands and results
+- catalog article count and validation results
 - any dependency installed into `D:\reverse_ENV\.venv`

@@ -5,6 +5,6 @@ description: Use for Web JS Node environment patching in D:\reverse_ENV after ru
 
 This is a Codex repo-scope entrypoint for the existing project skill.
 
-Before acting, read `D:\reverse_ENV\skill\web-env-patcher\SKILL.md` completely and use it as the source of truth. Resolve its relative `scripts/`, `references/`, and `templates/` paths against `D:\reverse_ENV\skill\web-env-patcher\`.
+Before acting, read `D:\reverse_ENV\skill\web-env-patcher\SKILL.md` completely and use it as the source of truth. Follow only the resource paths explicitly declared by that source skill.
 
 Do not duplicate or reinterpret the workflow here. If this entrypoint and the source skill disagree, the source skill wins and this wrapper should be updated.

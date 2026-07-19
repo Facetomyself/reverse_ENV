@@ -140,7 +140,7 @@ Phase 5 — DeepDive (可选):
 
 | 坑点 | 现象 | 解决 |
 |------|------|------|
-| 签名在 WASM | JS 找不到 | 标注 L4 triage-only |
+| 签名在 WASM | JS 找不到 | 固化 boundary Trace、wrapper fixture 和源码后切 `web-deobfuscation`；证据不足才标 L4/triage-only |
 | 捕获无 body | POST body 空 | 改用 break_on_xhr |
 | session 桥接后仍需登录 | cookie domain 不匹配 | 检查 domain/path/sameSite |
 | 补环境无限循环 | 补一个触发新 API | trace 获取完整列表一次性补齐 |

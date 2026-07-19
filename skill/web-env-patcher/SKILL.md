@@ -14,12 +14,14 @@ description: |
 
 ```text
 ruyi-reverse / mcp-js-reverse-playbook
-  -> web-env-patcher
+  -> web-deobfuscation（当混淆、JSVMP 或 WASM 边界是核心阻塞）
+  -> web-env-patcher（当浏览器环境依赖是核心阻塞）
   -> protocol-recovery
 ```
 
 - `ruyi-reverse`：负责反检测浏览器、RuyiTrace、网络取证、源码和运行时定位。
 - `mcp-js-reverse-playbook`：仅在无强反检测且需要 CDP 断点/单步时使用。
+- `web-deobfuscation`：负责 safe AST、可验证 JSVMP 和可观察 JS/WASM 边界的证据门禁。
 - `web-env-patcher`：负责把浏览器证据工程化为 Node.js 补环境、fixtures、coverage matrix 和最终请求验证门禁。
 - `protocol-recovery`：在 signer / decoder / session chain 已确认后，打包 Python 采集器或协议复现工程。
 
@@ -35,7 +37,7 @@ ruyi-reverse / mcp-js-reverse-playbook
 | 需要 Trace API inventory、env coverage matrix、Node 泄露阻断、fixtures 对齐 | `web-env-patcher` | 必须有浏览器真实样本作为对照。 |
 | 纯算法签名，无浏览器环境依赖，样本字段已确认 | `protocol-recovery` | 不要为了纯 MD5/AES/HMAC 强行补环境。 |
 | Node 输出已与浏览器 fixtures 对齐，需要 Python collector / final request | `protocol-recovery` | 本 skill 到此结束，进入协议交付。 |
-| WASM / JSVMP / VM opcode 是核心阻塞，补环境只能继续执行但不能解释算法 | `triage-only` 或转 `ast-deobfuscation` / `web-reverse-algorithm` | 不得把“能跑起来”伪装成“算法已还原”。 |
+| AST 混淆、JSVMP / VM opcode 或 JS/WASM 边界是核心阻塞 | `web-deobfuscation` | 先跑只读 gate；有 opcode/boundary Trace 与 fixture 才允许 L3/partial，否则保持 `triage-only`。 |
 
 ## 硬边界
 
@@ -43,7 +45,7 @@ ruyi-reverse / mcp-js-reverse-playbook
 - 不处理 Android、iOS、小程序、EXE、DLL、SO、Frida、IDA、JADX、Native patch。
 - 不替代 `ruyi-reverse` 做页面打开、反检测、trace 采集和交互取证。
 - 不替代 `protocol-recovery` 做最终 Python 采集器交付。
-- 默认不主动分析 JSVMP / WASM / VM 字节码；遇到该类目标时只记录环境依赖和 triage，除非用户明确切换到算法/反混淆任务。
+- 默认不主动分析 JSVMP / WASM / VM 字节码；遇到该类目标时记录环境依赖，并切换到 `web-deobfuscation` 做独立证据分级，不在本 skill 内冒充算法恢复。
 
 ## 环境隔离硬约束
 

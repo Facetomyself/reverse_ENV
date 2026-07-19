@@ -22,7 +22,7 @@
 | 需要 BiDi trace | T0/T1 → T2 | 先 `ruyi_browser_quit`，再 `ruyi_new_page { traceEnabled:true }` 重开 |
 | BiDi trace 缺 canvas/webgl/audio 或需完整 API 序列 | T2 → T3 | 导出 session 后跑 ruyitrace CLI |
 | 需要单步、作用域、结构化调用栈 | 任意 → T4 | 先通过 js-reverse gate，再桥接 |
-| WASM/VM/重混淆目标 | 任意 → L4 triage-only | 不声称完整还原，只交付证据和下一步 |
+| AST/JSVMP/WASM 成为核心阻塞 | T1-T3 取证后切 `web-deobfuscation` | safe AST 可 L2；opcode/boundary Trace + fixture 可 L3/partial；证据不足才 L4 |
 
 ## Trace Gate
 
@@ -76,4 +76,4 @@ BiDi trace 记录的是协议事件和有限辅助信息，不等同于完整 DO
 }
 ```
 
-`report.md` 禁止写明文 token/cookie/authorization；必要时只写脱敏前后缀、字段名和证据文件路径。`triage.md` 必须标注当前 Tier、升级原因、未完成能力边界；WASM/VM/重混淆目标必须标注 L4 triage-only。
+`report.md` 禁止写明文 token/cookie/authorization；必要时只写脱敏前后缀、字段名和证据文件路径。`triage.md` 必须标注当前 Tier、升级原因、未完成能力边界；WASM/VM 目标必须记录 `web-deobfuscation` profile，未通过 evidence validator 时保持 L4/triage-only。

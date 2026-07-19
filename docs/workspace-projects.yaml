@@ -256,18 +256,33 @@ projects:
 - name: jjwxc
   path: workspace/jjwxc
   ownership: owned
-  last_audited: 2026-07-17
+  last_audited: 2026-07-19
   kind: web-data-sync-reverse
   integration: registry
   lifecycle: active
   readiness: existing
   visibility: private
   remote: https://github.com/Facetomyself/jjwxc.git
-  notes: MVP v0.1 implements low-rate GB18030 discovery, detail enrichment, SQLite incremental persistence, change history, CLI scheduling, budgets, and breaker controls; raw captures and runtime databases stay local.
+  notes: MVP v0.2 uses Android anonymous API discovery plus Web detail enrichment, SQLite incremental persistence, change history, CLI scheduling, budgets, and breaker controls; raw captures, APK/DEX and runtime databases stay local.
   repository_root: workspace/jjwxc
   remote_name: origin
   default_branch: main
   deliverables: reverse-three-piece
+- name: jjwxc-method
+  path: workspace/jjwxc-method
+  ownership: owned
+  last_audited: 2026-07-19
+  kind: apk-method-extraction-runtime
+  integration: excluded
+  lifecycle: excluded
+  readiness: excluded
+  visibility: private
+  remote: null
+  notes: D-014B isolated LDPlayer/LSPosed/JDex2 runtime companion; canonical tracked findings stay in workspace/jjwxc, while raw DEX, logs and screenshots remain Git-ignored local evidence.
+  repository_root: workspace/jjwxc-method
+  remote_name: origin
+  default_branch: main
+  deliverables: none
 - name: live-verification
   path: workspace/live-verification
   ownership: owned

@@ -8,7 +8,7 @@
 |------|------|--------|
 | **Android APK** | 脱壳、反编译、签名算法还原、Frida 动态注入、Native .so 反检测 | jadx + apktool + Frida + IDA Pro |
 | **iOS IPA** | 静态分析、Mach-O 解析 | radare2 + IDA Pro |
-| **Web JS** | 反检测浏览、指纹取证、JS 逆向、签名/Token 提取、补环境 | ruyi-mcp (Firefox/BiDi) + js-reverse-mcp (Chrome/CDP) |
+| **Web JS** | 反检测浏览、指纹取证、JS 逆向、safe AST、签名/Token 提取、补环境 | ruyi-mcp (Firefox/BiDi) + js-reverse-mcp (Chrome/CDP) + Babel safe AST |
 | **Native 二进制** | PE/ELF/DLL/SO 深度静态分析、反汇编、反编译、Patch | IDA Pro + radare2 |
 | **易语言源码** | `*.e` / `*.ec` 纯静态源码、结构、调用与资源恢复 | SafeEplExtractor + EProjectFile |
 | **网络协议** | 抓包分析、TLS 解密、签名还原、Python 采集器 | Reqable + Frida + mitmproxy |
@@ -30,6 +30,7 @@ reverse_ENV/
 │   ├── ldplayer-control/     # 雷电模拟器实例管理
 │   ├── proxy-usage/          # 代理统一管理
 │   ├── web-env-patcher/      # Node.js 补环境
+│   ├── web-deobfuscation/    # AST/JSVMP/WASM 证据门禁
 │   ├── protocol-recovery/    # 签名 → Python 采集器
 │   ├── article-archiver/     # 文章知识库归档
 │   ├── wmpf-offset-adaptation/ # WMPF flue.dll 偏移适配
@@ -75,6 +76,7 @@ reverse_ENV/
 | Python venv | `.venv/` | Python 3.x + frida 等工具 |
 | JDK 21 | `tools/jdk/` | jadx/apktool 运行依赖 |
 | Node.js 20 | `tools/node/` | MCP 服务运行环境 |
+| Safe AST dependencies | `tools/web-deobfuscation/` | Babel 7.29.7 lockfile；不执行目标代码 |
 | .NET SDK 10.0.302 | `tools/dotnet/` | EPL/C# 工具 portable runtime |
 | Android NDK r29 | `tools/android-ndk/` | Native 编译（Frida gadget 等） |
 | Rust 工具链 | `%USERPROFILE%/.cargo/` | 交叉编译 aarch64/x86_64-android |
@@ -139,7 +141,8 @@ Phase 0 指纹 → Phase 1 静态解包(jadx+apktool) → Phase 2 动态分析(F
 
 ```
 ruyi-reverse（反检测浏览 + Hook + Trace 取证）
-  → web-env-patcher（Node 补环境，签名/Token 生成）
+  → web-deobfuscation（AST/JSVMP/WASM 是核心阻塞）
+    或 web-env-patcher（浏览器环境依赖是核心阻塞）
   → protocol-recovery（Python 采集器）
 ```
 
@@ -173,6 +176,7 @@ native-reverse（syscall 定位 → dump/fix → IDA 分析 → Patch → 验证
 - **IDA 二进制分析** → `ida-reverse`
 - **WMPF flue.dll 偏移适配** → `wmpf-offset-adaptation`，脚本失配再转 `ida-reverse`
 - **Web JS** → `ruyi-reverse`（默认首选）+ `mcp-js-reverse-playbook`（需 CDP 调试时）
+- **Web 反混淆** → `web-deobfuscation`（safe AST / JSVMP opcode+Trace / JS-WASM boundary / parity）
 - **Native 反检测** → `native-reverse`
 - **易语言 `*.e` / `*.ec`** → `tools/epl-source-recovery/run.ps1` 纯静态恢复
 - **Web 补环境** → `web-env-patcher` → `protocol-recovery`

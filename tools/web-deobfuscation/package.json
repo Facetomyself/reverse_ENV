@@ -1,0 +1,16 @@
+{
+  "name": "reverse-env-safe-ast-runtime",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Locked Babel runtime for static-only web deobfuscation passes.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20.20.2 <21"
+  },
+  "dependencies": {
+    "@babel/generator": "7.29.7",
+    "@babel/parser": "7.29.7",
+    "@babel/traverse": "7.29.7",
+    "@babel/types": "7.29.7"
+  }
+}

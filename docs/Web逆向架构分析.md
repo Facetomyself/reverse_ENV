@@ -10,13 +10,14 @@
 
 ---
 
-## 0.1 Web 补环境工程层
+## 0.1 Web 补环境与反混淆工程层
 
-当前 Web 逆向链路新增 `web-env-patcher` 作为浏览器取证与协议恢复之间的工程化补环境层：
+当前 Web 逆向链路在浏览器取证与协议恢复之间拆成两个专用工程层：
 
 ```text
 ruyi-reverse / js-reverse-mcp
-  -> web-env-patcher
+  -> web-deobfuscation（AST/JSVMP/WASM 是核心阻塞）
+  -> web-env-patcher（浏览器环境依赖是核心阻塞）
   -> protocol-recovery
 ```
 
@@ -24,6 +25,7 @@ ruyi-reverse / js-reverse-mcp
 
 - `ruyi-reverse` / `ruyi-mcp` 继续作为默认 Web JS 入口，负责反检测、RuyiTrace、网络/脚本/运行时取证。
 - `mcp-js-reverse-playbook` 只在无强反检测且需要 CDP 断点/单步时使用。
+- `web-deobfuscation` 接收已定位源码、runtime Trace 和脱敏 fixture，负责 safe AST、可验证 JSVMP、可观察 JS/WASM 边界和 evidence manifest 验收；默认不执行目标 JS。
 - `web-env-patcher` 接收已确认的浏览器证据，负责 cURL/HAR 检查、动态资源保鲜、Trace API inventory、Node 泄露阻断、fixtures 对比、最终请求 TLS 门禁。
 - `protocol-recovery` 只在 signer / decoder / session chain 已经验证后，负责采集器和协议交付。
 
@@ -39,9 +41,10 @@ ruyi-reverse / js-reverse-mcp
 | 需要 Trace API inventory、env coverage matrix、Node 泄露阻断、fixtures 对齐 | `web-env-patcher` |
 | 纯算法签名，无浏览器环境依赖，样本字段已确认 | 直接 `protocol-recovery` |
 | Node 输出已与浏览器 fixtures 对齐，需要 Python collector / final request | `protocol-recovery` |
-| WASM / JSVMP / VM opcode 是核心阻塞 | 标 `triage-only`，必要时转 `ast-deobfuscation` / `web-reverse-algorithm` |
+| 纯 AST computed property、primitive literal、常量分支清理 | `web-deobfuscation` 的 `ast-safe`（L2），锁定 Babel baseline + parse round-trip |
+| JSVMP / VM opcode 或 WASM 是核心阻塞 | `web-deobfuscation` gate；有 opcode/boundary Trace + fixture 才可 L3/partial，否则 `triage-only` |
 
-隔离约束：补环境可能依赖 Node ABI 敏感的 `.node` addon、魔改 isolated-vm 或 TLS 指纹客户端。`tools\node\node.exe` 是项目主 Node 和 MCP 运行时，不得替换或切换。Node 25/26、addon、xbs isolated-vm、CycleTLS、impers、curl_cffi 等只能进入 `tools\web-env\runtimes\` 或 `workspace\<项目名>\.runtime\`，并且必须先通过 `tools\web-env\check-isolation.ps1`。
+隔离约束：`tools\node\node.exe` 是项目主 Node 和 MCP 运行时，不得替换或切换。`tools\web-deobfuscation\` 只容纳 lockfile 与 Babel 7.29.7 纯 JS safe AST 依赖，禁止 `isolated-vm`、native addon、REstringer 或 webcrack runtime。Node 25/26、addon、xbs isolated-vm、CycleTLS、impers、curl_cffi 等只能进入 `tools\web-env\runtimes\` 或 `workspace\<项目名>\.runtime\`；不得自动安装，ABI 敏感能力必须先过隔离检查。
 
 
 ## 1. js-reverse-mcp 完整工具集（基线参考）
@@ -248,13 +251,13 @@ ruyi-mcp = js-reverse-mcp 等价工具 (22)
 
 | # | 工具 | 类型 | 关键参数 | 说明 |
 |---|------|------|---------|------|
-| R01 | `ruyi_new_page` | 对齐 | `url`, `timeout`, `proxy`, `fingerprint_profile` | 新标签页；可选代理+指纹 profile |
+| R01 | `ruyi_new_page` | 对齐+ | `url`, `timeout`, `proxy`, `fingerprint`, `headless`, `privateMode`, `container`, `traceEnabled` | proxy/fingerprint 等为 launch-only；新 tab 先建 `about:blank`，首跳前重放 fingerprint |
 | R02 | `ruyi_navigate_page` | 对齐 | `type`, `url`, `timeout` | 导航/刷新/前进后退 |
 | R03 | `ruyi_select_page` | 对齐 | `pageIdx` | 切换活跃标签 |
 | R04 | `ruyi_close_page` | 对齐+ | `pageIdx` | 关闭标签（js-reverse 无此工具） |
 
 **增强点 (vs js-reverse)：**
-- `new_page` 直接支持 `proxy` 和 `fingerprint_profile`，一步完成"过检页面"创建
+- `new_page` 启动时直接支持 `proxy` 和 `fingerprint`；普通 tab 首跳前重放 context-scoped 指纹，container 重放完整指纹且创建失败不降级
 
 #### 4.2.2 脚本分析 (Script Analysis) — 3 tools
 
@@ -322,7 +325,7 @@ ruyi-mcp = js-reverse-mcp 等价工具 (22)
 | # | 工具 | 类型 | 关键参数 | 说明 |
 |---|------|------|---------|------|
 | R21 | `ruyi_take_screenshot` | 对齐 | `format`, `fullPage`, `filePath` | 截图 |
-| R22 | `ruyi_select_frame` | 对齐 | `frameIdx` | 切换 iframe 上下文 |
+| R22 | `ruyi_select_frame` | 对齐+ | `contextId` / `selector`（二选一） | 按 BiDi context 切换，或经 `iframe.contentWindow` 精确映射 `srcdoc` / 同 URL frame |
 | R23 | `ruyi_clear_site_data` | 对齐 | — | 清除浏览器状态 |
 
 ---
@@ -332,7 +335,7 @@ ruyi-mcp = js-reverse-mcp 等价工具 (22)
 | # | 工具 | 关键参数 | 说明 |
 |---|------|---------|------|
 | R24 | `ruyi_set_proxy` | `pageIdx`, `proxy_url`(socks5://host:port:user:pass) | 为标签设置代理 |
-| R25 | `ruyi_set_fingerprint` | `pageIdx`, `geolocation`, `timezone`, `locale`, `userAgent`, `viewport` / `windowSize` | 设置运行时指纹；`windowSize` 同步 outer/viewport/screen/DPR |
+| R25 | `ruyi_set_fingerprint` | `pageIdx`, `geolocation`, `timezone`, `locale`, `userAgent`, `viewport` / `windowSize`, `screenSize` | `windowSize` 仅 outer 且与 `viewport` 互斥；`viewport` 独立支持 DPR；`screenSize` 回报 requested/actual/applied 状态 |
 | R26 | `ruyi_emulate_geolocation` | `pageIdx`, `latitude`, `longitude`, `accuracy` | 模拟地理位置 |
 | R27 | `ruyi_emulate_timezone` | `pageIdx`, `timezone_id`, `locale` | 模拟时区/语言 |
 
@@ -454,7 +457,7 @@ Observe ──────→ Capture ──────→ Rebuild ────
 ```
 
 **Observe 阶段 ruyi-mcp 的额外能力：**
-- `ruyi_set_proxy` + `ruyi_set_fingerprint` 在打开页面前配置反检测环境
+- 通过 `ruyi_new_page { proxy, fingerprint }` 在 launch / `about:blank` 阶段配置反检测并于首跳前重放；浏览器启动后 `ruyi_set_proxy` 不能切换代理，运行时 overlay 使用 `ruyi_set_fingerprint`
 - `ruyi_dom_select` + `ruyi_dom_get_info` 直接检查页面 DOM 状态
 - `ruyi_intercept_requests` 在请求发出前就拦截
 - `ruyi_trace_start` 一边观察一边记录结构化 BiDi 命令与事件

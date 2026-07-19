@@ -1,0 +1,2 @@
+{"opcode": 1, "ip": 0, "event": "function-entry"}
+{"opcode": 255, "ip": 2, "event": "return"}

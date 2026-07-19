@@ -1,0 +1,6 @@
+{
+  "applied_passes": [
+    "rename-string-array-binding"
+  ],
+  "unsafe_passes": []
+}

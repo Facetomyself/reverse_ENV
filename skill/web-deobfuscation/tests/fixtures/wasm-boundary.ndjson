@@ -1,0 +1,2 @@
+{"api": "TextDecoder.decode", "memory": "memory.buffer"}
+{"api": "crypto.getRandomValues", "view": "Uint8Array(buffer)"}

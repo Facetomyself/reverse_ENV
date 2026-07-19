@@ -1,0 +1,4 @@
+interface:
+  display_name: "Web Deobfuscation"
+  short_description: "Evidence-gated AST, JSVMP, and WASM recovery"
+  default_prompt: "Use $web-deobfuscation to classify this JavaScript target and enforce the right evidence and parity gates."

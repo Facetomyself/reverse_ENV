@@ -33,8 +33,9 @@
 | stealth-hook-engine | — | `stealth-hook-engine\` | 隐身 Hook 引擎 |
 | protocol-recovery | — | `protocol-recovery\` | 协议恢复 CLI 工具 |
 | web-env | — | `web-env\` | Web JS Node 补环境隔离检查与 xbs 纯 JS 检查器封装 |
+| web-deobfuscation | Babel 7.29.7 | `web-deobfuscation\` | Safe AST 静态 transform 的隔离依赖、lockfile 与 third-party notices |
 | ruyipage Firefox runtime | 151-proxy | `ruyipage\runtimes\151-proxy\firefox\firefox.exe` | ruyiPage 1.2.54 / ruyi-mcp 0.1.5 项目 BiDi runtime |
-| ruyiTrace | v1.2 | `ruyitrace\ruyitrace.ps1` | C++ DOMTrace NDJSON 采集；使用独立 Firefox trace kernel |
+| ruyiTrace | v1.2 | `ruyitrace\ruyitrace.ps1` | C++ DOMTrace NDJSON 采集；定时模式使用 BiDi reload/browser.close 后合并多进程分片；analyzer 分账 raw/repaired/unrecoverable 并支持 `--strict` |
 | gh | — | `gh\` | GitHub CLI |
 | go | — | `go\` | Go 工具链 |
 | workspace-governance | — | `workspace-governance\audit_workspace.py` | Workspace registry、remote、submodule 与 Git 禁入文件只读审计 |
@@ -44,6 +45,7 @@
 
 - **所有工具不依赖系统 PATH**，通过绝对路径调用
 - **补环境 runtime 隔离**：`tools\node\node.exe` 是项目主 Node，不得为 addon / isolated-vm 切换或覆盖；`tools\node22\node.exe` 仅供 DBX MCP；Node 25/26、xbs addon、TLS 指纹客户端只能放 `tools\web-env\runtimes\` 或 `workspace\<项目名>\.runtime\`
+- **Safe AST 依赖隔离**：`tools\web-deobfuscation\` 只安装 Babel 7.29.7 纯 JS 包，`node_modules`/npm cache 不进 Git；CLI 不 import 或执行目标源码，不得把 REstringer / `isolated-vm` 塞进该目录
 - **ruyipage runtime 隔离**：浏览器二进制放入 `tools\ruyipage\runtimes\` 并排除 Git；`tools\ruyitrace\firefox\` 继续作为 DOMTrace 专用 runtime，不得被普通 BiDi runtime 覆盖
 - 大文件不纳入 Git（`jadx/`, `jdk/`, `node/`, `node22/`, `dotnet/`, `android-ndk/`, `mingw64/`, `chromium/` 等已在 `.gitignore`）
 - 新增工具后同步更新本 README + `CLAUDE.md` 工具速查表 + `docs/工具与环境.md`

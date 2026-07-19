@@ -22,12 +22,12 @@ ruyi_new_page { url, proxy? }
 ```
 ruyi_new_page { url, proxy, fingerprint: { requireCountry: "US" } }
 → ruyi_handle_cloudflare { timeout: 15 }
-→ ruyi_set_fingerprint { geolocation, timezone, locale, userAgent, viewport? | windowSize? }
+→ ruyi_set_fingerprint { geolocation, timezone, locale, userAgent, (viewport? | windowSize?), screenSize? }
 ```
 
 **API:** 上述 + `ruyi_handle_cloudflare`, `ruyi_set_fingerprint`
 
-**能做到：** 22维硬件指纹、代理出口 IP 地理匹配、Cloudflare Turnstile / 5s 盾自动辅助、组合仿真、outer/viewport/screen/DPR 同步
+**能做到：** 22维硬件指纹、代理出口 IP 地理匹配、Cloudflare Turnstile / 5s 盾自动辅助；`windowSize` 仅控制 outer，`viewport` 独立控制 viewport+DPR，`screenSize` 独立控制 `screen.*` 并回报 requested/actual/applied 状态
 **做不到：** hCaptcha/reCAPTCHA/Akamai 自动破解、验证码图片识别（需人工或外部识别能力）
 
 ### 升级到 L2 的触发
@@ -76,11 +76,11 @@ ruyi_list_scripts { filter? }
 ```
 ruyi_save_script_source { url, filePath: "D:\reverse_ENV\workspace\<project>\target.js" }  (全部目标脚本)
 + ruyi_search_in_sources { query, isRegex: true }  (正则)
-+ ruyi_list_frames → ruyi_select_frame { contextId }  (iframe 内侦察)
++ ruyi_list_frames → ruyi_select_frame { contextId | selector }  (iframe 内侦察)
 ```
 
 **能做到：** 批量落盘、正则搜索、iframe 内侦察
-**做不到：** CDP 级 script source map 解析；`ruyi_select_frame` 只是把后续操作绑定到指定 context，切回主 frame 需重新选择主 frame 的 `contextId` 或回到 page 级 API
+**做不到：** CDP 级 script source map 解析；`ruyi_select_frame.contextId` 最稳定，`selector` 通过 `iframe.contentWindow` 精确映射 `srcdoc` / 同 URL frame；切回主 frame 仍需重新选择主 frame 的 `contextId` 或回到 page 级 API
 
 ### 升级到 L2 的触发
 
@@ -88,7 +88,7 @@ ruyi_save_script_source { url, filePath: "D:\reverse_ENV\workspace\<project>\tar
 |------|------|
 | 需要离线分析脚本 | 批量 save_script_source |
 | 关键字搜索需要正则 | search_in_sources(isRegex) |
-| 页面含 iframe | `ruyi_list_frames` + `ruyi_select_frame { contextId }` |
+| 页面含 iframe | `ruyi_list_frames` + `ruyi_select_frame { contextId }`；同 URL / `srcdoc` 歧义时直接用 `selector` |
 
 ---
 
@@ -167,7 +167,7 @@ ruyi_export_session { outputFile: "D:\reverse_ENV\workspace\<project>\trace-sess
 |----------|----------------|
 | 目标明确做指纹采集 (搜索命中 "fingerprint") | BiDi 大概率缺维度，直接用 C++ |
 | 需要 canvas/webgl/audio 维度 | BiDi 不覆盖这些 API |
-| 需要完整 C++ 调用栈 | BiDi 只有 JS 级 |
+| 需要 C++ Hook 层记录的 DOM API 与 JS frames | BiDi 只有协议事件，非完整 DOM API 追踪；DOMTrace 也不是 native C++ backtrace |
 | 需要离线 NDJSON 深度分析 | BiDi 输出为结构化 JSON，NDJSON 更灵活 |
 
 > 完整 CLI 参考见 `references/ruyitrace-cli.md`

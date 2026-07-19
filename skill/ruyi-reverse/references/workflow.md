@@ -114,7 +114,7 @@ ruyi_export_session { outputFile: "D:\reverse_ENV\workspace\<project>\session.js
 | 指纹取证 | [Trace](L2) C++ trace → `trace_analyzer.py` |
 | 去混淆 + 验证 | [Debug](L2) CDP 断点 → 单步验证去混淆结果 |
 | 控制流还原 | [Debug](L1) 软断点采样 → 追踪执行路径 |
-| WASM/VM 分析 | 标注 L4 triage-only（不假装能完整还原） |
+| AST/JSVMP/WASM 分析 | [Capture]/[Trace]/[Export] 固化证据后切 `web-deobfuscation`；门禁不通过才标 L4 triage-only |
 
 ---
 
@@ -138,6 +138,6 @@ ruyi_export_session { outputFile: "D:\reverse_ENV\workspace\<project>\session.js
 
 ## 交付落点
 
-三件套必须落在项目 workspace：`"D:\reverse_ENV\workspace\<project>\report.md"`、`"D:\reverse_ENV\workspace\<project>\findings.json"`、`"D:\reverse_ENV\workspace\<project>\triage.md"`。`findings.json` 每条记录必须带 `evidence`、`source`、`request_id`、`redaction`；`report.md` 禁止明文 token/cookie；`triage.md` 对 WASM/VM/重混淆等目标标注 L4 triage-only。
+三件套必须落在项目 workspace：`"D:\reverse_ENV\workspace\<project>\report.md"`、`"D:\reverse_ENV\workspace\<project>\findings.json"`、`"D:\reverse_ENV\workspace\<project>\triage.md"`。`findings.json` 每条记录必须带 `evidence`、`source`、`request_id`、`redaction`；`report.md` 禁止明文 token/cookie；WASM/VM 目标须记录 `web-deobfuscation` profile，缺 opcode/boundary Trace、fixture 或稳定语义时在 `triage.md` 标注 L4/triage-only。
 
 > 状态管理详见 `references/state-lifecycle.md`

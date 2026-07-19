@@ -149,7 +149,7 @@ ruyi_select_page { pageIdx: 1 }   → browser.current_page = 1
 ruyi_close_page { pageIdx: 1 }    → browser.pages 移除 [1]
 ```
 
-**注意：** ruyi-mcp 启动后 proxy 和 fingerprint 是 browser 级别的。不同标签页共享同一代理和指纹（除非用 T2 `set_per_tab_proxies`）。
+**注意：** MCP 的 proxy 是 launch-time browser 级配置，未暴露 per-tab proxy；切换代理须 quit/relaunch，只有 T2 直接调用 ruyipage 才能使用 `set_per_tab_proxies`。fingerprint tab 先创建 `about:blank`：普通 tab 首跳前重放 context-scoped overlay 并保留共享 userContext screen，container 首跳前重放完整 emulation；container 创建失败不得降级为普通 tab。
 
 ## Trace 生命周期
 

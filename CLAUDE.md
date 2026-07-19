@@ -7,7 +7,7 @@
 | # | 检查项 | 动作 |
 |---|--------|------|
 | 1 | **WebFetch 封禁** | 需要取 URL 内容？→ 禁止 WebFetch，走 `search-layer` / `content-extract` / `github-solution-research` / 浏览器方案 |
-| 2 | **知识库检索** | 新项目/新分析任务？→ 确认 `article` submodule 已初始化，再查 `article/INDEX.md` |
+| 2 | **知识库检索** | 新项目/新分析任务？→ 确认 `article` submodule 已初始化；先查 `article/INDEX.md`，需要合集子文章时再查 `article/CATALOG.md` |
 | 3 | **Git 状态** | `git status --short --branch` |
 | 4 | **远端同步** | 读取当前 branch/upstream 后 fetch 对应 remote；禁止把 `origin/main` 硬套到子仓 |
 
@@ -39,7 +39,7 @@
 - 项目仓只跟踪 README、AGENTS、三件套、原创源码、测试、脱敏 fixture 和 evidence manifest。APK/IPA/SO、IDA 数据库、HAR/PCAP/flow、Cookie、凭据、浏览器 profile、解包与反编译全集不得进入 Git。
 - 正在运行或存在归属明确脏改动的项目标记为 `deferred-active`；迁移时禁止对其执行 `checkout`、`reset`、`clean`、`stash`、`rebase`、移动目录或 `submodule absorbgitdirs`。
 - 新增、删除、重命名、建仓或变更 remote/submodule 状态时，必须同步 `docs/workspace-projects.yaml`，并运行 `tools/workspace-governance/audit_workspace.py`。
-- `article/` 是独立 Public 知识库 submodule；canonical index 位于 `article/INDEX.md`，`docs/article-index.md` 只保留主仓兼容入口。
+- `article/` 是独立 Public 知识库 submodule；canonical/tag index 位于 `article/INDEX.md`，逐篇生成目录位于 `article/CATALOG.md` / `article/catalog.json`，`docs/article-index.md` 只保留主仓兼容入口。
 
 ### AI 协作子约束
 
@@ -88,11 +88,12 @@
 | AI 协作开发规范 | `docs/AI开发规范.md` |
 | Git 操作规范 | `docs/Git与提交规范.md` |
 | **逆向知识库索引** | `article/INDEX.md` — 独立知识库 submodule 的 canonical index；`docs/article-index.md` 为兼容入口 |
+| 逆向知识库详细目录 | `article/CATALOG.md`（人读）+ `article/catalog.json`（机器读）— 由 `article/scripts/kb_catalog.py` 生成 |
 | 逆向知识库文章 | `article/` — Public submodule，包含协议分析/反检测/签名算法/加固绕过/Native分析/Web逆向 |
 
 ## 任务前知识库检索（硬纪律）
 
-**新项目/新分析任务启动时，必须先确认 `article/INDEX.md` 存在；缺失时运行 `git submodule update --init article`，随后按索引检索同主题/同厂商/同技术栈文章。跳过 → 违规。**
+**新项目/新分析任务启动时，必须先确认 `article/INDEX.md` 存在；缺失时运行 `git submodule update --init article`。先用 `INDEX.md` 检索 canonical 入口/标签，再用 `CATALOG.md` 检索合集子文章。跳过 → 违规。**
 
 | 场景 | 检索方向 |
 |------|---------|
@@ -101,6 +102,8 @@
 | 遇到反调试/加固 | 查 `article/packing-bypass/` + 标签「反检测/对抗」 |
 | 遇到 Web 框架/打包 | 查 `article/web-reverse/` + 标签「Webpack」 |
 | 遇到风控/验证码 | 查 `article/anti-detection/` + 标签「WAF」「设备指纹」 |
+
+知识库维护脚本：`article/scripts/kb_catalog.py generate|check|sanitize`；`CATALOG.md` / `catalog.json` 禁止手工编辑，`sanitize` 默认 dry-run。
 
 ## Skill 速查
 
@@ -113,15 +116,16 @@
 | `mcp-js-reverse-playbook` | Web JS — CDP 调试 | js-reverse-mcp (Chrome/CDP) — 需要完整断点/单步/调用栈时首选 |
 | `ruyi-reverse` | Web JS — 统一编排器 | 7 能力模块 (Anti-Detect/Observe/Capture/Trace/Human-Sim/Debug/Export) x 深浅两级，按任务主动组合。**唯一入口** |
 | `web-env-patcher` | Web JS Node 补环境 | 接在 ruyi/js-reverse 取证后：隔离 runtime、cURL/HAR 检查、Trace API 覆盖矩阵、fixtures、TLS 门禁 |
+| `web-deobfuscation` | Web JS 反混淆分级 | 接在浏览器/CDP 取证后：safe AST、可验证 JSVMP、可观察 JS/WASM 边界、fixture parity 与 triage 门禁 |
 | `proxy-usage` | 代理统一管理 | 快代理 + Cliproxy 双供应商 — 选型→提取→验证→注入 (ruyi/requests/curl/mitmproxy) |
 | `radare2` | 通用二进制 | CLI 快速侦察/反汇编/patch |
 | `reverse-engineering` | 知识库 | CTF 模式参考（自动加载，不直接调用） |
 | `native-reverse` | Android Native .so 反检测/绕过 | syscall 定位→dump/fix→IDA→patch→验证 |
 | `ldplayer-control` | 雷电模拟器 RE 实例管理 | re-init(-Template 创建/复制) / re-proxy / re-list / re-backup / re-restore / re-destroy — 模板实例 + 项目实例隔离 |
 | `protocol-recovery` | Web 协议恢复 | 签名→Python 采集器（接在 mcp-js-reverse-playbook 或 ruyi-reverse 之后） |
-| `article-archiver` | 文章知识库归档 | `article/pending` PDF/HTML/Markdown → 清洗 Markdown → 分类归档 → 更新 `article/INDEX.md` |
+| `article-archiver` | 文章知识库归档 | `article/pending` PDF/HTML/Markdown → 清洗归档 → 更新 `INDEX.md` → 生成 catalog → linter/tests |
 | `herosms-api` | HeroSMS 接码 API | 查余额/库存/价格、购买号码、轮询验证码并管理激活；凭据不进入仓库 |
-| `nas` | Synology NAS 运维（用户层） | NAS 状态、Docker、文件、`re-db` 数据库栈与备份操作 |
+| `nas` | Synology NAS 运维（用户层） | NAS 状态、VMM 虚拟机、Docker、文件、`re-db` 数据库栈与备份操作 |
 
 **路由**: `.so`/native 反检测/绕过 → `native-reverse`；`.so` 纯静态分析 → `ida-reverse`/`radare2`；APK Java → `apk-reverse`。
 **易语言路由**: `*.e` / `*.ec` 工程 → `tools\epl-source-recovery\run.ps1` 纯静态恢复；禁止安装易语言、运行工程或加载支持库。精易模块公共源码只读归档于 `tools\epl-source-recovery\assets\jingyi-ec\`。
@@ -132,6 +136,7 @@
 **微信小程序路由**: PC 微信 WMPF、`.wxapkg`、小程序/小游戏运行时调试 → `wechat-miniapp-re-mcp`（`wxmp_*`）；小程序内嵌 H5 或普通网页 JS 仍按 Web JS 路由处理。
 **Web JS 路由**: **默认 -> `ruyi-reverse`（统一编排器）** — 7 模块 x 两级深度，按任务主动组合 (Anti-Detect/Observe/Capture/Trace/Human-Sim/Debug/Export)。需 CDP 完整断点调试且无反检测需求 -> `mcp-js-reverse-playbook`。两者**可互补**，通过 Export 桥接。
 **Web 补环境路由**: 浏览器取证完成后，需要把原始网页 JS 放到 Node.js 中运行、补 `window/document/navigator/storage/crypto`、生成 sign/token 或对齐 fixtures 时，切到 `web-env-patcher`；协议采集器交付再切 `protocol-recovery`。
+**Web 反混淆路由**: 源码已定位且 AST 混淆、JSVMP/VM opcode 或 JS/WASM 边界成为核心阻塞时，切到 `web-deobfuscation`；先跑零执行 gate，再由 evidence manifest + parity validator 决定 L2、L3/partial 或 L4/triage-only。
 
 **Web 补环境判断矩阵**:
 
@@ -144,7 +149,8 @@
 | 需要 Trace API inventory、env coverage matrix、Node 泄露阻断、fixtures 对齐 | `web-env-patcher` |
 | 纯算法签名，无浏览器环境依赖，样本字段已确认 | 直接 `protocol-recovery` |
 | Node 输出已与浏览器 fixtures 对齐，需要 Python collector / final request | `protocol-recovery` |
-| WASM / JSVMP / VM opcode 是核心阻塞，补环境只能继续执行但不能解释算法 | 标 `triage-only`，必要时转 `ast-deobfuscation` / `web-reverse-algorithm` |
+| 纯 AST computed property、literal、常量分支清理，parser round-trip 可保持 | `web-deobfuscation` 的 `ast-safe`（L2）；默认使用锁定 Babel safe baseline，不执行 decoder/initializer |
+| JSVMP / VM opcode 或 WASM 是核心阻塞 | `web-deobfuscation` gate；有 opcode/boundary Trace + fixture 才可 L3/partial，否则 `triage-only` |
 
 
 ## 易语言源码恢复工具约束
@@ -243,7 +249,11 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 
 - Claude 路径：`%USERPROFILE%\.claude\skills\nas\`；Codex 路径：`%USERPROFILE%\.codex\skills\nas\`
 - NAS 登录凭据只存 `%USERPROFILE%\.nas\credentials.json`；数据库服务凭据以 NAS 上 `/volume1/docker/re-db/.env` 为准，本地可选副本为 `%USERPROFILE%\.nas\re-db.env`
+- VMM 可复用资产清单由两端 user skill 的 `references/vmm-inventory.md` 同步维护；运行状态、IP 与 ISO 槽以 `nas_vmm.py status/info/iso` 即时结果为准，资产身份、规格、OS、连接方式或介质变化后同步更新私有 `%USERPROFILE%\.nas\vmm\<guest>\connection.json`
 - NAS 部署清单与 DBX 连接登记是两层事实：NAS 维护六个服务，DBX 已登记 PostgreSQL、Redis、MongoDB、MariaDB、Elasticsearch；MinIO 不走 DBX
+- VMM 外部管理统一走 `nas_vmm.py`：先 `capabilities/status/list/images`，镜像导入、ISO 变更、创建、配置、开关机、删除和闭环测试必须显式 `--yes`；删除运行中 VM、未经验证的内部高级 API 与残留测试 VM 均禁止
+- 2026-07-17 至 2026-07-18 已在 DS920+ / DSM 7.3.2-86009 Update 4 实测：公共 API 的 VM 生命周期、ISO 镜像导入与任务清理通过；ISO 双槽挂载/卸载固定使用内部 `SYNO.Virtualization.Guest` v1 `set/get` 并回读验证，v2 `set` 返回 103
+- Rocky Linux 9.4 最小化 Kickstart 安装、SSH key、免密 sudo、`qemu-guest-agent` 和热卸载 ISO 已验证；`build_oemdrv.py` 负责生成卷标 `OEMDRV`、根目录含 `ks.cfg` 的安装介质；Snapshot、HA、replication、migration、image export/OVA 仍属 runtime-pending
 - 容器启停、重启、恢复、删除和数据库备份前先查状态；破坏性 NAS 操作仍需用户精确确认
 
 ## 全局设计拷问 skill 使用约束
@@ -372,7 +382,7 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 - `ruyi_capture_wait` 对 MCP 始终返回 `packets` 数组；ruyiPage 的 `count=1` 单个 `CapturePacket` / `None` 与 `count>1` list 必须在 Python bridge 边界归一化，并由 offline contract 覆盖三种返回形态。
 - `ruyi_capture_stop` 是有界清理操作：需要 packet 时必须先调用 `ruyi_capture_wait`；stop 会清空未消费队列/历史，再按 `cleanupTimeout`（默认 5 秒，范围 0.1–30 秒）释放 BiDi 订阅，并返回 `capturing` / `clearedPacketHistory` / `cleanupTimeoutSeconds` / `elapsedMs`。
 - 项目 BiDi runtime 放在 `tools\ruyipage\runtimes\`，浏览器二进制不进 Git；当前 `151-proxy` 固定在 `tools\ruyipage\runtimes\151-proxy\firefox\firefox.exe`。
-- `tools\ruyitrace\firefox\` 只用于 C++ DOMTrace。`ruyitrace.ps1` 设置 `MOZ_DISABLE_LAUNCHER_PROCESS=1`，将 `<output>_<PID>.ndjson` 分片合并到 `-Output`；`-Limit` 可选。
+- `tools\ruyitrace\firefox\` 只用于 C++ DOMTrace。`ruyitrace.ps1` 设置 `MOZ_DISABLE_LAUNCHER_PROCESS=1`；定时模式经 Remote Agent 执行 BiDi reload/browser.close，再将 `<output>_<PID>.ndjson` 分片合并到 `-Output`。分析器兼容旧 `api` 与新 `interface+member` schema；原始 malformed line 计入 `raw_invalid_lines`，只允许审计过的唯一 Function-source boundary 修复，`unrecoverable_lines` 必须由 `--strict` 或案例门禁拦截。
 - `.mcp.json` / `.codex/config.toml` 已切到 `151-proxy`；真实 HTTP 与 percent-encoded 凭据已通过。SOCKS5 只完成 offline contract，待有可用供应商时补真实出口门禁。
 
 ### js-reverse-mcp 双模式约束
@@ -400,6 +410,17 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 | 自动安装 | 未经用户确认不得 `npm install` / `pip install` / `nvm use` / `nvm install`；不得写系统 PATH 或用户级环境变量 |
 | ABI 检查 | `.node` addon / xbs isolated-vm 使用前必须跑 `tools\web-env\check-isolation.ps1`；不匹配只能记录 native gap 或走纯 JS fallback |
 | 产物落点 | captures、fixtures、trace、runtime profile、TLS 采样全部落 `workspace\<项目名>\`，不得污染 `tools\` 或 `workspace\` 根目录 |
+
+### Web 反混淆 Safe AST 隔离约束
+
+| 项 | 约束 |
+|----|------|
+| Node | 只用 `tools\node\node.exe` 20.20.2，不为 Babel 8 切换主 runtime |
+| 依赖 | `tools\web-deobfuscation\package-lock.json` 固定 Babel 7.29.7；`node_modules` / `.npm-cache` 不进 Git |
+| CLI | `skill\web-deobfuscation\scripts\safe_ast_transform.mjs`，只做命名静态 pass，输出前后 parse report 与 transform report |
+| 执行边界 | 不 import 目标模块，不调用 `eval` / `Function`，不执行 decoder、initializer、WASM 或 VM bytecode |
+| 禁入 | REstringer、webcrack runtime、`isolated-vm` 和 native addon 不得装入该 baseline |
+| 产物 | 输入、输出、parse/report 和 fixture 全部落 `workspace\<项目名>\`，再由 web-deobfuscation manifest validator 验收 |
 
 ### 反检测能力边界（指纹伪装）
 
@@ -542,6 +563,7 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | EPL Source Recovery | `tools\epl-source-recovery\run.ps1`（EProjectFile 与精易模块源码均固定为 submodule） |
 | dbx MCP 0.4.29 | `tools\node22\node.exe mcp\dbx-mcp\node_modules\@dbx-app\mcp-server\dist\index.js` |
 | Web Env | `tools\web-env\` |
+| Safe AST runtime | `tools\web-deobfuscation\`（Babel 7.29.7 lockfile；CLI 在 `skill\web-deobfuscation\scripts\safe_ast_transform.mjs`） |
 | MinGW-w64 14.2.0 (C/GCC) | `tools\mingw64\mingw64\bin\gcc.exe` |
 | QuickJS (qjs_min) | `tools\quickjs\qjs_min.exe` |
 | First (微信小程序调试 Legacy) | `powershell -File tools\First\first-gui.ps1` |

@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "case_id": "fixture-ast-safe",
+  "profile": "ast-safe",
+  "claim_scope": "transform-only",
+  "artifacts": {
+    "input_snapshot": "samples/input.js",
+    "output_snapshot": "samples/output.js",
+    "parse_before": "evidence/parse-before.json",
+    "parse_after": "evidence/parse-after.json",
+    "transform_report": "evidence/transform-report.json"
+  },
+  "checks": {
+    "parse_roundtrip": {
+      "passed": true,
+      "evidence": [
+        "parse_before",
+        "parse_after"
+      ]
+    },
+    "safe_passes_only": {
+      "passed": true,
+      "evidence": [
+        "transform_report"
+      ]
+    }
+  },
+  "limitations": []
+}

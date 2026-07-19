@@ -73,7 +73,7 @@ git status --short --branch   # 若已初始化 git
 ### 1.1 MCP 主线 / 脚本兜底
 
 - **MCP 工具（stdio）是主线**：ida-multi-mcp / jadx-ai-mcp / js-reverse-mcp / ruyi-mcp / reqable
-- **PowerShell/Bash 脚本是兜底**：当 MCP 有 schema bug 或需要特殊绕过时才走脚本
+- **PowerShell/Bash/Python 脚本是确定性兜底**：当 MCP 有 schema bug、需要特殊绕过或需要可重复门禁时才走脚本
 - **MCP 源码统一在 `mcp/` 下**，不得散落根目录或 `tools/`
 - 新增 MCP 服务时，同步更新 `.mcp.json` + `~/.codex/config.toml`（如需 Codex 默认启用）+ `mcp/README.md` + `docs/MCP服务详情.md` + `AGENTS.md` + `CLAUDE.md`
 - 新增 skill 时，同步更新 `AGENTS.md` / `CLAUDE.md` 的 skill 表
@@ -83,7 +83,7 @@ git status --short --branch   # 若已初始化 git
 | 目录 | 职责 | 禁止 |
 |------|------|------|
 | `skill/*/SKILL.md` | skill 定义、工作流、适用范围 | 不写具体配置值，不硬编码路径 |
-| `skill/*/scripts/` | 可执行的 .ps1 脚本 | 不跨 skill 互相调用 |
+| `skill/*/scripts/` | 可执行的 `.ps1` / `.sh` / `.py` 脚本 | 不跨 skill 互相调用 |
 | `skill/*/references/` | 参考资料、速查表 | 不包含可执行逻辑 |
 | `tools/` | 便携工具二进制/jar/脚本 | 不安装到系统目录 |
 | `.mcp.json` | MCP 服务注册 | 不注册非本仓库安装的服务 |
@@ -92,7 +92,7 @@ git status --short --branch   # 若已初始化 git
 ### 1.3 平台扩展边界
 
 当前覆盖 Web / Android / 二进制 三大逆向领域，各自独立：
-- Web → 默认 `ruyi-reverse` + ruyi-mcp；仅需 CDP 完整断点且无反检测需求时走 `mcp-js-reverse-playbook` + js-reverse-mcp
+- Web → 默认 `ruyi-reverse` + ruyi-mcp；仅需 CDP 完整断点且无反检测需求时走 `mcp-js-reverse-playbook` + js-reverse-mcp；源码定位后，AST/JSVMP/WASM 阻塞切 `web-deobfuscation`（AST 默认使用锁定 Babel 7.29.7 纯静态 baseline），浏览器环境阻塞切 `web-env-patcher`，完成协议链后切 `protocol-recovery`
 - Android → `apk-reverse` + jadx-ai-mcp + frida + adb
 - 二进制 → `ida-reverse` + `radare2` + ida-multi-mcp
 - 知识参考 → `reverse-engineering`（CTF 向，只读）
@@ -162,12 +162,13 @@ git status --short --branch   # 若已初始化 git
 
 本仓库没有统一业务测试套件。每次改动后最低验证：
 
-1. 新增/修改的脚本能否独立运行（PowerShell 语法无误）
+1. 新增/修改的脚本能否独立运行（Python parse/单测、PowerShell/Bash 语法与最小 CLI 均按实际类型验证）
 2. 新增/修改的 MCP 服务能否启动（`--help` 或 `--version` 不报错）
 3. 新增的 CLI 工具能否输出预期版本号
 4. `AGENTS.md` / `CLAUDE.md` 中引用的所有路径是否真实存在
 5. Workspace registry 与本地目录、Git remote、submodule 状态是否一致
 6. 新建项目仓是否通过禁止文件、敏感文件和大文件门禁
+7. 新增/修改的 skill 是否通过 `quick_validate.py`，且 repo-scope / Claude 薄入口指向真实源 skill
 
 ---
 

@@ -20,7 +20,7 @@
 | `ruyi-mcp` | `mcp\ruyi-mcp\` | `tools\node\node.exe mcp\ruyi-mcp\build\src\index.js` | [公开 Git submodule](https://github.com/Facetomyself/ruyi-mcp) + npm | 活跃 |
 | `dbx` | `mcp\dbx-mcp\` | `tools\node22\node.exe mcp\dbx-mcp\node_modules\@dbx-app\mcp-server\dist\index.js` | npm lock + 隔离 Node.js 22 | 活跃；默认冷启动 |
 | `reqable` | `mcp\reqable-mcp\` (源) | `.venv\Scripts\reqable-mcp.exe mcp` | pip (venv) | 按需，默认不自动初始化 |
-| `wechat-miniapp-re-mcp` | `mcp\wechat-miniapp-re-mcp\` | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js` | [Public Git submodule](https://github.com/Facetomyself/wechat-miniapp-re-mcp) + npm | v0.3.1；PR #14/#15/#16 已合入 runner、Review P0 修复与 post-fix live record；99 tests；按需启用 |
+| `wechat-miniapp-re-mcp` | `mcp\wechat-miniapp-re-mcp\` | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js` | [Public Git submodule](https://github.com/Facetomyself/wechat-miniapp-re-mcp) + npm | v0.3.1；PR #11 已合入 WMPF v20079 profile/AOB/hash-binding 交叉验证；按需启用 |
 | `first-mcp` | — (远程) | `http://127.0.0.1:4554/sse` | 外部 SSE | 按需，默认不自动初始化 |
 
 ## 配置入口
@@ -103,7 +103,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "D:\reverse_ENV\tools\build-
 & "D:\reverse_ENV\tools\node\npm.cmd" --prefix "D:\reverse_ENV\mcp\wechat-miniapp-re-mcp" run check
 ```
 
-当前仍按需启用。v0.3.1 已在 v19977 通过 AppService 选择、evaluate、真实 breakpoint、727 trace wrappers、`wx.request`/fetch/XHR hook、Network body/replay、同 session reconnect、detach 与 evidence export；PR #10/#11 分别闭环静态 subprocess workflow 和 v20079 profile/AOB/hash-binding/生产 hook 交叉验证。PR #14 新增可重复 acceptance contract 与 live runner，PR #15 修复当前 xwechat 默认包发现、CDP capability 误报及 Frida/DevTools proxy 异常清理，Node 20/22 CI 均为 99 tests。PR #16 已将 fresh v19977 lifecycle 的 post-fix full-semantic repeat 写入机器可读 acceptance record：所有 required gates 通过、runner 无 errors、lifecycle findings 在 export 前 resolved。第二版本完整 mini-program semantic gate 仍待补齐，详见 `mcp\wechat-miniapp-re-mcp\docs\progress.md`。
+当前仍按需启用。v0.3.1 在既有 capability 语义探测、context-scoped request/script、clean-room profile/AOB、evidence 容量治理和 schema validation 基础上，统一解析嵌套 WMPF `wx` runtime，并已在 v19977 通过 AppService 选择、evaluate、真实 breakpoint、727 trace wrappers、`wx.request`/fetch/XHR hook、Network body/replay、同 session reconnect、detach 与 evidence export。PR #10 补齐受控 Node backend 的真实 subprocess decompile/search/index/repack、失败映射和 no-output CI 门禁；PR #11 又在官方 WMPF v20079 上闭环跨版本 AOB 唯一性、module SHA-256、reviewed profile、生产 hook attach/ready/detach。剩余项收敛为第二版本完整 mini-program semantic gate，详见 `mcp\wechat-miniapp-re-mcp\docs\progress.md`。
 
 ## Claude → Codex 迁移约束
 

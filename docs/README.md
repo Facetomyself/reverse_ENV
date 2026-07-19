@@ -22,6 +22,7 @@
 | `ruyi-mcp-引导方案.md` | ruyi-mcp 引导与部署方案 |
 | `ruyi-mcp-devtools-调试能力分析.md` | ruyi-mcp 软断点调试能力 vs js-reverse-mcp CDP 对比 |
 | `ruyipage-upstream-update-audit-2026-07-14.md` | RuyiPage 1.2.46、151-proxy、Issue/CI 与 ruyi-mcp 兼容审计 |
+| `article-capability-audit-2026-07-18.md` | `article/` 全量结构、清洁度、能力缺口与项目转化路线审计，含 catalog/linter P0 实施结果 |
 
 ## 维护规则
 
