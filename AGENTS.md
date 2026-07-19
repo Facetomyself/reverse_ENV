@@ -330,8 +330,10 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 
 ### ruyi Trace 与 Firefox runtime 分层
 
-- `ruyi-mcp 0.1.2` 固定 `ruyiPage==1.2.50`；`ruyi_trace_*` 产出 RuyiPage/WebDriver BiDi JSON Trace，不是 C++ DOMTrace。
-- `ruyi_human_drag` 使用单次 BiDi `input.performActions` 保持拖拽按下态；`ruyi_set_fingerprint.windowSize` 运行时同步 outer/viewport/screen/DPR，且与 `viewport` 互斥。
+- `ruyi-mcp 0.1.4` 固定 `ruyiPage==1.2.54`；`ruyi_trace_*` 产出 RuyiPage/WebDriver BiDi JSON Trace，不是 C++ DOMTrace。
+- `ruyi_human_drag` 使用单次 BiDi `input.performActions` 保持拖拽按下态；`ruyi_set_fingerprint` 将 `windowSize`（仅 outer）、`viewport`（含可选 DPR）和 `screenSize`（独立 `screen.*`）分开处理，`screenSize` 返回 `requested` / `actual` / `screenSizeApplied` / `devicePixelRatioApplied`。当前 `151-proxy` 可应用 screen 宽高，但会忽略请求的 DPR `1.25`；`viewport.devicePixelRatio=1.25` 已验证可生效。
+- `ruyi_select_frame` 的 `contextId` / `selector` 二选一；`selector` 经 `iframe.contentWindow` 精确映射 `srcdoc` 或同 URL frame。新标签页先创建 `about:blank`：普通 tab 首跳前重放 geo/locale/timezone/headers 并保留共享 userContext 的 screen，container 首跳前重放完整 fingerprint；container 创建失败不得降级为普通 tab，导航失败必须关闭未登记 tab。
+- `ruyi_capture_wait` 对 MCP 始终返回 `packets` 数组；ruyiPage 的 `count=1` 单个 `CapturePacket` / `None` 与 `count>1` list 必须在 Python bridge 边界归一化，并由 offline contract 覆盖三种返回形态。
 - 项目 BiDi runtime 放在 `tools\ruyipage\runtimes\`，浏览器二进制不进 Git；当前 `151-proxy` 固定在 `tools\ruyipage\runtimes\151-proxy\firefox\firefox.exe`。
 - `tools\ruyitrace\firefox\` 只用于 C++ DOMTrace。`ruyitrace.ps1` 设置 `MOZ_DISABLE_LAUNCHER_PROCESS=1`，将 `<output>_<PID>.ndjson` 分片合并到 `-Output`；`-Limit` 可选。
 - `.mcp.json` / `.codex/config.toml` 已切到 `151-proxy`；真实 HTTP 与 percent-encoded 凭据已通过。SOCKS5 只完成 offline contract，待有可用供应商时补真实出口门禁。
@@ -391,7 +393,7 @@ python "$env:USERPROFILE\.codex\skills\cloudflare-tmail\scripts\tmail.py" cf inv
 2. **System32 文件无权限 / 同名旧 IDA 库** → `open.ps1` 自动复制到 `%TEMP%\opencode\`；默认不删除 `.i64` / `.id*`。
 3. **IDA 许可单实例** → GUI 和 headless 互斥，跑 headless 前关 GUI。
 4. **jadx-ai-mcp 需先开 GUI** → `tools\jadx-gui.cmd` 启动并加载 APK 后 MCP 才可用。
-5. **ruyi-mcp proxy 需在 launch 时设置** → 启动后无法切换代理。Cliproxy 用户名以 `-` 分段，Sticky `sid` 只使用 ASCII 字母、数字、下划线；含 `-` 的 SID 可能被截断，造成“看似轮换、实际同 IP 复用”。
+5. **ruyi-mcp proxy 需在 launch 时设置** → 启动后无法切换代理。当前 MCP 已支持 container tab，但未暴露 per-tab proxy；切换代理仍须 quit/relaunch，不能把 container 当成多代理降级路径，container 创建失败也不会降级为普通 tab。Cliproxy 用户名以 `-` 分段，Sticky `sid` 只使用 ASCII 字母、数字、下划线；含 `-` 的 SID 可能被截断，造成“看似轮换、实际同 IP 复用”。
 6. **NDK 交叉编译** → `tools\android-ndk\toolchains\llvm\prebuilt\windows-x86_64\bin\aarch64-linux-android33-clang.cmd`
 7. **LDPlayer RE 模拟器** → 多实例模板：`re-base`(Root+Frida+CA)、`re-xposed`(+LSPosed+JustTrustMe)、`re-stealth`(+Hide My Applist+Shamiko v0.7.5)。项目实例从模板复制，模板 verified 备份在 `storage\ldplayer-backups\`。`ldconsole restore` 会恢复备份内部实例名，必须通过 `re-restore.ps1` 按 index 恢复并重命名。
 8. **Rust 交叉编译** → 需 `rustup target add aarch64-linux-android x86_64-linux-android`
@@ -453,9 +455,9 @@ PS 脚本绝对路径调用：`powershell -File "D:\reverse_ENV\skill\<name>\scr
 | uv | `.venv\Scripts\uv.exe` |
 | Python | `.venv\Scripts\python.exe` |
 | js-reverse-mcp | `powershell -File tools\chromium\start-js-reverse.ps1` |
-| ruyipage 1.2.50 / 151-proxy | `tools\ruyipage\runtimes\151-proxy\firefox\firefox.exe`（项目 BiDi runtime） |
+| ruyipage 1.2.54 / 151-proxy | `tools\ruyipage\runtimes\151-proxy\firefox\firefox.exe`（项目 BiDi runtime） |
 | ruyiTrace DOMTrace | `tools\ruyitrace\ruyitrace.ps1`（专用 `tools\ruyitrace\firefox\`） |
-| ruyi-mcp 0.1.2 | `tools\node\node.exe mcp\ruyi-mcp\build\src\index.js` |
+| ruyi-mcp 0.1.4 | `tools\node\node.exe mcp\ruyi-mcp\build\src\index.js` |
 | dbx MCP 0.4.29 | `tools\node22\node.exe mcp\dbx-mcp\node_modules\@dbx-app\mcp-server\dist\index.js` |
 | reqable-mcp | `.venv\Scripts\reqable-mcp.exe mcp` |
 | wechat-miniapp-re-mcp | `tools\node\node.exe mcp\wechat-miniapp-re-mcp\build\src\index.js`（Public submodule；stdio 可冷握手；v0.3.1 已通过 WMPF v19977 完整真实语义门禁；WMPF v20079 已完成 profile/AOB/hash-binding、生产 hook attach/ready/detach 交叉验证；第二版本完整 mini-program semantic gate 继续列为后续项，服务仍按需启用） |

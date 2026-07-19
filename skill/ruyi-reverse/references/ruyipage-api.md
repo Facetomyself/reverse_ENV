@@ -7,7 +7,7 @@
 
 | 项目 | 值 |
 |------|-----|
-| Python 包 | `ruyipage` 1.2.50（`D:\reverse_ENV\.venv\Lib\site-packages\ruyipage\`） |
+| Python 包 | `ruyipage` 1.2.54（`D:\reverse_ENV\.venv\Lib\site-packages\ruyipage\`） |
 | 浏览器 | Firefox 151.0a1 `151-proxy`（`D:\reverse_ENV\tools\ruyipage\runtimes\151-proxy\firefox\firefox.exe`） |
 | 协议 | WebDriver BiDi |
 | 启动 | `"D:\reverse_ENV\.venv\Scripts\python.exe" -m ruyipage` |
@@ -53,8 +53,10 @@ ctx = opts.smart_fingerprint(
     require_country="US",
 )
 page = FirefoxPage(opts)
-ctx.apply_emulation(page)  # geo+tz+locale+viewport+UA 一步到位
-page.set_window_size(1280, 720, device_pixel_ratio=1.25)
+ctx.apply_emulation(page)  # screen+geo+locale+timezone+headers；不隐式调整 outer/viewport
+page.set_window_size(1280, 720)  # 1.2.54 起仅设置 outer window
+page.set_viewport(1200, 700, 1.25)  # 显式 viewport + DPR
+page.emulation.set_screen_size(1920, 1080, device_pixel_ratio=1.25)  # runtime 可能忽略 DPR，需实测
 page.get("https://bot.sannysoft.com")
 page.quit()
 ```
@@ -65,18 +67,31 @@ page.quit()
 opts = FirefoxOptions()
 opts.set_browser_path(r"D:\reverse_ENV\tools\ruyipage\runtimes\151-proxy\firefox\firefox.exe")
 
+ctx = opts.smart_fingerprint(
+    manual_geo={
+        "ip": "203.0.113.10", "country_code": "US",
+        "timezone": "America/New_York",
+        "latitude": 40.7128, "longitude": -74.0060,
+    }
+)
+
 # 每标签独立 SOCKS5
 opts.set_per_tab_proxies(
     ["socks5://p1:1080:user:pass", "socks5://p2:1080:user:pass"],
     exhausted="wrap"
 )
 page = FirefoxPage(opts)
-page.new_container_tabs(count=2, url="https://browserscan.net/")
+tabs = [page.new_container_tab(url=None) for _ in range(2)]
+for tab in tabs:
+    ctx.apply_emulation(tab)  # container 首跳前重放完整 fingerprint
+    tab.get("https://browserscan.net/")
 
 # 流式抓包
 page.capture.start("/api/", method="POST")
 page.get("https://target.com")
 packets = page.capture.wait(timeout=10, count=5)
+# 上游合同：count=1 -> CapturePacket | None；count>1 -> list[CapturePacket]
+# ruyi-mcp 在 Python Bridge 边界统一为 MCP result.packets 数组。
 
 # 自定义拦截
 def handler(req):

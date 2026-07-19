@@ -35,7 +35,7 @@
 | `ida-multi-mcp` | 0.1.0 | `survey_binary`, `decompile`, `analyze_function`, `idalib_*` 等 | Python venv | 无需额外操作 |
 | `jadx-ai-mcp` | 6.4.0 | `jadx_*` | Python venv | **先启动 jadx-gui 并加载 APK**；按需手动启用，默认不自动初始化 |
 | `js-reverse-mcp` | 3.0.0 | `js-reverse_*` | Node.js 便携版 | Chrome 浏览器；按需手动启用，默认不自动初始化 |
-| `ruyi-mcp` | 0.1.2 | `ruyi_*` | Node.js 便携版 + Python venv (`ruyiPage==1.2.50`) | 已初始化公开 submodule；Firefox runtime 按 BiDi / DOMTrace 分层 |
+| `ruyi-mcp` | 0.1.4 | `ruyi_*` | Node.js 便携版 + Python venv (`ruyiPage==1.2.54`) | 已初始化公开 submodule；Firefox runtime 按 BiDi / DOMTrace 分层 |
 | `dbx` | 0.4.29 | `dbx_*` | Node.js 22.23.1 + native addons | DBX 已安装并存在本地连接数据库；默认冷启动 |
 | `reqable` | 0.3.2 | `reqable_*` | Python venv (stdio) | Reqable ≥2.20 桌面端；按需手动启用，默认不自动初始化 |
 | `wechat-miniapp-re-mcp` | 0.3.1 | `wxmp_*` | Node.js 便携版 + lazy Frida + Gwxapkg adapter | Public submodule；PR #14/#15/#16 runner、Review P0 与 post-fix live record 已合入；按需启用 |
@@ -101,7 +101,7 @@ MCP client 拉起 ida-multi-mcp (stdio)
 - **初始化**: `git submodule update --init mcp/ruyi-mcp`，随后执行 `tools\node\npm.cmd --prefix mcp\ruyi-mcp ci`
 - **入口**: `tools\node\node.exe mcp\ruyi-mcp\build\src\index.js`
 - **Python**: 项目配置注入 `RUYI_MCP_PYTHON=D:\reverse_ENV\.venv\Scripts\python.exe`
-- **版本**: `ruyi-mcp 0.1.2`，依赖固定为 `ruyiPage==1.2.50`
+- **版本**: `ruyi-mcp 0.1.4`，依赖固定为 `ruyiPage==1.2.54`
 - **当前 Firefox 配置**: `RUYI_FIREFOX_PATH=D:\reverse_ENV\tools\ruyipage\runtimes\151-proxy\firefox\firefox.exe`
 - **Firefox BuildID**: `20260702113527`；`tools\ruyitrace\firefox\` 仅保留给 DOMTrace CLI
 - **架构**: Node.js MCP Server → Python 子进程 (JSON-RPC over stdio) → ruyipage (WebDriver BiDi)
@@ -111,14 +111,14 @@ MCP client 拉起 ida-multi-mcp (stdio)
 
 | 分类 | 工具 | 说明 |
 |------|------|------|
-| 页面管理 | `ruyi_new_page`, `ruyi_navigate_page`, `ruyi_close_page`, `ruyi_select_page`, `ruyi_list_pages`, `ruyi_list_frames`, `ruyi_select_frame` | 反检测浏览器页面/iframe 操作，`new_page` 支持 proxy+fingerprint |
+| 页面管理 | `ruyi_new_page`, `ruyi_navigate_page`, `ruyi_close_page`, `ruyi_select_page`, `ruyi_list_pages`, `ruyi_list_frames`, `ruyi_select_frame` | 首次 launch 支持 proxy+fingerprint；新 tab 先建 `about:blank` 并在首跳前重放，container 不降级；`select_frame` 支持 `contextId` 或精确 `selector` |
 | 脚本分析 | `ruyi_list_scripts`, `ruyi_get_script_source`, `ruyi_save_script_source`, `ruyi_search_in_sources` | JS 脚本枚举/源码获取/搜索 |
 | 运行时求值 | `ruyi_evaluate_script`, `ruyi_list_console_messages` | 页面 JS 执行 + 控制台日志 |
-| 反检测/指纹 | `ruyi_set_fingerprint`, `ruyi_emulate_geolocation`, `ruyi_emulate_timezone`, `ruyi_emulate_locale`, `ruyi_emulate_useragent`, `ruyi_set_proxy`, `ruyi_handle_cloudflare` | 22 维指纹伪装 + CF 自动过检；`windowSize` 同步 outer/viewport/screen/DPR；proxy 必须在 `new_page` 时设置 |
+| 反检测/指纹 | `ruyi_set_fingerprint`, `ruyi_emulate_geolocation`, `ruyi_emulate_timezone`, `ruyi_emulate_locale`, `ruyi_emulate_useragent`, `ruyi_set_proxy`, `ruyi_handle_cloudflare` | 22 维指纹伪装 + CF 自动过检；`windowSize` 仅 outer，`viewport` 独立支持 DPR，`screenSize` 独立设置并回报 `requested` / `actual` / `screenSizeApplied` / `devicePixelRatioApplied`；proxy 必须在 `new_page` 时设置 |
 | DOM 交互 | `ruyi_dom_select`, `ruyi_dom_get_info`, `ruyi_dom_input`, `ruyi_dom_click` | 元素定位/读写/交互 |
 | Session 导出 | `ruyi_export_session` | Cookie+Storage 导出（跨工具桥接） |
 | Cookie 管理 | `ruyi_get_cookies`, `ruyi_set_cookies`, `ruyi_delete_cookies` | Cookie 读取/写入/删除 |
-| 网络取证 | `ruyi_list_network_requests`, `ruyi_capture_start`, `ruyi_capture_stop`, `ruyi_capture_wait`, `ruyi_get_request_initiator` | 网络请求列表、被动抓包、fetch/XHR 调用栈采样 |
+| 网络取证 | `ruyi_list_network_requests`, `ruyi_capture_start`, `ruyi_capture_stop`, `ruyi_capture_wait`, `ruyi_get_request_initiator` | 网络请求列表、被动抓包、fetch/XHR 调用栈采样；`capture_wait` 对 MCP 始终返回 `packets` 数组 |
 | 请求/响应拦截 | `ruyi_intercept_requests`, `ruyi_intercept_responses`, `ruyi_intercept_wait`, `ruyi_intercept_stop` | BiDi network intercept 队列式消费 |
 | WebSocket | `ruyi_websocket_inject`, `ruyi_get_websocket_messages` | 注入 WebSocket Proxy 并采集 send/receive 消息 |
 | 软断点调试 | `ruyi_set_breakpoint_on_text`, `ruyi_break_on_xhr`, `ruyi_list_breakpoints`, `ruyi_remove_breakpoint`, `ruyi_list_preload_scripts` | preload script + Proxy 软断点 |
@@ -132,11 +132,13 @@ MCP client 拉起 ida-multi-mcp (stdio)
 ### BiDi Trace 与 DOMTrace 边界
 
 - `ruyi_trace_*` 操作 RuyiPage Tracer，结果和 `outputFile` 都是 JSON；launch/runtime Trace entries 增长、stop 后冻结已通过回归。
+- 2026-07-18 上游复核确认 Ruyi Trace 最新可信公开版仍为 `v1.2`；JSCALL / JSVMP / WASM / HTTP / WS 环境变量已被上游回滚，本地 `xul.dll` 也不含对应 marker，因此没有可吸收的新版源码或二进制。完整证据见 `mcp\ruyi-mcp\docs\upstream-audit-2026-07-18.md`。
 - `tools\ruyitrace\ruyitrace.ps1` 操作 Firefox C++ DOM Hook，输出 NDJSON，和 MCP 的 `ruyi_trace_*` 不是同一条链路。
 - DOMTrace CLI 设置 `MOZ_DOM_TRACE=1`、`MOZ_DISABLE_LAUNCHER_PROCESS=1`。Firefox 生成的 `<output>_<PID>.ndjson` 会在退出后合并到 `-Output`；`-Limit` 为可选的每进程行数上限。
 - `151-proxy` 没有 `RUYI_DOMTRACE.txt` marker，实际验证也不生成 DOMTrace。`tools\ruyitrace\firefox\` 因此继续作为 DOMTrace 专用 runtime。
 - 真实 HTTP 认证代理与 percent-encoded 凭据已通过；SOCKS5 因当前供应商无产品只完成 offline contract，待有可用供应商时补真实出口门禁。
-- v0.1.2 已通过 `151-proxy` 真浏览器门禁：可信 `buttons=1` 拖拽事件、单次 `input.performActions` Trace、目标落点和 window/viewport/screen/DPR 同步均通过。
+- v0.1.3 已通过 `151-proxy` 真浏览器门禁：outer `960x640`（Firefox 原生 inner `960x554`）、screen `1440x900`、viewport `800x500` + DPR `1.25`、普通/container 首文档 fingerprint replay、第二个 `srcdoc` frame 精确选择和原子拖拽均通过；`screenSize` DPR 请求 `1.25`、实际 `1.0`，Bridge 正确返回 `devicePixelRatioApplied:false`。
+- v0.1.4 补齐 `ruyi_capture_wait(count=1)` 单包归一化；单个 `CapturePacket`、`None` 和多包 list 均由 Bridge contract 覆盖，对 MCP 固定输出 `packets` 数组。
 
 ### 与 js-reverse-mcp 的关系
 
