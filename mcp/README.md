@@ -61,8 +61,9 @@ SQL 固定按 `dbx_list_connections` → schema/table 描述 → `dbx_execute_qu
 
 ## ruyi-mcp submodule
 
-当前公开子仓版本为 `0.1.2`，Python 依赖固定为 `ruyiPage==1.2.50`。
-本版暴露 57 tools，新增原子 `ruyi_human_drag` 与 `ruyi_set_fingerprint.windowSize` 同步窗口尺寸能力。
+当前公开子仓版本为 `0.1.4`，Python 依赖固定为 `ruyiPage==1.2.54`。
+本版保持 57 tools：`windowSize` 仅设置 outer window，`viewport` 独立设置 viewport / DPR，`screenSize` 独立设置 `screen.*` 并回报实际应用结果；`ruyi_select_frame.selector` 可精确区分 `srcdoc` 与同 URL frame。
+新标签页统一从 `about:blank` 创建并在首跳前重放 fingerprint，container 创建失败不降级，导航失败会清理未登记 tab；`ruyi_capture_wait` 将单个 `CapturePacket`、`None` 或多包 list 统一为 MCP `packets` 数组。上游取舍与验证证据见 [`ruyi-mcp/docs/upstream-audit-2026-07-18.md`](ruyi-mcp/docs/upstream-audit-2026-07-18.md)。
 
 首次克隆或 submodule 未初始化时：
 
@@ -85,6 +86,7 @@ Firefox runtime 分层如下：
 - 当前 `.mcp.json` / `.codex/config.toml` 已指向 `tools\ruyipage\runtimes\151-proxy\firefox\firefox.exe`，作为项目 BiDi runtime。
 - 真实 HTTP 认证代理和 percent-encoded 凭据门禁已通过；SOCKS5 因当前供应商无对应产品只完成 offline contract，待有可用供应商时补真实出口门禁。
 - `ruyi_trace_start` / `ruyi_trace_stop` / `ruyi_trace_get_results` 是 RuyiPage BiDi JSON Trace，不是 C++ DOMTrace。
+- 2026-07-18 上游审计确认 Ruyi Trace 最新可信公开版仍为 `v1.2`；内部 JSCALL / JSVMP / WASM / HTTP / WS 能力已回滚，本轮不替换 trace kernel。
 - C++ DOMTrace 继续使用 `tools\ruyitrace\ruyitrace.ps1` 和专用 `tools\ruyitrace\firefox\`。脚本设置 `MOZ_DISABLE_LAUNCHER_PROCESS=1`，将 `<output>_<PID>.ndjson` 分片合并到 `-Output`；`-Limit` 可选。
 
 ## wechat-miniapp-re-mcp submodule
