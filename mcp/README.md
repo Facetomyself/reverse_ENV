@@ -61,9 +61,10 @@ SQL 固定按 `dbx_list_connections` → schema/table 描述 → `dbx_execute_qu
 
 ## ruyi-mcp submodule
 
-当前公开子仓版本为 `0.1.4`，Python 依赖固定为 `ruyiPage==1.2.54`。
+当前公开子仓版本为 `0.1.5`，Python 依赖固定为 `ruyiPage==1.2.54`。
 本版保持 57 tools：`windowSize` 仅设置 outer window，`viewport` 独立设置 viewport / DPR，`screenSize` 独立设置 `screen.*` 并回报实际应用结果；`ruyi_select_frame.selector` 可精确区分 `srcdoc` 与同 URL frame。
-新标签页统一从 `about:blank` 创建并在首跳前重放 fingerprint，container 创建失败不降级，导航失败会清理未登记 tab；`ruyi_capture_wait` 将单个 `CapturePacket`、`None` 或多包 list 统一为 MCP `packets` 数组。上游取舍与验证证据见 [`ruyi-mcp/docs/upstream-audit-2026-07-18.md`](ruyi-mcp/docs/upstream-audit-2026-07-18.md)。
+新标签页统一从 `about:blank` 创建并在首跳前重放 fingerprint，container 创建失败不降级，导航失败会清理未登记 tab；`ruyi_capture_wait` 将单个 `CapturePacket`、`None` 或多包 list 统一为 MCP `packets` 数组。
+`ruyi_capture_stop` 在释放 BiDi 订阅前清空未消费队列/历史，所需 packet 必须先通过 `ruyi_capture_wait` 获取；`cleanupTimeout` 默认 5 秒、范围 0.1–30 秒。v0.1.5 已通过 21 项 Bridge contract、57 tools stdio smoke 和 20 轮真实 Firefox 本地 HTTP `start/wait/stop` 门禁。上游取舍与验证证据见 [`ruyi-mcp/docs/upstream-audit-2026-07-18.md`](ruyi-mcp/docs/upstream-audit-2026-07-18.md)。
 
 首次克隆或 submodule 未初始化时：
 
