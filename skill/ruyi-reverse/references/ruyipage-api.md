@@ -92,6 +92,9 @@ page.get("https://target.com")
 packets = page.capture.wait(timeout=10, count=5)
 # 上游合同：count=1 -> CapturePacket | None；count>1 -> list[CapturePacket]
 # ruyi-mcp 在 Python Bridge 边界统一为 MCP result.packets 数组。
+# MCP v0.1.5 调用顺序：ruyi_capture_start -> ruyi_capture_wait -> ruyi_capture_stop。
+# 需要的 packet 必须在 stop 前取走；stop 会清空剩余历史，并按 cleanupTimeout
+# （默认 5 秒，范围 0.1–30 秒）有界释放 BiDi 订阅与 DataCollector。
 
 # 自定义拦截
 def handler(req):
@@ -151,7 +154,7 @@ page.ele("css:.card").ele("css:h2 a").click_self()
 
 | 操作 | API |
 |------|-----|
-| 被动抓包 | `page.capture.start/stop/wait` |
+| 被动抓包 | `page.capture.start/wait/stop`；MCP 必须先 wait 再 stop，stop 会丢弃剩余历史 |
 | 请求拦截 | `page.intercept.start_requests(handler)` |
 | 响应拦截 | `page.intercept.start_responses(handler)` |
 | 全局 Headers | `page.network.set_extra_headers({...})` |

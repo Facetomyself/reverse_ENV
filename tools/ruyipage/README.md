@@ -10,10 +10,10 @@
 | 可执行文件 | `D:\reverse_ENV\tools\ruyipage\runtimes\151-proxy\firefox\firefox.exe` |
 | Windows release asset SHA256 | `f82151f9f197b528b36fb461cf106bc6825c0f752efb5c5d762c34f7529055f6` |
 | Firefox BuildID | `20260702113527` |
-| 配套依赖 | `ruyiPage==1.2.54`、`ruyi-mcp 0.1.4` |
+| 配套依赖 | `ruyiPage==1.2.54`、`ruyi-mcp 0.1.5` |
 | 当前状态 | 已完成回归并作为项目 MCP 的 BiDi runtime 启用 |
 
-该 runtime 已通过 BiDi launch/quit、UA/viewport/timezone/locale/orientation、DOM click、launch/runtime Trace entries 增长和 stop 后冻结，以及真实 HTTP 认证代理与 percent-encoded 凭据验证。v0.1.3 真浏览器门禁确认 outer `960x640` / 原生 inner `960x554`、screen `1440x900`、viewport `800x500` + DPR `1.25`、普通 tab 继承 shared-userContext screen、container 首跳前完整 fingerprint replay、第二个 `srcdoc` frame 精确选择，以及保持按下态的原子拖拽；screen DPR 请求 `1.25`、实际 `1.0`，Bridge 返回未应用状态。v0.1.4 通过 offline contract 锁住 `capture.wait()` 的单包、空结果和多包返回形态，MCP 始终输出 `packets` 数组。本轮代理能力只复跑 percent-encoded auth-file offline contract。3 个 headed fingerprint profile 均未复现 Issue #20 的窗口最大化/坐标偏移；SOCKS5 因当前供应商没有对应产品，只完成 offline contract，待有可用供应商时补真实出口门禁。
+该 runtime 已通过 BiDi launch/quit、UA/viewport/timezone/locale/orientation、DOM click、launch/runtime Trace entries 增长和 stop 后冻结，以及真实 HTTP 认证代理与 percent-encoded 凭据验证。v0.1.3 真浏览器门禁确认 outer `960x640` / 原生 inner `960x554`、screen `1440x900`、viewport `800x500` + DPR `1.25`、普通 tab 继承 shared-userContext screen、container 首跳前完整 fingerprint replay、第二个 `srcdoc` frame 精确选择，以及保持按下态的原子拖拽；screen DPR 请求 `1.25`、实际 `1.0`，Bridge 返回未应用状态。v0.1.4 通过 offline contract 锁住 `capture.wait()` 的单包、空结果和多包返回形态，MCP 始终输出 `packets` 数组。v0.1.5 将 `capture_stop` 收敛为先清空未消费历史、再按 `cleanupTimeout` 有界释放资源，并通过 20 轮真实 Firefox 本地 HTTP `start/wait/stop` 门禁。本轮代理能力只复跑 percent-encoded auth-file offline contract。3 个 headed fingerprint profile 均未复现 Issue #20 的窗口最大化/坐标偏移；SOCKS5 因当前供应商没有对应产品，只完成 offline contract，待有可用供应商时补真实出口门禁。
 
 它没有 `RUYI_DOMTRACE.txt` marker，实际验证也未生成 C++ DOMTrace 输出，因此不能替换 DOMTrace 专用内核。
 
