@@ -1,5 +1,5 @@
 version: 1
-updated: 2026-07-19
+updated: 2026-07-22
 defaults:
   owner: Facetomyself
   visibility: private
@@ -513,6 +513,21 @@ projects:
   remote_name: origin
   default_branch: main
   deliverables: none
+- name: saaserp
+  path: workspace/saaserp
+  ownership: owned
+  last_audited: 2026-07-22
+  kind: application-and-web-reverse
+  integration: registry
+  lifecycle: active
+  readiness: ready
+  visibility: private
+  remote: https://github.com/Facetomyself/saaserp.git
+  notes: Read-only SaaS ERP collector and local product-processing application; credentials, raw HAR/Trace, browser sessions, site bundles, SQLite databases, logs, images, exports, and full product responses remain local and ignored.
+  repository_root: workspace/saaserp
+  remote_name: origin
+  default_branch: main
+  deliverables: project-native
 - name: search-layer-grok-evolution
   path: workspace/search-layer-grok-evolution
   ownership: owned
