@@ -6,4 +6,4 @@ Each skill directory here is a thin entrypoint. It must route to the matching `D
 
 If a Claude entrypoint conflicts with the source skill, the source skill wins and the entrypoint must be corrected.
 
-Current incremental entries include `web-deobfuscation` and `web-env-patcher`; both must read their matching source skill and preserve the project's zero-execution/evidence gates and isolated runtime boundary.
+Current incremental entries include `web-deobfuscation`, `web-env-patcher`, and `emil-design-eng`. Each must read its matching source skill; the Web skills preserve the project's zero-execution/evidence gates and isolated runtime boundary, while `emil-design-eng` preserves its six-skill routing and mandatory post-coding review gate.

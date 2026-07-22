@@ -130,6 +130,7 @@
 | `drawio` | 流程图/架构图 | .drawio 文件生成与导出 |
 | `docx-thesis-formatter` | DOCX 格式化 | 论文/报告模板 |
 | `nas` | Synology NAS 运维（用户层） | NAS 状态、VMM 虚拟机、Docker、文件、`re-db` 数据库栈与备份操作 |
+| `emil-design-eng` | 前端设计工程编排器 — 非前端工程师 | UI 打磨/动画审查/动效改进/交互优化 — 6 子技能自动路由 + 强制审查门 + 速查表 |
 
 **路由**: `.so`/native 反检测/绕过 → `native-reverse`；`.so` 纯静态分析 → `ida-reverse`/`radare2`；APK Java → `apk-reverse`。
 **易语言路由**: `*.e` / `*.ec` 工程 → `tools\epl-source-recovery\run.ps1` 纯静态恢复；禁止安装易语言、运行工程或加载支持库。精易模块公共源码只读归档于 `tools\epl-source-recovery\assets\jingyi-ec\`。
@@ -141,6 +142,7 @@
 **Web JS 路由**: **默认 -> `ruyi-reverse`（统一编排器）** — 7 模块 x 两级深度，按任务主动组合。需 CDP 完整断点调试且无反检测需求 -> `js-reverse-mcp`。
 **Web 补环境路由**: 浏览器取证完成后，需要把原始网页 JS 放到 Node.js 中运行、补 `window/document/navigator/storage/crypto`、生成 sign/token 或对齐 fixtures 时，切到 `web-env-patcher`；协议采集器交付再切 `protocol-recovery`。
 **Web 反混淆路由**: 源码已定位且 AST 混淆、JSVMP/VM opcode 或 JS/WASM 边界成为核心阻塞时，切到 `web-deobfuscation`；先跑零执行 gate，再由 evidence manifest + parity validator 决定 L2、L3/partial 或 L4/triage-only。
+**前端设计路由**: 做界面/写动画/审查UI/打磨交互/前端代码审查 → `emil-design-eng`（编排器）。标准流程：写代码 → 自检 → 审查门 → 修正。增强流程：审查 → 发现机会 → 实施。速查表可直接复制缓动曲线/时长/Spring 预设。
 
 **Web 补环境判断矩阵**:
 
@@ -194,6 +196,20 @@ git -C "D:\reverse_ENV" submodule update --init "tools/epl-source-recovery/upstr
 & "D:\reverse_ENV\.venv\Scripts\python.exe" "D:\reverse_ENV\skill\wmpf-offset-adaptation\scripts\extract_wmpf_offsets.py" --version <version> --dll "D:\reverse_ENV\workspace\<project>\flue.dll" --output "D:\reverse_ENV\workspace\<project>\addresses.<version>.json"
 ```
 
+
+## 前端设计工程 skill 使用约束
+
+`emil-design-eng` 的唯一源码位于 `D:\reverse_ENV\skill\emil-design-eng\`。Codex 与 Claude 项目入口只做路由。
+
+| 项 | 约束 |
+|----|------|
+| 定位 | 面向非前端工程师的 UI 打磨编排器，非逆向工具。设计品味规则来自 Emil Kowalski（前 Vercel/Linear，Sonner 作者） |
+| 双端入口 | Codex：`.agents\skills\emil-design-eng\`；Claude：`.claude\skills\emil-design-eng\`（均路由到 `skill\emil-design-eng\SKILL.md`） |
+| 子技能 | 6 个：`emil-design-eng`（主哲学）/ `review-animations`（审查）/ `improve-animations`（审计）/ `find-animation-opportunities`（发现）/ `animation-vocabulary`（术语）/ `apple-design`（Apple 交互） |
+| 触发 | "做界面/写动画/审查UI/打磨交互/前端代码审查/加点动效/这个动画效果叫什么/Apple风格" |
+| 强制审查门 | 写前端代码后自动触发 `review-animations`；写代码 → 自检 → 审查 → 修正 → 通过 |
+| 禁区 | 键盘快捷键动作不加动画；`transition: all` / `ease-in` / `scale(0)` / `width/height` 动画绝对禁止；UI 动画不超 300ms |
+| 速查表 | 编排器内置缓动曲线预设、时长表、Spring 预设，非前端可直接复制使用 |
 
 ## HeroSMS skill/API 使用约束
 
