@@ -298,6 +298,21 @@ projects:
   remote_name: origin
   default_branch: main
   deliverables: none
+- name: kmart-furniture-crawl
+  path: workspace/kmart-furniture-crawl
+  ownership: owned
+  last_audited: 2026-07-24
+  kind: web-data-collection
+  integration: registry
+  lifecycle: active
+  readiness: existing
+  visibility: private
+  remote: https://github.com/Facetomyself/kmart-furniture-crawl.git
+  notes: Ruyi-backed Kmart AU Constructor.io protocol recovery and curl_cffi collector; raw API payloads, sessions, traces, images, generated datasets and XLSX deliverables remain local and ignored.
+  repository_root: workspace/kmart-furniture-crawl
+  remote_name: origin
+  default_branch: main
+  deliverables: reverse-three-piece
 - name: live-verification
   path: workspace/live-verification
   ownership: owned
